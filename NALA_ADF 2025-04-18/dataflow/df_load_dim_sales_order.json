@@ -1,0 +1,126 @@
+{
+	"name": "df_load_dim_sales_order",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_parquet",
+						"type": "DatasetReference"
+					},
+					"name": "SrcSalestable"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference"
+					},
+					"name": "LkpTruckVolume"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference"
+					},
+					"name": "Salestable"
+				}
+			],
+			"transformations": [
+				{
+					"name": "JoinLkpTruckVolumnColumns"
+				},
+				{
+					"name": "RederiveColumns"
+				},
+				{
+					"name": "FilterLastestRecords"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     df_prev_max_timestamp as string",
+				"}",
+				"source(output(",
+				"          DATAAREAID as string,",
+				"          SALESID as string,",
+				"          CUSTOMERREF as string,",
+				"          PURCHORDERFORMNUM as string,",
+				"          SALESTYPE as integer,",
+				"          RETURNITEMNUM as string,",
+				"          RETURNREPLACEMENTCREATED as integer,",
+				"          SALESPOOLID as string,",
+				"          PLANNUMBER as string,",
+				"          RETURNREPLACEMENTID as string,",
+				"          MODIFIEDDATETIME as timestamp,",
+				"          MCRHOLDCODE as string,",
+				"          SALESLINE_LARGEITEMORDEREDQTY as decimal(38,16),",
+				"          SALESLINE_TOTALLARGEITEMVOLUME as decimal(38,6),",
+				"          SALESLINE_MODIFIEDDATETIME as timestamp,",
+				"          CUSTPACKINGSLIPTRANS_FIRSTLARGEITEMSHIPPEDQTY as decimal(38,16),",
+				"          CUSTPACKINGSLIPTRANS_MODIFIEDDATETIME as timestamp,",
+				"          LATEST_MODIFIEDDATETIME as timestamp,",
+				"          HK_SOURCE_NAME as string,",
+				"          HK_JOB_RUN_ID as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> SrcSalestable",
+				"source(output(",
+				"          LEGAL_ENTITY_ID as string,",
+				"          HK_LAST_UPDATED_TIMESTAMP as timestamp,",
+				"          TRUCK_TOTAL_CUBIC_FEET as decimal(25,16)",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     query: 'select ltv1.legal_entity_id, ltv1.hk_last_updated_timestamp as HK_LAST_UPDATED_TIMESTAMP, ltv1.truck_total_cubic_feet\\r\\nfrom LKP_TRUCK_VOLUME ltv1\\r\\nwhere is_tempurpedic = true',",
+				"     format: 'query') ~> LkpTruckVolume",
+				"SrcSalestable, LkpTruckVolume join(DATAAREAID == LEGAL_ENTITY_ID,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> JoinLkpTruckVolumnColumns",
+				"JoinLkpTruckVolumnColumns derive(LATEST_MODIFIEDDATETIME_NEW = greatest(LATEST_MODIFIEDDATETIME,\r",
+				"iifNull(HK_LAST_UPDATED_TIMESTAMP,toTimestamp('1950-01-01 00:00:00'),HK_LAST_UPDATED_TIMESTAMP))) ~> RederiveColumns",
+				"RederiveColumns filter(LATEST_MODIFIEDDATETIME_NEW > toTimestamp($df_prev_max_timestamp, 'yyyy-MM-dd HH:mm:ss')) ~> FilterLastestRecords",
+				"FilterLastestRecords sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     stageInsert: true,",
+				"     mapColumn(",
+				"          DATAAREAID,",
+				"          SALESID,",
+				"          CUSTOMERREF,",
+				"          PURCHORDERFORMNUM,",
+				"          SALESTYPE,",
+				"          RETURNITEMNUM,",
+				"          RETURNREPLACEMENTCREATED,",
+				"          SALESPOOLID,",
+				"          PLANNUMBER,",
+				"          RETURNREPLACEMENTID,",
+				"          MODIFIEDDATETIME,",
+				"          MCRHOLDCODE,",
+				"          SALESLINE_LARGEITEMORDEREDQTY,",
+				"          SALESLINE_TOTALLARGEITEMVOLUME,",
+				"          SALESLINE_MODIFIEDDATETIME,",
+				"          CUSTPACKINGSLIPTRANS_FIRSTLARGEITEMSHIPPEDQTY,",
+				"          CUSTPACKINGSLIPTRANS_MODIFIEDDATETIME,",
+				"          HK_SOURCE_NAME,",
+				"          HK_JOB_RUN_ID,",
+				"          LKP_TRUCK_VOLUME_LEGAL_ENTITY_ID = LEGAL_ENTITY_ID,",
+				"          LKP_TRUCK_VOLUME_TRUCK_TOTAL_CUBIC_FEET = TRUCK_TOTAL_CUBIC_FEET,",
+				"          LATEST_MODIFIEDDATETIME = LATEST_MODIFIEDDATETIME_NEW",
+				"     )) ~> Salestable"
+			]
+		}
+	}
+}

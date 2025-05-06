@@ -1,0 +1,103 @@
+{
+	"name": "df_load_fact_cost_of_goods_sold",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_excel",
+						"type": "DatasetReference"
+					},
+					"name": "srcCogsItemCosts"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference"
+					},
+					"name": "cogs"
+				}
+			],
+			"transformations": [
+				{
+					"name": "deriveColumns"
+				},
+				{
+					"name": "reDeriveColumns"
+				},
+				{
+					"name": "maxLastestModifieddatetime"
+				},
+				{
+					"name": "pullLatestRecords"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     df_last_mod_tmstmp_cogs_itemcosts as string,",
+				"     df_pipeline_job_id as string,",
+				"     df_prev_max_timestamp as string,",
+				"     df_src_nm as string",
+				"}",
+				"source(output(",
+				"          ItemNumber as string,",
+				"          Configuration as string,",
+				"          EffectiveDate as date,",
+				"          StandardCost as double,",
+				"          Material as double,",
+				"          Labor as double,",
+				"          VariableOverhead as double,",
+				"          FixedOverhead as double",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> srcCogsItemCosts",
+				"srcCogsItemCosts derive(LATEST_MODIFIEDDATETIME = toTimestamp($df_last_mod_tmstmp_cogs_itemcosts, 'yyyy-MM-dd\\'T\\'HH:mm'),",
+				"          ORACLEITEM = 'No Mapped Oracle Item',",
+				"          DATAAREAID = '740',",
+				"          HK_JOB_RUN_ID = $df_pipeline_job_id,",
+				"          HK_SOURCE_NAME = $df_src_nm) ~> deriveColumns",
+				"deriveColumns select(mapColumn(",
+				"          LATEST_MODIFIEDDATETIME,",
+				"          ORACLEITEM,",
+				"          DATAAREAID,",
+				"          HK_JOB_RUN_ID,",
+				"          each(match(true()),",
+				"               upper($$) = $$)",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> reDeriveColumns",
+				"reDeriveColumns window(LATEST_MODIFIEDDATETIME = max(LATEST_MODIFIEDDATETIME) ) ~> maxLastestModifieddatetime",
+				"maxLastestModifieddatetime filter(LATEST_MODIFIEDDATETIME > toTimestamp($df_prev_max_timestamp, 'yyyy-MM-dd HH:mm:ss') ) ~> pullLatestRecords",
+				"pullLatestRecords sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     stageInsert: true,",
+				"     mapColumn(",
+				"          LATEST_MODIFIEDDATETIME,",
+				"          ORACLEITEM,",
+				"          DATAAREAID,",
+				"          HK_JOB_RUN_ID,",
+				"          ITEMNUMBER,",
+				"          CONFIGURATION,",
+				"          EFFECTIVEDATE,",
+				"          STANDARDCOST,",
+				"          MATERIAL,",
+				"          LABOR,",
+				"          VARIABLEOVERHEAD,",
+				"          FIXEDOVERHEAD,",
+				"          HK_SOURCE_NAME",
+				"     )) ~> cogs"
+			]
+		}
+	}
+}

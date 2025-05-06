@@ -1,0 +1,235 @@
+{
+	"name": "pp_edw_hist_fact_inventory_transactions",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy from sqlserver to ADLS",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "select --top (10)\n\tf1.DW_Id as DW_ID,\n\tf1.CurrencyKey as CURRENCYKEY,\n\tf1.InventoryKey as INVENTORYKEY,\n\tf1.InventoryTransactionDetailsKey as INVENTORYTRANSACTIONDETAILSKEY,\n\tf1.ItemKey as ITEMKEY,\n\tf1.LegalEntityKey as LEGALENTITYKEY,\n\tf1.DateClosed as DATECLOSED,\n\tf1.DateExpected as DATEEXPECTED,\n\tf1.DateFinancial as DATEFINANCIAL,\n\tf1.DatePhysical as DATEPHYSICAL,\n\tf1.InventoryDate as INVENTORYDATE,\n\tf1.ShippingDateConfirmed as SHIPPINGDATECONFIRMED,\n\tf1.ShippingDateRequested as SHIPPINGDATEREQUESTED,\n\tf1.StatusDate as STATUSDATE,\n\tf1.RecordID as RECORDID,\n\tf1.InventoryTransactionID as INVENTORYTRANSACTIONID,\n\tf1.InvoiceID as INVOICEID,\n\tf1.LegalEntity as LEGALENTITY,\n\tf1.PackingSlipID as PACKINGSLIPID,\n\tf1.PickingRouteID as PICKINGROUTEID,\n\tf1.ReferenceID as REFERENCEID,\n\tf1.Voucher as VOUCHER,\n\tf1.VoucherPhysical as VOUCHERPHYSICAL,\n\tf1.Quantity as QUANTITY,\n\tf1.QuantitySettled as QUANTITYSETTLED,\n\tf1.CostAmountAdjustment as COSTAMOUNTADJUSTMENT,\n\tf1.CostAmountOperations as COSTAMOUNTOPERATIONS,\n\tf1.CostAmountPhysical as COSTAMOUNTPHYSICAL,\n\tf1.CostAmountPosted as COSTAMOUNTPOSTED,\n\tf1.CostAmountSettled as COSTAMOUNTSETTLED,\n\tf1.CostAmountStandard as COSTAMOUNTSTANDARD,\n\tf1.IncrementalTimeStamp as INCREMENTALTIMESTAMP,\n\tf1.InventorySiteID as INVENTORYSITEID,\n\tf1.InventoryWarehouseID as INVENTORYWAREHOUSEID,\n\tf1.DatePhysicalID as DATEPHYSICALID,\n\tcase when f1.CurrencyKey in (-1, -2) then f2.currencycode else dcurr1.currencycode end as CURRENCYCODE,\n\tcase when f1.InventoryKey in (-1, -2) then f2.inventdimid else dinv1.inventorydimensionid end as INVENTORYDIMENSIONID,\n\tcase when f1.ItemKey in (-1, -2) then f2.itemid else dit1.itemid end as ITEMID,\n\tditd1.financialstatus as FINANCIALSTATUS,\n\tditd1.referencecategory as REFERENCECATEGORY,\n\tditd1.statusissue as STATUSISSUE,\n\tditd1.statusreceipt as STATUSRECEIPT,\n\tf1.DW_Batch as DW_BATCH,\n\tf1.DW_SourceCode as DW_SOURCECODE,\n\tf1.DW_TimeStamp as DW_TIMESTAMP\nfrom dbo.FACTINVENTORYTRANSACTIONS f1 with (nolock)\n\t-- changed this to an \"inner join\" instead of a \"left join\" since it will return the same number of records and hopefully it will run faster.\n\tinner join edw_hka.dbo.FACTINVENTORYTRANSACTIONS f2 with (nolock) on\n\t\tf1.RecordID = f2.RECID\n\tleft join dbo.DIMCURRENCY dcurr1 with (nolock) on\n\t\tf1.currencykey = dcurr1.currencykey\n\tleft join dbo.DIMINVENTORY dinv1 with (nolock) on\n\t\tf1.inventorykey = dinv1.inventorykey\n\tleft join dbo.DIMITEM dit1 with (nolock) on\n\t\tf1.itemkey = dit1.itemkey\n\t\n\tleft join dbo.DIMINVENTORYTRANSACTIONDETAILS ditd1 with (nolock) on\n\t\tf1.inventorytransactiondetailskey = ditd1.inventorytransactiondetailskey;",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": false,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_sql_server",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_src_table_name": {
+								"value": "@pipeline().parameters.p_src_table_nm",
+								"type": "Expression"
+							},
+							"p_src_schema_name": {
+								"value": "@pipeline().parameters.p_src_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_serverName": {
+								"value": "@pipeline().globalParameters.edw_sql_serverName",
+								"type": "Expression"
+							},
+							"p_ls_dbName": {
+								"value": "@pipeline().globalParameters.edw_sql_dbName",
+								"type": "Expression"
+							},
+							"p_ls_sqlUsername": {
+								"value": "@pipeline().globalParameters.sql_userName",
+								"type": "Expression"
+							},
+							"p_ls_sqlPassword": {
+								"value": "@pipeline().globalParameters.sql_password",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_parq_edw",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_root_system": {
+								"value": "@pipeline().globalParameters.rootDir",
+								"type": "Expression"
+							},
+							"p_directory": {
+								"value": "@pipeline().parameters.p_temp_directory",
+								"type": "Expression"
+							},
+							"p_file_name": {
+								"value": "@concat(toUpper(pipeline().parameters.p_curate_table_name),'_HIST_',substring(string(utcNow()),0,4),'_',substring(string(utcNow()),5,2),'_',substring(string(utcNow()),8,2),'.snappy.parquet')",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "ADLS to Snowflake RAW with HK columns",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "Copy from sqlserver to ADLS",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_load_edw_history",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"adlsSource": {
+								"p_root_system": {
+									"value": "@pipeline().globalParameters.rootDir",
+									"type": "Expression"
+								},
+								"p_directory": {
+									"value": "@pipeline().parameters.p_temp_directory",
+									"type": "Expression"
+								},
+								"p_file_name": {
+									"value": "@concat(toUpper(pipeline().parameters.p_curate_table_name),'_HIST_',substring(string(utcNow()),0,4),'_',substring(string(utcNow()),5,2),'_',substring(string(utcNow()),8,2),'.snappy.parquet')",
+									"type": "Expression"
+								}
+							},
+							"snowflakeRawTarget": {
+								"p_tgt_table_name": {
+									"value": "@pipeline().parameters.p_src_table_nm",
+									"type": "Expression"
+								},
+								"p_tgt_schema_name": {
+									"value": "@pipeline().parameters.p_tgt_schema_nm",
+									"type": "Expression"
+								},
+								"p_ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_rawDb",
+									"type": "Expression"
+								},
+								"p_ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"integrationRuntime": {
+						"referenceName": "IR-Snowflake-NALA",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "RAW to CURATE SP",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "ADLS to Snowflake RAW with HK columns",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_curateDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "truncate table global.FACT_INVENTORY_TRANSACTIONS;\n\ninsert into global.FACT_INVENTORY_TRANSACTIONS (fact_inventory_transactions_key, source_name, record_id, dim_source_system_key, dim_source_system_snkey, date_closed_dim_date_key, date_closed_dim_date_snkey, date_expected_dim_date_key, date_expected_dim_date_snkey, date_financial_dim_date_key, date_financial_dim_date_snkey, date_physical_dim_date_key, date_physical_dim_date_snkey, inventory_date_dim_date_key, inventory_date_dim_date_snkey, shipping_date_confirmed_dim_date_key, shipping_date_confirmed_dim_date_snkey, shipping_date_requested_dim_date_key, shipping_date_requested_dim_date_snkey, status_date_dim_date_key, status_date_dim_date_snkey, dim_currency_key, dim_currency_snkey, dim_inventory_key, dim_inventory_snkey, dim_item_key, dim_item_snkey, dim_legal_entity_key, dim_legal_entity_snkey, currency_code, inventory_dimension_id, item_id, financial_status, reference_category, status_issue, status_receipt, date_closed, date_expected, date_financial, date_physical, inventory_date, shipping_date_confirmed, shipping_date_requested, status_date, inventory_transaction_id, invoice_id, legal_entity, packing_slip_id, picking_route_id, reference_id, voucher, voucher_physical, quantity, quantity_settled, cost_amount_adjustment, cost_amount_operations, cost_amount_physical, cost_amount_posted, cost_amount_settled, cost_amount_standard, inventory_site_id, inventory_warehouse_id, date_physical_id, hk_hash_key, hk_source_name, hk_soft_delete_flag, hk_source_created_timestamp, hk_source_last_updated_timestamp, hk_created_job_run_id, hk_last_updated_job_run_id, hk_created_timestamp, hk_last_updated_timestamp, hk_warehouse_id)\n\tselect hash(a.source_name, '~', to_char(a.record_id))::number as FACT_INVENTORY_TRANSACTIONS_KEY\n\t\t, a.source_name as SOURCE_NAME, a.record_id as RECORD_ID\n\t\t\n\t\t, case when a.source_name = '' then -2\n\t\t\telse nvl(dss1.dim_source_system_key, -1)\n\t\t\tend::number as DIM_SOURCE_SYSTEM_KEY\n\t\t, a.dim_source_system_snkey as DIM_SOURCE_SYSTEM_SNKEY\n\t\t\n\t\t, nvl(dd1.dim_date_key, -1)::number as DATE_CLOSED_DIM_DATE_KEY\n\t\t, a.date_closed_dim_date_snkey as DATE_CLOSED_DIM_DATE_SNKEY\n\t\t, nvl(dd2.dim_date_key, -1)::number as DATE_EXPECTED_DIM_DATE_KEY\n\t\t, a.date_expected_dim_date_snkey as DATE_EXPECTED_DIM_DATE_SNKEY\n\t\t, nvl(dd3.dim_date_key, -1)::number as DATE_FINANCIAL_DIM_DATE_KEY\n\t\t, a.date_financial_dim_date_snkey as DATE_FINANCIAL_DIM_DATE_SNKEY\n\t\t, nvl(dd4.dim_date_key, -1)::number as DATE_PHYSICAL_DIM_DATE_KEY\n\t\t, a.date_physical_dim_date_snkey as DATE_PHYSICAL_DIM_DATE_SNKEY\n\t\t, nvl(dd5.dim_date_key, -1)::number as INVENTORY_DATE_DIM_DATE_KEY\n\t\t, a.inventory_date_dim_date_snkey as INVENTORY_DATE_DIM_DATE_SNKEY\n\t\t, nvl(dd6.dim_date_key, -1)::number as SHIPPING_DATE_CONFIRMED_DIM_DATE_KEY\n\t\t, a.shipping_date_confirmed_dim_date_snkey as SHIPPING_DATE_CONFIRMED_DIM_DATE_SNKEY\n\t\t, nvl(dd7.dim_date_key, -1)::number as SHIPPING_DATE_REQUESTED_DIM_DATE_KEY\n\t\t, a.shipping_date_requested_dim_date_snkey as SHIPPING_DATE_REQUESTED_DIM_DATE_SNKEY\n\t\t, nvl(dd8.dim_date_key, -1)::number as STATUS_DATE_DIM_DATE_KEY\n\t\t, a.status_date_dim_date_snkey as STATUS_DATE_DIM_DATE_SNKEY\n\t\t\n\t\t, case when a.dim_currency_snkey = -2 then -2\n\t\t\t\telse nvl(dcurr1.dim_currency_key, -1)\n\t\t\tend::number as DIM_CURRENCY_KEY\n\t\t, a.dim_currency_snkey as DIM_CURRENCY_SNKEY\n\t\t, case when a.dim_inventory_snkey = -2 then -2\n\t\t\t\telse nvl(dinv1.dim_inventory_key, -1)\n\t\t\tend::number as DIM_INVENTORY_KEY\n\t\t, case when a.dim_inventory_snkey = -2 then -2\n\t\t\t\telse a.dim_inventory_snkey\n\t\t\tend::number as DIM_INVENTORY_SNKEY\n\t\t, case when a.dim_item_snkey = -2 then -2\n\t\t\t\telse nvl(dit1.dim_item_key, -1)\n\t\t\tend::number as DIM_ITEM_KEY\n\t\t, a.dim_item_snkey as DIM_ITEM_SNKEY\n\t\t, case when a.dim_legal_entity_snkey = -2 then -2\n\t\t\t\telse nvl(dle1.dim_legal_entity_key, -1)\n\t\t\tend::number as DIM_LEGAL_ENTITY_KEY\n\t\t, a.dim_legal_entity_snkey as DIM_LEGAL_ENTITY_SNKEY\n\t\t\n\t\t, a.currency_code as CURRENCY_CODE, a.inventory_dimension_id as INVENTORY_DIMENSION_ID, a.item_id as ITEM_ID, a.financial_status as FINANCIAL_STATUS, a.reference_category as REFERENCE_CATEGORY, a.status_issue as STATUS_ISSUE, a.status_receipt as STATUS_RECEIPT, a.date_closed as DATE_CLOSED, a.date_expected as DATE_EXPECTED, a.date_financial as DATE_FINANCIAL, a.date_physical as DATE_PHYSICAL, a.inventory_date as INVENTORY_DATE, a.shipping_date_confirmed as SHIPPING_DATE_CONFIRMED, a.shipping_date_requested as SHIPPING_DATE_REQUESTED, a.status_date as STATUS_DATE, a.inventory_transaction_id as INVENTORY_TRANSACTION_ID, a.invoice_id as INVOICE_ID, a.legal_entity as LEGAL_ENTITY, a.packing_slip_id as PACKING_SLIP_ID, a.picking_route_id as PICKING_ROUTE_ID, a.reference_id as REFERENCE_ID, a.voucher as VOUCHER, a.voucher_physical as VOUCHER_PHYSICAL, a.quantity as QUANTITY, a.quantity_settled as QUANTITY_SETTLED, a.cost_amount_adjustment as COST_AMOUNT_ADJUSTMENT, a.cost_amount_operations as COST_AMOUNT_OPERATIONS, a.cost_amount_physical as COST_AMOUNT_PHYSICAL, a.cost_amount_posted as COST_AMOUNT_POSTED, a.cost_amount_settled as COST_AMOUNT_SETTLED, a.cost_amount_standard as COST_AMOUNT_STANDARD, a.inventory_site_id as INVENTORY_SITE_ID, a.inventory_warehouse_id as INVENTORY_WAREHOUSE_ID, a.date_physical_id as DATE_PHYSICAL_ID\n\t\t\n\t\t, hash(a.source_name, '~', to_char(a.record_id), '~', a.currency_code, '~', a.inventory_dimension_id, '~', a.item_id, '~', a.financial_status, '~', a.reference_category, '~', a.status_issue, '~', a.status_receipt, '~', to_char(a.date_closed, 'yyyymmdd'), '~', to_char(a.date_expected, 'yyyymmdd'), '~', to_char(a.date_financial, 'yyyymmdd'), '~', to_char(a.date_physical, 'yyyymmdd'), '~', to_char(a.inventory_date, 'yyyymmdd'), '~', to_char(a.shipping_date_confirmed, 'yyyymmdd'), '~', to_char(a.shipping_date_requested, 'yyyymmdd'), '~', to_char(a.status_date, 'yyyymmdd'), '~', a.inventory_transaction_id, '~', a.invoice_id, '~', a.legal_entity, '~', a.packing_slip_id, '~', a.picking_route_id, '~', a.reference_id, '~', a.voucher, '~', a.voucher_physical, '~', to_char(a.quantity), '~', to_char(a.quantity_settled), '~', to_char(a.cost_amount_adjustment), '~', to_char(a.cost_amount_operations), '~', to_char(a.cost_amount_physical), '~', to_char(a.cost_amount_posted), '~', to_char(a.cost_amount_settled), '~', to_char(a.cost_amount_standard), '~', a.inventory_site_id, '~', a.inventory_warehouse_id, '~', to_char(a.date_physical_id))::number as HK_HASH_KEY\n\t\t\n\t\t, a.hk_source_name as HK_SOURCE_NAME\n\t\t, false::boolean as HK_SOFT_DELETE_FLAG\n\t\t, a.hk_source_created_timestamp as HK_SOURCE_CREATED_TIMESTAMP, a.hk_source_last_updated_timestamp as HK_SOURCE_LAST_UPDATED_TIMESTAMP, a.hk_created_job_run_id as HK_CREATED_JOB_RUN_ID, a.hk_last_updated_job_run_id as HK_LAST_UPDATED_JOB_RUN_ID\n\t\t, current_timestamp::timestamp_tz as HK_CREATED_TIMESTAMP\n\t\t, current_timestamp::timestamp_tz as HK_LAST_UPDATED_TIMESTAMP\n\t\t, uuid_string()::varchar as HK_WAREHOUSE_ID\n\t\n\tfrom (select 'AXNALA'::varchar as SOURCE_NAME\n\t\t\t, nvl(b.recordid, 0)::number(38, 0) as RECORD_ID\n\t\t\t\n\t\t\t, nvl(b.currencycode, '')::varchar as CURRENCY_CODE\n\t\t\t, nvl(b.inventorydimensionid, '')::varchar as INVENTORY_DIMENSION_ID\n\t\t\t, nvl(b.itemid, '')::varchar as ITEM_ID\n\t\t\t, nvl(b.financialstatus, '')::varchar as FINANCIAL_STATUS\n\t\t\t, nvl(b.referencecategory, '')::varchar as REFERENCE_CATEGORY\n\t\t\t, nvl(b.statusissue, '')::varchar as STATUS_ISSUE\n\t\t\t, nvl(b.statusreceipt, '')::varchar as STATUS_RECEIPT\n\t\t\t, case when nvl(b.dateclosed, '1900-01-01') in ('1900-01-01') then '1950-01-01'\n\t\t\t\t\twhen b.dateclosed < dd1.min_date_value then '1951-12-31'\n\t\t\t\t\twhen b.dateclosed > dd1.max_date_value then '9951-12-31'\n\t\t\t\telse b.dateclosed\n\t\t\t\tend::date as DATE_CLOSED\n\t\t\t, case when nvl(b.dateexpected, '1900-01-01') in ('1900-01-01') then '1950-01-01'\n\t\t\t\t\twhen b.dateexpected < dd1.min_date_value then '1951-12-31'\n\t\t\t\t\twhen b.dateexpected > dd1.max_date_value then '9951-12-31'\n\t\t\t\telse b.dateexpected\n\t\t\t\tend::date as DATE_EXPECTED\n\t\t\t, case when nvl(b.datefinancial, '1900-01-01') in ('1900-01-01') then '1950-01-01'\n\t\t\t\t\twhen b.datefinancial < dd1.min_date_value then '1951-12-31'\n\t\t\t\t\twhen b.datefinancial > dd1.max_date_value then '9951-12-31'\n\t\t\t\telse b.datefinancial\n\t\t\t\tend::date as DATE_FINANCIAL\n\t\t\t, case when nvl(b.datephysical, '1900-01-01') in ('1900-01-01') then '1950-01-01'\n\t\t\t\t\twhen b.datephysical < dd1.min_date_value then '1951-12-31'\n\t\t\t\t\twhen b.datephysical > dd1.max_date_value then '9951-12-31'\n\t\t\t\telse b.datephysical\n\t\t\t\tend::date as DATE_PHYSICAL\n\t\t\t, case when nvl(b.inventorydate, '1900-01-01') in ('1900-01-01') then '1950-01-01'\n\t\t\t\t\twhen b.inventorydate < dd1.min_date_value then '1951-12-31'\n\t\t\t\t\twhen b.inventorydate > dd1.max_date_value then '9951-12-31'\n\t\t\t\telse b.inventorydate\n\t\t\t\tend::date as INVENTORY_DATE\n\t\t\t, case when nvl(b.shippingdateconfirmed, '1900-01-01') in ('1900-01-01') then '1950-01-01'\n\t\t\t\t\twhen b.shippingdateconfirmed < dd1.min_date_value then '1951-12-31'\n\t\t\t\t\twhen b.shippingdateconfirmed > dd1.max_date_value then '9951-12-31'\n\t\t\t\telse b.shippingdateconfirmed\n\t\t\t\tend::date as SHIPPING_DATE_CONFIRMED\n\t\t\t, case when nvl(b.shippingdaterequested, '1900-01-01') in ('1900-01-01') then '1950-01-01'\n\t\t\t\t\twhen b.shippingdaterequested < dd1.min_date_value then '1951-12-31'\n\t\t\t\t\twhen b.shippingdaterequested > dd1.max_date_value then '9951-12-31'\n\t\t\t\telse b.shippingdaterequested\n\t\t\t\tend::date as SHIPPING_DATE_REQUESTED\n\t\t\t, case when nvl(b.statusdate, '1900-01-01') in ('1900-01-01') then '1950-01-01'\n\t\t\t\t\twhen b.statusdate < dd1.min_date_value then '1951-12-31'\n\t\t\t\t\twhen b.statusdate > dd1.max_date_value then '9951-12-31'\n\t\t\t\telse b.statusdate\n\t\t\t\tend::date as STATUS_DATE\n\t\t\t, nvl(b.inventorytransactionid, '')::varchar as INVENTORY_TRANSACTION_ID\n\t\t\t, nvl(b.invoiceid, '')::varchar as INVOICE_ID\n\t\t\t, nvl(b.legalentity, '')::varchar as LEGAL_ENTITY\n\t\t\t, nvl(b.packingslipid, '')::varchar as PACKING_SLIP_ID\n\t\t\t, nvl(b.pickingrouteid, '')::varchar as PICKING_ROUTE_ID\n\t\t\t, nvl(b.referenceid, '')::varchar as REFERENCE_ID\n\t\t\t, nvl(b.voucher_src, '')::varchar as VOUCHER\n\t\t\t, nvl(b.voucherphysical, '')::varchar as VOUCHER_PHYSICAL\n\t\t\t, nvl(b.quantity_src, 0)::number(28, 16) as QUANTITY\n\t\t\t, nvl(b.quantitysettled, 0)::number(28, 16) as QUANTITY_SETTLED\n\t\t\t, nvl(b.costamountadjustment, 0)::number(28, 16) as COST_AMOUNT_ADJUSTMENT\n\t\t\t, nvl(b.costamountoperations, 0)::number(28, 16) as COST_AMOUNT_OPERATIONS\n\t\t\t, nvl(b.costamountphysical, 0)::number(28, 16) as COST_AMOUNT_PHYSICAL\n\t\t\t, nvl(b.costamountposted, 0)::number(28, 16) as COST_AMOUNT_POSTED\n\t\t\t, nvl(b.costamountsettled, 0)::number(28, 16) as COST_AMOUNT_SETTLED\n\t\t\t, nvl(b.costamountstandard, 0)::number(28, 16) as COST_AMOUNT_STANDARD\n\t\t\t, nvl(b.inventorysiteid, '')::varchar as INVENTORY_SITE_ID\n\t\t\t, nvl(b.inventorywarehouseid, '')::varchar as INVENTORY_WAREHOUSE_ID\n\t\t\t, nvl(b.datephysicalid, 0)::number(38, 0) as DATE_PHYSICAL_ID\n\t\t\t\n\t\t\t, case when nvl(SOURCE_NAME, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME)\n\t\t\t\tend::number as DIM_SOURCE_SYSTEM_SNKEY\n\t\t\t, case when nvl(DATE_CLOSED, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(DATE_CLOSED, 'yyyymmdd'))\n\t\t\t\tend::number as DATE_CLOSED_DIM_DATE_SNKEY\n\t\t\t, case when nvl(DATE_EXPECTED, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(DATE_EXPECTED, 'yyyymmdd'))\n\t\t\t\tend::number as DATE_EXPECTED_DIM_DATE_SNKEY\n\t\t\t, case when nvl(DATE_FINANCIAL, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(DATE_FINANCIAL, 'yyyymmdd'))\n\t\t\t\tend::number as DATE_FINANCIAL_DIM_DATE_SNKEY\n\t\t\t, case when nvl(DATE_PHYSICAL, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(DATE_PHYSICAL, 'yyyymmdd'))\n\t\t\t\tend::number as DATE_PHYSICAL_DIM_DATE_SNKEY\n\t\t\t, case when nvl(INVENTORY_DATE, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(INVENTORY_DATE, 'yyyymmdd'))\n\t\t\t\tend::number as INVENTORY_DATE_DIM_DATE_SNKEY\n\t\t\t, case when nvl(SHIPPING_DATE_CONFIRMED, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(SHIPPING_DATE_CONFIRMED, 'yyyymmdd'))\n\t\t\t\tend::number as SHIPPING_DATE_CONFIRMED_DIM_DATE_SNKEY\n\t\t\t, case when nvl(SHIPPING_DATE_REQUESTED, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(SHIPPING_DATE_REQUESTED, 'yyyymmdd'))\n\t\t\t\tend::number as SHIPPING_DATE_REQUESTED_DIM_DATE_SNKEY\n\t\t\t, case when nvl(STATUS_DATE, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(STATUS_DATE, 'yyyymmdd'))\n\t\t\t\tend::number as STATUS_DATE_DIM_DATE_SNKEY\n\t\t\t\n\t\t\t, case when nvl(CURRENCY_CODE, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', CURRENCY_CODE)\n\t\t\t\tend::number as DIM_CURRENCY_SNKEY\n\t\t\t, case when nvl(LEGAL_ENTITY, '') = '' or nvl(INVENTORY_DIMENSION_ID, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', LEGAL_ENTITY, '~', INVENTORY_DIMENSION_ID)\n\t\t\t\tend::number as DIM_INVENTORY_SNKEY\n\t\t\t, case when nvl(LEGAL_ENTITY, '') = '' or nvl(ITEM_ID, '') = '' then -2\n\t\t\t\telse hash('', '~', LEGAL_ENTITY, '~', ITEM_ID)\t-- (NOTE: ITEM_KEY is unique across all source systems; therefore, this field will always be set to '')\n\t\t\t\tend::number as DIM_ITEM_SNKEY\n\t\t\t, case when nvl(LEGAL_ENTITY, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', LEGAL_ENTITY)\n\t\t\t\tend::number as DIM_LEGAL_ENTITY_SNKEY\n\t\t\t\n\t\t\t, nvl(b.dw_sourcecode, '')::varchar as HK_SOURCE_NAME\n\t\t\t, '1950-01-01 00:00:00'::timestamp_tz as HK_SOURCE_CREATED_TIMESTAMP\n\t\t\t, nvl(b.dw_timestamp, '1950-01-01 00:00:00')::timestamp_tz as HK_SOURCE_LAST_UPDATED_TIMESTAMP\n\t\t\t, '-1'::varchar as HK_CREATED_JOB_RUN_ID\n\t\t\t, nvl(b.dw_batch, '-1')::varchar as HK_LAST_UPDATED_JOB_RUN_ID\n\t\t\t\n\t\tfrom (select hk_source_name, hk_job_run_id, hk_created_timestamp, hk_warehouse_id, dw_id, currencykey, inventorykey, inventorytransactiondetailskey, itemkey, legalentitykey, dateclosed, dateexpected, datefinancial, datephysical, inventorydate, shippingdateconfirmed, shippingdaterequested, statusdate, recordid, inventorytransactionid, invoiceid, legalentity, packingslipid, pickingrouteid, referenceid, voucher as VOUCHER_SRC, voucherphysical, quantity as QUANTITY_SRC, quantitysettled, costamountadjustment, costamountoperations, costamountphysical, costamountposted, costamountsettled, costamountstandard, incrementaltimestamp, inventorysiteid, inventorywarehouseid, datephysicalid, currencycode, inventorydimensionid, itemid, financialstatus, referencecategory, statusissue, statusreceipt, dw_batch, dw_sourcecode, dw_timestamp\n\t\t\tfrom @{pipeline().globalParameters.environment}_raw.edw_dwh.FACTINVENTORYTRANSACTIONS\n\t\t\t) b\n\t\t\tinner join (select min(date_value) as MIN_DATE_VALUE\n\t\t\t\t\t\t\t, max(date_value) as MAX_DATE_VALUE\n\t\t\t\t\t\tfrom global.DIM_DATE\n\t\t\t\t\t\twhere date_value not in ('1950-01-01', '1951-12-31', '9000-01-01', '9951-12-31')) dd1 on\n\t\t\t\t1=1\n\t\t) a\n\tleft join global.DIM_SOURCE_SYSTEM dss1 on\n\t\ta.dim_source_system_snkey = dss1.dim_source_system_snkey\n\tleft join global.DIM_DATE dd1 on\n\t\ta.date_closed_dim_date_snkey = dd1.dim_date_snkey\n\tleft join global.DIM_DATE dd2 on\n\t\ta.date_expected_dim_date_snkey = dd2.dim_date_snkey\n\tleft join global.DIM_DATE dd3 on\n\t\ta.date_financial_dim_date_snkey = dd3.dim_date_snkey\n\tleft join global.DIM_DATE dd4 on\n\t\ta.date_physical_dim_date_snkey = dd4.dim_date_snkey\n\tleft join global.DIM_DATE dd5 on\n\t\ta.inventory_date_dim_date_snkey = dd5.dim_date_snkey\n\tleft join global.DIM_DATE dd6 on\n\t\ta.shipping_date_confirmed_dim_date_snkey = dd6.dim_date_snkey\n\tleft join global.DIM_DATE dd7 on\n\t\ta.shipping_date_requested_dim_date_snkey = dd7.dim_date_snkey\n\tleft join global.DIM_DATE dd8 on\n\t\ta.status_date_dim_date_snkey = dd8.dim_date_snkey\n\tleft join global.DIM_CURRENCY dcurr1 on\n\t\ta.dim_currency_snkey = dcurr1.dim_currency_snkey\n\tleft join global.DIM_INVENTORY dinv1 on\n\t\ta.dim_inventory_snkey = dinv1.dim_inventory_snkey\n\tleft join global.DIM_ITEM dit1 on\n\t\ta.dim_item_snkey = dit1.dim_item_snkey\n\tleft join global.DIM_LEGAL_ENTITY dle1 on\n\t\ta.dim_legal_entity_snkey = dle1.dim_legal_entity_snkey\n;\n\n",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "FACTINVENTORYTRANSACTIONS"
+			},
+			"p_temp_directory": {
+				"type": "string",
+				"defaultValue": "temp_files"
+			},
+			"p_tgt_schema_nm": {
+				"type": "string",
+				"defaultValue": "EDW_DWH"
+			},
+			"p_curate_table_name": {
+				"type": "string",
+				"defaultValue": "FACT_INVENTORY_TRANSACTIONS"
+			}
+		},
+		"folder": {
+			"name": "history_fact"
+		},
+		"annotations": []
+	}
+}

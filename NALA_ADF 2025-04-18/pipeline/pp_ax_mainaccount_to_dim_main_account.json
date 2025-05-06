@@ -1,0 +1,2126 @@
+{
+	"name": "pp_ax_mainaccount_to_dim_main_account",
+	"properties": {
+		"activities": [
+			{
+				"name": "raw_to_curate_sp_call",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "load_dim_main_account",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_rawDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('CALL ',pipeline().globalParameters.environment,'_AUDIT.CONTROL.SP_TASK_INITIALIZE(','''',pipeline().RunId,'''',',','''',pipeline().globalParameters.environment,'''',',','''',pipeline().parameters.p_tgt_curate_table_nm,'''',',',pipeline().parameters.p_src_code,')')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "stored_procedure_failure_notification",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_adf_pipeline_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"subscription": {
+							"value": "@pipeline().globalParameters.subscriptionId",
+							"type": "Expression"
+						},
+						"resourceGroup": {
+							"value": "@pipeline().globalParameters.resourceGroup",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@coalesce(pipeline().RunId, -1)",
+							"type": "Expression"
+						},
+						"name": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"triggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"status": {
+							"value": "@activity('raw_to_curate_sp_call').Status",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@activity('raw_to_curate_sp_call').Error['message']",
+							"type": "Expression"
+						},
+						"executionEndTime": {
+							"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+							"type": "Expression"
+						},
+						"runDuration": {
+							"value": "@activity('raw_to_curate_sp_call').Duration",
+							"type": "Expression"
+						},
+						"teamWebhookUrl": {
+							"value": "@pipeline().globalParameters.teamsWebhookUrl",
+							"type": "Expression"
+						},
+						"notificationTime": {
+							"value": "@utcNow()",
+							"type": "Expression"
+						},
+						"taskName": {
+							"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+							"type": "Expression"
+						},
+						"taskStepNumber": {
+							"value": "@pipeline().parameters.p_src_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "lkp_raw_last_modified_date",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "set_last_mod_tmstmp_OpsFinance_Mapping",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SnowflakeSource",
+						"query": {
+							"value": "@concat('select max(to_varchar(LATEST_MODIFIEDDATETIME::timestamp, ''','yyyy-mm-dd hh24:mi:ss',''')) as max_date from ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_rawDb,'.',pipeline().parameters.p_tgt_raw_schema_nm, '.', pipeline().parameters.p_tgt_raw_table_nm)",
+							"type": "Expression"
+						},
+						"exportSettings": {
+							"type": "SnowflakeExportCopyCommand"
+						}
+					},
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_tgt_table_name": {
+								"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+								"type": "Expression"
+							},
+							"p_tgt_schema_name": {
+								"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_DbName": {
+								"value": "@pipeline().globalParameters.snow_rawDb",
+								"type": "Expression"
+							},
+							"p_ls_Env": {
+								"value": "@pipeline().globalParameters.environment",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "set_last_modified_date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkp_raw_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_prev_max_timestamp",
+					"value": {
+						"value": "@coalesce(activity('lkp_raw_last_modified_date').output.firstRow.max_date, '1950-01-01 00:00:00')\n\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "switch_nala_retail_d365",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "set_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.p_src_code",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "1",
+							"activities": [
+								{
+									"name": "mainaccount_to_adls_nala",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": {
+												"value": "SELECT ma1.RECID as RECID ,ma1.MAINACCOUNTID as MAINACCOUNTID ,ma1.NAME as NAME ,ma1.ACCOUNTCATEGORYREF as ACCOUNTCATEGORYREF ,ma1.LEDGERCHARTOFACCOUNTS as LEDGERCHARTOFACCOUNTS ,ma1.TYPE as TYPE ,ma1.POSTINGTYPE as POSTINGTYPE ,ma1.MONETARY as MONETARY ,ma1.MODIFIEDDATETIME as MODIFIEDDATETIME ,mac1.ACCOUNTCATEGORY as MAINACCOUNTCATEGORY_ACCOUNTCATEGORY ,mac1.DESCRIPTION as MAINACCOUNTCATEGORY_DESCRIPTION ,lcoa1.NAME as LEDGERCHARTOFACCOUNTS_NAME ,lcoa1.DESCRIPTION as LEDGERCHARTOFACCOUNTS_DESCRIPTION ,tet1.ENUMVALUELABEL as TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_DIMENSIONLEDGERACCOUNTTYPE ,tet2.ENUMVALUELABEL as TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_LEDGERPOSTINGTYPE ,ma2.LEVEL1 as MAINACCOUNT2_LEVEL1 ,ma2.LEVEL2 as MAINACCOUNT2_LEVEL2 ,ma2.LEVEL3 as MAINACCOUNT2_LEVEL3 ,ma2.LEVEL4 as MAINACCOUNT2_LEVEL4 ,ma2.LEVEL5 as MAINACCOUNT2_LEVEL5 ,ma2.LEVEL6 as MAINACCOUNT2_LEVEL6 ,ma1.MODIFIEDDATETIME FROM dbo.MAINACCOUNT ma1 left join dbo.MAINACCOUNTCATEGORY mac1 on \tma1.ACCOUNTCATEGORYREF = mac1.ACCOUNTCATEGORYREF left join dbo.LEDGERCHARTOFACCOUNTS lcoa1 on \tma1.LEDGERCHARTOFACCOUNTS = lcoa1.RECID left join (select ENUMNAME, ENUMVALUE \t\t\t, max(ENUMVALUELABEL) as ENUMVALUELABEL \t\tfrom dbo.TIMEXTENDERENUMTABLE \t\twhere ENUMNAME = 'DimensionLedgerAccountType' \t\tgroup by ENUMNAME, ENUMVALUE) tet1 on \tma1.TYPE = tet1.ENUMVALUE left join (select ENUMNAME, ENUMVALUE \t\t\t, max(ENUMVALUELABEL) as ENUMVALUELABEL \t\tfrom dbo.TIMEXTENDERENUMTABLE \t\twhere ENUMNAME = 'LedgerPostingType' \t\tgroup by ENUMNAME, ENUMVALUE) tet2 on \tma1.POSTINGTYPE = tet2.ENUMVALUE left join (select ma20.MAINACCOUNTID, ma20.LEDGERCHARTOFACCOUNTS \t\t\t, substring(ma20.MAINACCOUNTID, 1, 1) as LEVEL1 \t\t\t, isnull(ma20.LEVEL2_PROSPECT, ma20.LEVEL3_PROSPECT) as LEVEL2 \t\t\t, isnull(ma20.LEVEL3_PROSPECT, ma20.LEVEL4_PROSPECT) as LEVEL3 \t\t\t, isnull(ma20.LEVEL4_PROSPECT, ma20.LEVEL5_PROSPECT) as LEVEL4 \t\t\t, isnull(ma20.LEVEL5_PROSPECT, ma20.LEVEL6_PROSPECT) as LEVEL5 \t\t\t, ma20.LEVEL6_PROSPECT as LEVEL6 \t\tfrom (select ma_hier1.MAINACCOUNTID, ma_hier1.LEDGERCHARTOFACCOUNTS \t\t\t\t, ma_master2.MAINACCOUNTID as LEVEL2_PROSPECT \t\t\t\t, ma_master3.MAINACCOUNTID as LEVEL3_PROSPECT \t\t\t\t, ma_master4.MAINACCOUNTID as LEVEL4_PROSPECT \t\t\t\t, ma_master5.MAINACCOUNTID as LEVEL5_PROSPECT \t\t\t\t, ma_master6.MAINACCOUNTID as LEVEL6_PROSPECT \t\t\tfrom dbo.MAINACCOUNT ma_hier1 \t\t\tleft join dbo.MAINACCOUNT ma_master2 on \t\t\t\tleft(ma_master2.MAINACCOUNTID, 1) like '[0-9]' and \t\t\t\tma_master2.MAINACCOUNTID not like '%T' and \t\t\t\tma_hier1.LEDGERCHARTOFACCOUNTS = ma_master2.LEDGERCHARTOFACCOUNTS and \t\t\t\tcase when len(ma_hier1.MAINACCOUNTID) >= 2 then substring(ma_hier1.MAINACCOUNTID, 1, 2) else null end = ma_master2.MAINACCOUNTID \t\t\tleft join dbo.MAINACCOUNT ma_master3 on \t\t\t\tleft(ma_master3.MAINACCOUNTID, 1) like '[0-9]' and \t\t\t\tma_master3.MAINACCOUNTID not like '%T' and \t\t\t\tma_hier1.LEDGERCHARTOFACCOUNTS = ma_master3.LEDGERCHARTOFACCOUNTS and \t\t\t\tcase when len(ma_hier1.MAINACCOUNTID) >= 3 then substring(ma_hier1.MAINACCOUNTID, 1, 3) else null end = ma_master3.MAINACCOUNTID \t\t\tleft join dbo.MAINACCOUNT ma_master4 on \t\t\t\tleft(ma_master4.MAINACCOUNTID, 1) like '[0-9]' and \t\t\t\tma_master4.MAINACCOUNTID not like '%T' and \t\t\t\tma_hier1.LEDGERCHARTOFACCOUNTS = ma_master4.LEDGERCHARTOFACCOUNTS and \t\t\t\tcase when len(ma_hier1.MAINACCOUNTID) >= 4 then substring(ma_hier1.MAINACCOUNTID, 1, 4) else null end = ma_master4.MAINACCOUNTID \t\t\tleft join dbo.MAINACCOUNT ma_master5 on \t\t\t\tleft(ma_master5.MAINACCOUNTID, 1) like '[0-9]' and \t\t\t\tma_master5.MAINACCOUNTID not like '%T' and \t\t\t\tma_hier1.LEDGERCHARTOFACCOUNTS = ma_master5.LEDGERCHARTOFACCOUNTS and \t\t\t\tcase when len(ma_hier1.MAINACCOUNTID) >= 5 then substring(ma_hier1.MAINACCOUNTID, 1, 5) else null end = ma_master5.MAINACCOUNTID \t\t\tleft join dbo.MAINACCOUNT ma_master6 on \t\t\t\tleft(ma_master6.MAINACCOUNTID, 1) like '[0-9]' and \t\t\t\tma_master6.MAINACCOUNTID not like '%T' and \t\t\t\tma_hier1.LEDGERCHARTOFACCOUNTS = ma_master6.LEDGERCHARTOFACCOUNTS and \t\t\t\tcase when len(ma_hier1.MAINACCOUNTID) >= 6 then substring(ma_hier1.MAINACCOUNTID, 1, 6) else null end = ma_master6.MAINACCOUNTID \t\t\twhere left(ma_hier1.MAINACCOUNTID, 1) like '[0-9]' \t\t\tand ma_hier1.MAINACCOUNTID not like '%T') ma20 \t\t) ma2 on \tma1.MAINACCOUNTID = ma2.MAINACCOUNTID and \tma1.LEDGERCHARTOFACCOUNTS = ma2.LEDGERCHARTOFACCOUNTS",
+												"type": "Expression"
+											},
+											"queryTimeout": "20:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "RECID",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "RECID",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNTID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MAINACCOUNTID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "ACCOUNTCATEGORYREF",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "ACCOUNTCATEGORYREF",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERCHARTOFACCOUNTS",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "LEDGERCHARTOFACCOUNTS",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "TYPE",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "TYPE",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "POSTINGTYPE",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "POSTINGTYPE",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "MONETARY",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "MONETARY",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNTCATEGORY_ACCOUNTCATEGORY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MAINACCOUNTCATEGORY_ACCOUNTCATEGORY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNTCATEGORY_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MAINACCOUNTCATEGORY_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERCHARTOFACCOUNTS_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LEDGERCHARTOFACCOUNTS_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERCHARTOFACCOUNTS_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LEDGERCHARTOFACCOUNTS_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_DIMENSIONLEDGERACCOUNTTYPE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_DIMENSIONLEDGERACCOUNTTYPE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_LEDGERPOSTINGTYPE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_LEDGERPOSTINGTYPE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNT2_LEVEL1",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MAINACCOUNT2_LEVEL1",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNT2_LEVEL2",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MAINACCOUNT2_LEVEL2",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNT2_LEVEL3",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MAINACCOUNT2_LEVEL3",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNT2_LEVEL4",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MAINACCOUNT2_LEVEL4",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNT2_LEVEL5",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MAINACCOUNT2_LEVEL5",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNT2_LEVEL6",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MAINACCOUNT2_LEVEL6",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": true
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_sql_server",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_src_table_name": {
+													"value": "@pipeline().parameters.p_src_table_nm",
+													"type": "Expression"
+												},
+												"p_src_schema_name": {
+													"value": "@pipeline().parameters.p_src_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_serverName": {
+													"value": "@pipeline().globalParameters.nala_sql_serverName",
+													"type": "Expression"
+												},
+												"p_ls_dbName": {
+													"value": "@pipeline().globalParameters.nala_sql_dbName",
+													"type": "Expression"
+												},
+												"p_ls_sqlUsername": {
+													"value": "@pipeline().globalParameters.sql_userName",
+													"type": "Expression"
+												},
+												"p_ls_sqlPassword": {
+													"value": "@pipeline().globalParameters.sql_password",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_directory": {
+													"value": "@pipeline().parameters.p_temp_directory",
+													"type": "Expression"
+												},
+												"p_root_system": {
+													"value": "@pipeline().globalParameters.rootDir",
+													"type": "Expression"
+												},
+												"p_file_name": {
+													"value": "@pipeline().parameters.p_temp_file_nm",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "nala_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "mainaccount_to_adls_nala",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('mainaccount_to_adls_nala').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('mainaccount_to_adls_nala').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('mainaccount_to_adls_nala').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('mainaccount_to_adls_nala').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_nala_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "nala_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('mainaccount_to_adls_nala').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						},
+						{
+							"value": "2",
+							"activities": [
+								{
+									"name": "mainaccount_to_adls_retail",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": {
+												"value": "SELECT ma1.RECID as RECID ,ma1.MAINACCOUNTID as MAINACCOUNTID ,ma1.NAME as NAME ,ma1.ACCOUNTCATEGORYREF as ACCOUNTCATEGORYREF ,ma1.LEDGERCHARTOFACCOUNTS as LEDGERCHARTOFACCOUNTS ,ma1.TYPE as TYPE ,ma1.POSTINGTYPE as POSTINGTYPE ,ma1.MONETARY as MONETARY ,ma1.MODIFIEDDATETIME as MODIFIEDDATETIME ,mac1.ACCOUNTCATEGORY as MAINACCOUNTCATEGORY_ACCOUNTCATEGORY ,mac1.DESCRIPTION as MAINACCOUNTCATEGORY_DESCRIPTION ,lcoa1.NAME as LEDGERCHARTOFACCOUNTS_NAME ,lcoa1.DESCRIPTION as LEDGERCHARTOFACCOUNTS_DESCRIPTION ,tet1.ENUMVALUELABEL as TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_DIMENSIONLEDGERACCOUNTTYPE ,tet2.ENUMVALUELABEL as TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_LEDGERPOSTINGTYPE ,ma2.LEVEL1 as MAINACCOUNT2_LEVEL1 ,ma2.LEVEL2 as MAINACCOUNT2_LEVEL2 ,ma2.LEVEL3 as MAINACCOUNT2_LEVEL3 ,ma2.LEVEL4 as MAINACCOUNT2_LEVEL4 ,ma2.LEVEL5 as MAINACCOUNT2_LEVEL5 ,ma2.LEVEL6 as MAINACCOUNT2_LEVEL6 ,ma1.MODIFIEDDATETIME FROM dbo.MAINACCOUNT ma1 left join dbo.MAINACCOUNTCATEGORY mac1 on \tma1.ACCOUNTCATEGORYREF = mac1.ACCOUNTCATEGORYREF left join dbo.LEDGERCHARTOFACCOUNTS lcoa1 on \tma1.LEDGERCHARTOFACCOUNTS = lcoa1.RECID left join (select ENUMNAME, ENUMVALUE \t\t\t, max(ENUMVALUELABEL) as ENUMVALUELABEL \t\tfrom dbo.TIMEXTENDERENUMTABLE \t\twhere ENUMNAME = 'DimensionLedgerAccountType' \t\tgroup by ENUMNAME, ENUMVALUE) tet1 on \tma1.TYPE = tet1.ENUMVALUE left join (select ENUMNAME, ENUMVALUE \t\t\t, max(ENUMVALUELABEL) as ENUMVALUELABEL \t\tfrom dbo.TIMEXTENDERENUMTABLE \t\twhere ENUMNAME = 'LedgerPostingType' \t\tgroup by ENUMNAME, ENUMVALUE) tet2 on \tma1.POSTINGTYPE = tet2.ENUMVALUE left join (select ma20.MAINACCOUNTID, ma20.LEDGERCHARTOFACCOUNTS \t\t\t, substring(ma20.MAINACCOUNTID, 1, 1) as LEVEL1 \t\t\t, isnull(ma20.LEVEL2_PROSPECT, ma20.LEVEL3_PROSPECT) as LEVEL2 \t\t\t, isnull(ma20.LEVEL3_PROSPECT, ma20.LEVEL4_PROSPECT) as LEVEL3 \t\t\t, isnull(ma20.LEVEL4_PROSPECT, ma20.LEVEL5_PROSPECT) as LEVEL4 \t\t\t, isnull(ma20.LEVEL5_PROSPECT, ma20.LEVEL6_PROSPECT) as LEVEL5 \t\t\t, ma20.LEVEL6_PROSPECT as LEVEL6 \t\tfrom (select ma_hier1.MAINACCOUNTID, ma_hier1.LEDGERCHARTOFACCOUNTS \t\t\t\t, ma_master2.MAINACCOUNTID as LEVEL2_PROSPECT \t\t\t\t, ma_master3.MAINACCOUNTID as LEVEL3_PROSPECT \t\t\t\t, ma_master4.MAINACCOUNTID as LEVEL4_PROSPECT \t\t\t\t, ma_master5.MAINACCOUNTID as LEVEL5_PROSPECT \t\t\t\t, ma_master6.MAINACCOUNTID as LEVEL6_PROSPECT \t\t\tfrom dbo.MAINACCOUNT ma_hier1 \t\t\tleft join dbo.MAINACCOUNT ma_master2 on \t\t\t\tleft(ma_master2.MAINACCOUNTID, 1) like '[0-9]' and \t\t\t\tma_master2.MAINACCOUNTID not like '%T' and \t\t\t\tma_hier1.LEDGERCHARTOFACCOUNTS = ma_master2.LEDGERCHARTOFACCOUNTS and \t\t\t\tcase when len(ma_hier1.MAINACCOUNTID) >= 2 then substring(ma_hier1.MAINACCOUNTID, 1, 2) else null end = ma_master2.MAINACCOUNTID \t\t\tleft join dbo.MAINACCOUNT ma_master3 on \t\t\t\tleft(ma_master3.MAINACCOUNTID, 1) like '[0-9]' and \t\t\t\tma_master3.MAINACCOUNTID not like '%T' and \t\t\t\tma_hier1.LEDGERCHARTOFACCOUNTS = ma_master3.LEDGERCHARTOFACCOUNTS and \t\t\t\tcase when len(ma_hier1.MAINACCOUNTID) >= 3 then substring(ma_hier1.MAINACCOUNTID, 1, 3) else null end = ma_master3.MAINACCOUNTID \t\t\tleft join dbo.MAINACCOUNT ma_master4 on \t\t\t\tleft(ma_master4.MAINACCOUNTID, 1) like '[0-9]' and \t\t\t\tma_master4.MAINACCOUNTID not like '%T' and \t\t\t\tma_hier1.LEDGERCHARTOFACCOUNTS = ma_master4.LEDGERCHARTOFACCOUNTS and \t\t\t\tcase when len(ma_hier1.MAINACCOUNTID) >= 4 then substring(ma_hier1.MAINACCOUNTID, 1, 4) else null end = ma_master4.MAINACCOUNTID \t\t\tleft join dbo.MAINACCOUNT ma_master5 on \t\t\t\tleft(ma_master5.MAINACCOUNTID, 1) like '[0-9]' and \t\t\t\tma_master5.MAINACCOUNTID not like '%T' and \t\t\t\tma_hier1.LEDGERCHARTOFACCOUNTS = ma_master5.LEDGERCHARTOFACCOUNTS and \t\t\t\tcase when len(ma_hier1.MAINACCOUNTID) >= 5 then substring(ma_hier1.MAINACCOUNTID, 1, 5) else null end = ma_master5.MAINACCOUNTID \t\t\tleft join dbo.MAINACCOUNT ma_master6 on \t\t\t\tleft(ma_master6.MAINACCOUNTID, 1) like '[0-9]' and \t\t\t\tma_master6.MAINACCOUNTID not like '%T' and \t\t\t\tma_hier1.LEDGERCHARTOFACCOUNTS = ma_master6.LEDGERCHARTOFACCOUNTS and \t\t\t\tcase when len(ma_hier1.MAINACCOUNTID) >= 6 then substring(ma_hier1.MAINACCOUNTID, 1, 6) else null end = ma_master6.MAINACCOUNTID \t\t\twhere left(ma_hier1.MAINACCOUNTID, 1) like '[0-9]' \t\t\tand ma_hier1.MAINACCOUNTID not like '%T') ma20 \t\t) ma2 on \tma1.MAINACCOUNTID = ma2.MAINACCOUNTID and \tma1.LEDGERCHARTOFACCOUNTS = ma2.LEDGERCHARTOFACCOUNTS",
+												"type": "Expression"
+											},
+											"queryTimeout": "20:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "RECID",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "RECID",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNTID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MAINACCOUNTID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "ACCOUNTCATEGORYREF",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "ACCOUNTCATEGORYREF",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERCHARTOFACCOUNTS",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "LEDGERCHARTOFACCOUNTS",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "TYPE",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "TYPE",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "POSTINGTYPE",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "POSTINGTYPE",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "MONETARY",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "MONETARY",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNTCATEGORY_ACCOUNTCATEGORY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MAINACCOUNTCATEGORY_ACCOUNTCATEGORY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNTCATEGORY_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MAINACCOUNTCATEGORY_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERCHARTOFACCOUNTS_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LEDGERCHARTOFACCOUNTS_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERCHARTOFACCOUNTS_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LEDGERCHARTOFACCOUNTS_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_DIMENSIONLEDGERACCOUNTTYPE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_DIMENSIONLEDGERACCOUNTTYPE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_LEDGERPOSTINGTYPE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_LEDGERPOSTINGTYPE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNT2_LEVEL1",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MAINACCOUNT2_LEVEL1",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNT2_LEVEL2",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MAINACCOUNT2_LEVEL2",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNT2_LEVEL3",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MAINACCOUNT2_LEVEL3",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNT2_LEVEL4",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MAINACCOUNT2_LEVEL4",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNT2_LEVEL5",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MAINACCOUNT2_LEVEL5",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNT2_LEVEL6",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MAINACCOUNT2_LEVEL6",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": true
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_sql_server",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_src_table_name": {
+													"value": "@pipeline().parameters.p_src_table_nm",
+													"type": "Expression"
+												},
+												"p_src_schema_name": {
+													"value": "@pipeline().parameters.p_src_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_serverName": {
+													"value": "@pipeline().globalParameters.retail_sql_serverName",
+													"type": "Expression"
+												},
+												"p_ls_dbName": {
+													"value": "@pipeline().globalParameters.retail_sql_dbName",
+													"type": "Expression"
+												},
+												"p_ls_sqlUsername": {
+													"value": "@pipeline().globalParameters.sql_userName",
+													"type": "Expression"
+												},
+												"p_ls_sqlPassword": {
+													"value": "@pipeline().globalParameters.sql_password",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_directory": {
+													"value": "@pipeline().parameters.p_temp_directory",
+													"type": "Expression"
+												},
+												"p_root_system": {
+													"value": "@pipeline().globalParameters.rootDir",
+													"type": "Expression"
+												},
+												"p_file_name": {
+													"value": "@pipeline().parameters.p_temp_file_nm",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "retail_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "mainaccount_to_adls_retail",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('mainaccount_to_adls_retail').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('mainaccount_to_adls_retail').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('mainaccount_to_adls_retail').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('mainaccount_to_adls_retail').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_retail_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "retail_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('mainaccount_to_adls_retail').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						}
+					],
+					"defaultActivities": [
+						{
+							"name": "mainaccount_to_adls_d365",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "WarehouseSource",
+									"additionalColumns": [
+										{
+											"name": "HK_JOB_RUN_ID",
+											"value": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "HK_SOURCE_NAME",
+											"value": {
+												"value": "@pipeline().parameters.p_src_nm",
+												"type": "Expression"
+											}
+										}
+									],
+									"sqlReaderQuery": {
+										"value": "@concat('select\nma1.recid as RECID\n,ma1.mainaccountid as MAINACCOUNTID\n,ma1.name as NAME\n,ma1.accountcategoryref as ACCOUNTCATEGORYREF\n,ma1.ledgerchartofaccounts as LEDGERCHARTOFACCOUNTS\n,ma1.type as TYPE\n,ma1.postingtype as POSTINGTYPE\n,ma1.monetary as MONETARY\n,ma1.modifieddatetime as MODIFIEDDATETIME\n,mac1.accountcategory as MAINACCOUNTCATEGORY_ACCOUNTCATEGORY\n,mac1.description as MAINACCOUNTCATEGORY_DESCRIPTION\n,lcoa1.name as LEDGERCHARTOFACCOUNTS_NAME\n,lcoa1.description as LEDGERCHARTOFACCOUNTS_DESCRIPTION\n,tet1.enumvaluelabel as TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_DIMENSIONLEDGERACCOUNTTYPE\n,tet2.enumvaluelabel as TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_LEDGERPOSTINGTYPE\n,ma2.level1 as MAINACCOUNT2_LEVEL1\n,ma2.level2 as MAINACCOUNT2_LEVEL2\n,ma2.level3 as MAINACCOUNT2_LEVEL3\n,ma2.level4 as MAINACCOUNT2_LEVEL4\n,ma2.level5 as MAINACCOUNT2_LEVEL5\n,ma2.level6 as MAINACCOUNT2_LEVEL6\n,ma1.modifieddatetime as MODIFIEDDATETIME\nfrom\n',pipeline().globalParameters.d365_dbName,'.','mainaccount ma1\nleft join ',pipeline().globalParameters.d365_dbName,'.','mainaccountcategory mac1 on\n\tma1.accountcategoryref = mac1.accountcategoryref\nleft join ',pipeline().globalParameters.d365_dbName,'.','ledgerchartofaccounts lcoa1 on\n\tma1.ledgerchartofaccounts = lcoa1.recid\nleft join (select enumname, enumvalue\n\t\t\t, max(enumvaluelabel) as enumvaluelabel\n\t\tfrom ',pipeline().globalParameters.d365_dbName,'.','timextenderenumtable\n\t\twhere enumname = ''DimensionLedgerAccountType''\n\t\tgroup by enumname, enumvalue) tet1 on\n\tma1.type = tet1.enumvalue\nleft join (select enumname, enumvalue\n\t\t\t, max(enumvaluelabel) as enumvaluelabel\n\t\tfrom ',pipeline().globalParameters.d365_dbName,'.','timextenderenumtable\n\t\twhere enumname = ''LedgerPostingType''\n\t\tgroup by enumname, enumvalue) tet2 on\n\tma1.postingtype = tet2.enumvalue\nleft join (select ma20.mainaccountid, ma20.ledgerchartofaccounts\n\t\t\t, substring(ma20.mainaccountid, 1, 1) as level1\n\t\t\t, isnull(ma20.level2_prospect, ma20.level3_prospect) as level2\n\t\t\t, isnull(ma20.level3_prospect, ma20.level4_prospect) as level3\n\t\t\t, isnull(ma20.level4_prospect, ma20.level5_prospect) as level4\n\t\t\t, isnull(ma20.level5_prospect, ma20.level6_prospect) as level5\n\t\t\t, ma20.level6_prospect as level6\n\t\tfrom (select ma_hier1.mainaccountid, ma_hier1.ledgerchartofaccounts\n\t\t\t\t, ma_master2.mainaccountid as level2_prospect\n\t\t\t\t, ma_master3.mainaccountid as level3_prospect\n\t\t\t\t, ma_master4.mainaccountid as level4_prospect\n\t\t\t\t, ma_master5.mainaccountid as level5_prospect\n\t\t\t\t, ma_master6.mainaccountid as level6_prospect\n\t\t\tfrom ',pipeline().globalParameters.d365_dbName,'.','mainaccount ma_hier1\n\t\t\tleft join ',pipeline().globalParameters.d365_dbName,'.','mainaccount ma_master2 on\n\t\t\t\tleft(ma_master2.mainaccountid, 1) like ''[0-9]'' and\n\t\t\t\tma_master2.mainaccountid not like ''%T'' and\n\t\t\t\tma_hier1.ledgerchartofaccounts = ma_master2.ledgerchartofaccounts and\n\t\t\t\tcase when len(ma_hier1.mainaccountid) >= 2 then substring(ma_hier1.mainaccountid, 1, 2) else null end = ma_master2.mainaccountid\n\t\t\tleft join ',pipeline().globalParameters.d365_dbName,'.','mainaccount ma_master3 on\n\t\t\t\tleft(ma_master3.mainaccountid, 1) like ''[0-9]'' and\n\t\t\t\tma_master3.mainaccountid not like ''%T'' and\n\t\t\t\tma_hier1.ledgerchartofaccounts = ma_master3.ledgerchartofaccounts and\n\t\t\t\tcase when len(ma_hier1.mainaccountid) >= 3 then substring(ma_hier1.mainaccountid, 1, 3) else null end = ma_master3.mainaccountid\n\t\t\tleft join ',pipeline().globalParameters.d365_dbName,'.','mainaccount ma_master4 on\n\t\t\t\tleft(ma_master4.mainaccountid, 1) like ''[0-9]'' and\n\t\t\t\tma_master4.mainaccountid not like ''%T'' and\n\t\t\t\tma_hier1.ledgerchartofaccounts = ma_master4.ledgerchartofaccounts and\n\t\t\t\tcase when len(ma_hier1.mainaccountid) >= 4 then substring(ma_hier1.mainaccountid, 1, 4) else null end = ma_master4.mainaccountid\n\t\t\tleft join ',pipeline().globalParameters.d365_dbName,'.','mainaccount ma_master5 on\n\t\t\t\tleft(ma_master5.mainaccountid, 1) like ''[0-9]'' and\n\t\t\t\tma_master5.mainaccountid not like ''%T'' and\n\t\t\t\tma_hier1.ledgerchartofaccounts = ma_master5.ledgerchartofaccounts and\n\t\t\t\tcase when len(ma_hier1.mainaccountid) >= 5 then substring(ma_hier1.mainaccountid, 1, 5) else null end = ma_master5.mainaccountid\n\t\t\tleft join ',pipeline().globalParameters.d365_dbName,'.','mainaccount ma_master6 on\n\t\t\t\tleft(ma_master6.mainaccountid, 1) like ''[0-9]'' and\n\t\t\t\tma_master6.mainaccountid not like ''%T'' and\n\t\t\t\tma_hier1.ledgerchartofaccounts = ma_master6.ledgerchartofaccounts and\n\t\t\t\tcase when len(ma_hier1.mainaccountid) >= 6 then substring(ma_hier1.mainaccountid, 1, 6) else null end = ma_master6.mainaccountid\n\t\t\twhere left(ma_hier1.mainaccountid, 1) like ''[0-9]''\n\t\t\tand ma_hier1.mainaccountid not like ''%T'') ma20\n\t\t) ma2 on\n\tma1.mainaccountid = ma2.mainaccountid and\n\tma1.ledgerchartofaccounts = ma2.ledgerchartofaccounts')",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "RECID",
+												"type": "Int64",
+												"physicalType": "bigint"
+											},
+											"sink": {
+												"name": "RECID",
+												"type": "Int64",
+												"physicalType": "INT_64"
+											}
+										},
+										{
+											"source": {
+												"name": "MAINACCOUNTID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "MAINACCOUNTID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "NAME",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "NAME",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "ACCOUNTCATEGORYREF",
+												"type": "Int64",
+												"physicalType": "bigint"
+											},
+											"sink": {
+												"name": "ACCOUNTCATEGORYREF",
+												"type": "Int64",
+												"physicalType": "INT_64"
+											}
+										},
+										{
+											"source": {
+												"name": "LEDGERCHARTOFACCOUNTS",
+												"type": "Int64",
+												"physicalType": "bigint"
+											},
+											"sink": {
+												"name": "LEDGERCHARTOFACCOUNTS",
+												"type": "Int64",
+												"physicalType": "INT_64"
+											}
+										},
+										{
+											"source": {
+												"name": "TYPE",
+												"type": "Int64",
+												"physicalType": "bigint"
+											},
+											"sink": {
+												"name": "TYPE",
+												"type": "Int64",
+												"physicalType": "INT_64"
+											}
+										},
+										{
+											"source": {
+												"name": "POSTINGTYPE",
+												"type": "Int64",
+												"physicalType": "bigint"
+											},
+											"sink": {
+												"name": "POSTINGTYPE",
+												"type": "Int64",
+												"physicalType": "INT_64"
+											}
+										},
+										{
+											"source": {
+												"name": "MONETARY",
+												"type": "Int64",
+												"physicalType": "bigint"
+											},
+											"sink": {
+												"name": "MONETARY",
+												"type": "Int64",
+												"physicalType": "INT_64"
+											}
+										},
+										{
+											"source": {
+												"name": "MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "datetime2"
+											},
+											"sink": {
+												"name": "MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "INT_96"
+											}
+										},
+										{
+											"source": {
+												"name": "MAINACCOUNTCATEGORY_ACCOUNTCATEGORY",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "MAINACCOUNTCATEGORY_ACCOUNTCATEGORY",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "MAINACCOUNTCATEGORY_DESCRIPTION",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "MAINACCOUNTCATEGORY_DESCRIPTION",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LEDGERCHARTOFACCOUNTS_NAME",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LEDGERCHARTOFACCOUNTS_NAME",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LEDGERCHARTOFACCOUNTS_DESCRIPTION",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LEDGERCHARTOFACCOUNTS_DESCRIPTION",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_DIMENSIONLEDGERACCOUNTTYPE",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_DIMENSIONLEDGERACCOUNTTYPE",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_LEDGERPOSTINGTYPE",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_LEDGERPOSTINGTYPE",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "MAINACCOUNT2_LEVEL1",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "MAINACCOUNT2_LEVEL1",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "MAINACCOUNT2_LEVEL2",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "MAINACCOUNT2_LEVEL2",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "MAINACCOUNT2_LEVEL3",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "MAINACCOUNT2_LEVEL3",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "MAINACCOUNT2_LEVEL4",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "MAINACCOUNT2_LEVEL4",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "MAINACCOUNT2_LEVEL5",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "MAINACCOUNT2_LEVEL5",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "MAINACCOUNT2_LEVEL6",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "MAINACCOUNT2_LEVEL6",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "HK_JOB_RUN_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "HK_JOB_RUN_ID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "HK_SOURCE_NAME",
+												"type": "String"
+											},
+											"sink": {
+												"name": "HK_SOURCE_NAME",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										}
+									],
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": true
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_fabric_wh",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_parquet",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_directory": {
+											"value": "@pipeline().parameters.p_temp_directory",
+											"type": "Expression"
+										},
+										"p_root_system": {
+											"value": "@pipeline().globalParameters.rootDir",
+											"type": "Expression"
+										},
+										"p_file_name": {
+											"value": "@pipeline().parameters.p_temp_file_nm",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "d365_raw_load_failure_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "mainaccount_to_adls_d365",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@activity('mainaccount_to_adls_d365').Status",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@activity('mainaccount_to_adls_d365').Error['message']",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('mainaccount_to_adls_d365').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('mainaccount_to_adls_d365').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "d365_load_to_raw_fail",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "d365_raw_load_failure_notification",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": {
+									"value": "@activity('mainaccount_to_adls_d365').Error['message']",
+									"type": "Expression"
+								},
+								"errorCode": "500"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "get_last_modifieddatetime_OpsFinance_Mapping",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_excel",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_src_directory": {
+								"value": "@pipeline().parameters.p_src_directory",
+								"type": "Expression"
+							},
+							"p_src_file_name": {
+								"value": "@pipeline().parameters.p_src_file_nm",
+								"type": "Expression"
+							},
+							"p_src_root_system": {
+								"value": "@pipeline().globalParameters.rootDir",
+								"type": "Expression"
+							},
+							"p_sheet_name": {
+								"value": "@pipeline().parameters.p_src_file_sheet",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"itemName",
+						"lastModified"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					}
+				}
+			},
+			{
+				"name": "set_last_mod_tmstmp_OpsFinance_Mapping",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "get_last_modifieddatetime_OpsFinance_Mapping",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_last_mod_tmstmp_opsfinance",
+					"value": {
+						"value": "@coalesce(activity('get_last_modifieddatetime_OpsFinance_Mapping').output.lastModified,'1950-01-01 00:00:00')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "load_dim_main_account",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "switch_nala_retail_d365",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_load_dim_main_account",
+						"type": "DataFlowReference",
+						"parameters": {
+							"df_prev_max_timestamp": {
+								"value": "'@{variables('v_prev_max_timestamp')}'",
+								"type": "Expression"
+							},
+							"df_last_mod_tmstmp_opsfinance": {
+								"value": "'@{variables('v_last_mod_tmstmp_opsfinance')}'",
+								"type": "Expression"
+							}
+						},
+						"datasetParameters": {
+							"SrcMainAccount": {
+								"p_directory": {
+									"value": "@pipeline().parameters.p_temp_directory",
+									"type": "Expression"
+								},
+								"p_root_system": {
+									"value": "@pipeline().globalParameters.rootDir",
+									"type": "Expression"
+								},
+								"p_file_name": {
+									"value": "@pipeline().parameters.p_temp_file_nm",
+									"type": "Expression"
+								}
+							},
+							"OpsFinanceMapping": {
+								"p_src_directory": {
+									"value": "@pipeline().parameters.p_src_directory",
+									"type": "Expression"
+								},
+								"p_src_file_name": {
+									"value": "@pipeline().parameters.p_src_file_nm",
+									"type": "Expression"
+								},
+								"p_src_root_system": {
+									"value": "@pipeline().globalParameters.rootDir",
+									"type": "Expression"
+								},
+								"p_sheet_name": {
+									"value": "@pipeline().parameters.p_src_file_sheet",
+									"type": "Expression"
+								}
+							},
+							"MainAccount": {
+								"p_tgt_table_name": {
+									"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+									"type": "Expression"
+								},
+								"p_tgt_schema_name": {
+									"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+									"type": "Expression"
+								},
+								"p_ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_rawDb",
+									"type": "Expression"
+								},
+								"p_ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"integrationRuntime": {
+						"referenceName": "IR-Snowflake-NALA",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "pipeline_execution_notification",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(equals(activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE'],'TRUE'),bool('TRUE'), bool('FALSE'))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "pp_stored_procedure_failure_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@toUpper('failed')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "curate_load_failure",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "pp_stored_procedure_failure_notification",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": {
+									"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+									"type": "Expression"
+								},
+								"errorCode": "500"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "stored_procedure_success_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@activity('raw_to_curate_sp_call').Status",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat(pipeline().parameters.p_tgt_curate_table_nm, ' is successfully loaded')",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": {
+										"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+										"type": "Expression"
+									},
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "load_raw_failure_notification",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "load_dim_main_account",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_adf_pipeline_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"subscription": {
+							"value": "@pipeline().globalParameters.subscriptionId",
+							"type": "Expression"
+						},
+						"resourceGroup": {
+							"value": "@pipeline().globalParameters.resourceGroup",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@coalesce(pipeline().RunId, -1)",
+							"type": "Expression"
+						},
+						"name": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"triggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"status": {
+							"value": "@activity('load_dim_main_account').Status",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@activity('load_dim_main_account').Error['message']",
+							"type": "Expression"
+						},
+						"executionEndTime": {
+							"value": "@activity('load_dim_main_account').ExecutionEndTime",
+							"type": "Expression"
+						},
+						"runDuration": {
+							"value": "@activity('load_dim_main_account').Duration",
+							"type": "Expression"
+						},
+						"teamWebhookUrl": {
+							"value": "@pipeline().globalParameters.teamsWebhookUrl",
+							"type": "Expression"
+						},
+						"notificationTime": {
+							"value": "@utcNow()",
+							"type": "Expression"
+						},
+						"taskName": {
+							"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+							"type": "Expression"
+						},
+						"taskStepNumber": {
+							"value": "@pipeline().parameters.p_src_code",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "MAINACCOUNT"
+			},
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_tgt_raw_table_nm": {
+				"type": "string",
+				"defaultValue": "MAINACCOUNT"
+			},
+			"p_tgt_raw_schema_nm": {
+				"type": "string",
+				"defaultValue": "AX_NALA"
+			},
+			"p_tgt_curate_table_nm": {
+				"type": "string",
+				"defaultValue": "DIM_MAIN_ACCOUNT"
+			},
+			"p_tgt_curate_schema_nm": {
+				"type": "string",
+				"defaultValue": "GLOBAL"
+			},
+			"p_src_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA"
+			},
+			"p_src_directory": {
+				"type": "string",
+				"defaultValue": "business_files"
+			},
+			"p_temp_file_nm": {
+				"type": "string",
+				"defaultValue": "mainaccount_nala.parquet"
+			},
+			"p_src_file_nm": {
+				"type": "string",
+				"defaultValue": "OpsFinance_Mapping.xlsx"
+			},
+			"p_temp_directory": {
+				"type": "string",
+				"defaultValue": "temp_files"
+			},
+			"p_src_file_sheet": {
+				"type": "string",
+				"defaultValue": "MainAcc_Mapping"
+			},
+			"p_src_code": {
+				"type": "string",
+				"defaultValue": "1"
+			}
+		},
+		"variables": {
+			"v_prev_max_timestamp": {
+				"type": "String"
+			},
+			"v_last_mod_tmstmp_opsfinance": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-06-03T12:07:12Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,235 @@
+{
+	"name": "pp_edw_hist_fact_purchase_receipts",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy from sqlserver to ADLS",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "select --top (10)\nf1.DW_Id as DW_ID,\n f1.CurrencyKey as CURRENCYKEY,\n f1.DataSourceKey as DATASOURCEKEY,\n f1.DefaultDimensionKey as DEFAULTDIMENSIONKEY,\n f1.DeliveryModeKey as DELIVERYMODEKEY,\n f1.IntrastatTransactionCodeKey as INTRASTATTRANSACTIONCODEKEY,\n f1.InventoryKey as INVENTORYKEY,\n f1.ItemKey as ITEMKEY,\n f1.LegalEntityKey as LEGALENTITYKEY,\n f1.LocationKey as LOCATIONKEY,\n f1.ProcurementCategoryKey as PROCUREMENTCATEGORYKEY,\n f1.PurchaseOrderKey as PURCHASEORDERKEY,\n f1.PurchaseOrderDetailsKey as PURCHASEORDERDETAILSKEY,\n f1.ReturnReasonKey as RETURNREASONKEY,\n f1.UnitOfMeasurePurchaseKey as UNITOFMEASUREPURCHASEKEY,\n f1.UnitOfMeasureInventoryKey as UNITOFMEASUREINVENTORYKEY,\n f1.VendorInvoiceKey as VENDORINVOICEKEY,\n f1.VendorInvoiceHistoryKey as VENDORINVOICEHISTORYKEY,\n f1.VendorOrderKey as VENDORORDERKEY,\n f1.VendorOrderHistoryKey as VENDORORDERHISTORYKEY,\n f1.WorkerOrdererKey as WORKERORDERERKEY,\n f1.WorkerRequesterKey as WORKERREQUESTERKEY,\nf1.AccountingDate as ACCOUNTINGDATE,\nf1.InventoryDate as INVENTORYDATE,\nf1.PurchaseLineExpectedDeliveryDate as PURCHASELINEEXPECTEDDELIVERYDATE,\nf1.ReceivedDate as RECEIVEDDATE,\nf1.TargetDeliveryDate as TARGETDELIVERYDATE,\n f1.RecordID as RECORDID,\nf1.InventoryTransactionID as INVENTORYTRANSACTIONID,\nf1.LegalEntity as LEGALENTITY,\nf1.PurchaseOrderID as PURCHASEORDERID,\nf1.PurchaseReceiptID as PURCHASERECEIPTID,\n f1.LineNumber as LINENUMBER,\n f1.PurchaseLineNumber as PURCHASELINENUMBER,\n f1.QtyInventoryUnit as QTYINVENTORYUNIT,\nf1.InventoryUnit as INVENTORYUNIT,\n f1.QtyPurchaseUnit as QTYPURCHASEUNIT,\nf1.PurchaseUnit as PURCHASEUNIT,\n f1.NetAmountTransactionCurrency as NETAMOUNTTRANSACTIONCURRENCY,\nf1.IncrementalTimeStamp as INCREMENTALTIMESTAMP,\ncase when f1.CurrencyKey in (-1, -2) then f2.currencycode else dcurr1.currencycode end as CURRENCYCODE,\n cast(case when f1.defaultdimensionkey in (-1, -2) then f2.defaultdimension else dd1.defaultdimension end as varchar) as DEFAULTDIMENSION,\ncase when f1.deliverymodekey in (-1, -2) then f2.dlvmode else ddm1.deliverymodeid end as DELIVERYMODEID,\ncase when f1.intrastattransactioncodekey in (-1, -2) then f2.transactioncode else distc1.intrastattransactioncode end as INTRASTATTRANSACTIONCODE,\ncase when f1.InventoryKey in (-1, -2) then f2.inventdimid else dinv1.inventorydimensionid end as INVENTORYDIMENSIONID,\ncase when f1.ItemKey in (-1, -2) then f2.itemid else dit1.itemid end as ITEMID,\n case when f1.LocationKey in (-1, -2) then f2.deliverypostaladdress else dl1.recordid end as RECORDIDLOCATION,\n case when f1.ProcurementCategoryKey in (-1, -2) then f2.procurementcategory else dspc1.recordid end  as PROCUREMENTCATEGORY,\ncase when f1.ReturnReasonKey in (-1, -2) then f2.returnreasoncodeid else drr1.returnreasonid end as RETURNREASONID,\ncase when f1.UnitOfMeasureInventoryKey in (-1, -2) then f2.unitid else duomi1.unitofmeasurecode end as UNITOFMEASURECODEINVENTORY,\ncase when f1.UnitOfMeasurePurchaseKey in (-1, -2) then f2.purchunit else duomp1.unitofmeasurecode end as UNITOFMEASURECODEPURCHASE,\ncase when f1.VendorInvoiceHistoryKey in (-1, -2) then f2.invoiceaccount else dvi1.vendoraccountid end as VENDORACCOUNTIDINVOICE,\ncase when f1.VendorOrderHistoryKey in (-1, -2) then f2.orderaccount else dvo1.vendoraccountid end as VENDORACCOUNTIDORDER,\n case when f1.WorkerOrdererKey in (-1, -2) then f2.workerpurchplacer else dwo1.recordid end  as RECORDIDORDERER,\n case when f1.WorkerRequesterKey in (-1, -2) then f2.requester else dwr1.recordid end as RECORDIDREQUESTER,\ndpod1.assettransactiontype as ASSETTRANSACTIONTYPE,\ndpod1.deliverytype as DELIVERYTYPE,\ndpod1.documentstatus as DOCUMENTSTATUS,\ndpod1.isstockedproduct as ISSTOCKEDPRODUCT,\ndpod1.purchaselinestatus as PURCHASELINESTATUS,\ndpod1.purchaseheaderstatus as PURCHASEHEADERSTATUS,\ndpod1.purchasetype as PURCHASETYPE,\n f1.DW_Batch as DW_BATCH,\nf1.DW_SourceCode as DW_SOURCECODE,\nf1.DW_TimeStamp as DW_TIMESTAMP\n\n\n\tfrom dbo.FACTPURCHASERECEIPTS f1 with (nolock)\n\tleft join edw_hka.dbo.FACTPURCHASERECEIPTS f2 with (nolock) on\n\t\tf1.RecordID = f2.RECID\n\tleft join dbo.DIMCURRENCY dcurr1 with (nolock) on\n\t\tf1.currencykey = dcurr1.currencykey\n\tleft join edw_hka.dbo.DIMDEFAULTDIMENSION dd1 with (nolock) on\n\t\tf1.defaultdimensionkey = dd1.defaultdimensionkey\n\tleft join dbo.DIMDELIVERYMODE ddm1 with (nolock) on\n\t\tf1.deliverymodekey = ddm1.deliverymodekey\n\tleft join dbo.DIMINTRASTATTRANSACTIONCODE distc1 with (nolock) on\n\t\tf1.intrastattransactioncodekey = distc1.intrastattransactioncodekey\n\tleft join dbo.DIMINVENTORY dinv1 with (nolock) on\n\t\tf1.inventorykey = dinv1.inventorykey\n\tleft join dbo.DIMITEM dit1 with (nolock) on\n\t\tf1.itemkey = dit1.itemkey\n\tleft join dbo.DIMLOCATION dl1 with (nolock) on\n\t\tf1.locationkey = dl1.locationkey\n\tleft join dbo.DIMSALESPROCUREMENTCATEGORY dspc1 with (nolock) on\n\t\tf1.procurementcategorykey = dspc1.procurementcategorykey\n\tleft join dbo.DIMRETURNREASON drr1 with (nolock) on\n\t\tf1.returnreasonkey = drr1.returnreasonkey\n\tleft join dbo.DIMUNITOFMEASURE duomi1 with (nolock) on\n\t\tf1.unitofmeasureinventorykey = duomi1.unitofmeasurekey\n\tleft join dbo.DIMUNITOFMEASURE duomp1 with (nolock) on\n\t\tf1.unitofmeasurepurchasekey = duomp1.unitofmeasurekey\n\tleft join dbo.DIMVENDOR dvi1 with (nolock) on\n\t\tf1.vendorinvoicehistorykey = dvi1.vendorhistorykey\n\tleft join dbo.DIMVENDOR dvo1 with (nolock) on\n\t\tf1.vendororderhistorykey = dvo1.vendorhistorykey\n\tleft join dbo.DIMWORKER dwo1 with (nolock) on\n\t\tf1.workerordererkey = dwo1.workerkey\n\tleft join dbo.DIMWORKER dwr1 with (nolock) on\n\t\tf1.workerrequesterkey = dwr1.workerkey\n\t\n\tleft join dbo.DIMPURCHASEORDERDETAILS dpod1 with (nolock) on\n\t\tf1.purchaseorderdetailskey = dpod1.purchaseorderdetailskey;",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": false,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_sql_server",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_src_table_name": {
+								"value": "@pipeline().parameters.p_src_table_nm",
+								"type": "Expression"
+							},
+							"p_src_schema_name": {
+								"value": "@pipeline().parameters.p_src_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_serverName": {
+								"value": "@pipeline().globalParameters.edw_sql_serverName",
+								"type": "Expression"
+							},
+							"p_ls_dbName": {
+								"value": "@pipeline().globalParameters.edw_sql_dbName",
+								"type": "Expression"
+							},
+							"p_ls_sqlUsername": {
+								"value": "@pipeline().globalParameters.sql_userName",
+								"type": "Expression"
+							},
+							"p_ls_sqlPassword": {
+								"value": "@pipeline().globalParameters.sql_password",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_parq_edw",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_root_system": {
+								"value": "@pipeline().globalParameters.rootDir",
+								"type": "Expression"
+							},
+							"p_directory": {
+								"value": "@pipeline().parameters.p_temp_directory",
+								"type": "Expression"
+							},
+							"p_file_name": {
+								"value": "@concat(toUpper(pipeline().parameters.p_curate_table_name),'_HIST_',substring(string(utcNow()),0,4),'_',substring(string(utcNow()),5,2),'_',substring(string(utcNow()),8,2),'.snappy.parquet')",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "ADLS to Snowflake RAW with HK columns",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "Copy from sqlserver to ADLS",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_load_edw_history",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"adlsSource": {
+								"p_root_system": {
+									"value": "@pipeline().globalParameters.rootDir",
+									"type": "Expression"
+								},
+								"p_directory": {
+									"value": "@pipeline().parameters.p_temp_directory",
+									"type": "Expression"
+								},
+								"p_file_name": {
+									"value": "@concat(toUpper(pipeline().parameters.p_curate_table_name),'_HIST_',substring(string(utcNow()),0,4),'_',substring(string(utcNow()),5,2),'_',substring(string(utcNow()),8,2),'.snappy.parquet')",
+									"type": "Expression"
+								}
+							},
+							"snowflakeRawTarget": {
+								"p_tgt_table_name": {
+									"value": "@pipeline().parameters.p_src_table_nm",
+									"type": "Expression"
+								},
+								"p_tgt_schema_name": {
+									"value": "@pipeline().parameters.p_tgt_schema_nm",
+									"type": "Expression"
+								},
+								"p_ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_rawDb",
+									"type": "Expression"
+								},
+								"p_ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"integrationRuntime": {
+						"referenceName": "IR-Snowflake-NALA",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "RAW to CURATE SP",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "ADLS to Snowflake RAW with HK columns",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_curateDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "truncate table global.FACT_PURCHASE_RECEIPTS;\n\ninsert into global.FACT_PURCHASE_RECEIPTS (fact_purchase_receipts_key, source_name, record_id, dim_source_system_key, dim_source_system_snkey, accounting_date_dim_date_key, accounting_date_dim_date_snkey, inventory_date_dim_date_key, inventory_date_dim_date_snkey, purchase_line_expected_delivery_date_dim_date_key, purchase_line_expected_delivery_date_dim_date_snkey, received_date_dim_date_key, received_date_dim_date_snkey, target_delivery_date_dim_date_key, target_delivery_date_dim_date_snkey, dim_currency_key, dim_currency_snkey, dim_default_dimension_key, dim_default_dimension_snkey, dim_delivery_mode_key, dim_delivery_mode_snkey, dim_intra_stat_transaction_code_key, dim_intra_stat_transaction_code_snkey, dim_inventory_key, dim_inventory_snkey, dim_item_key, dim_item_snkey, dim_legal_entity_key, dim_legal_entity_snkey, dim_location_key, dim_location_snkey, dim_procurement_category_key, dim_procurement_category_snkey, dim_purchase_order_key, dim_purchase_order_snkey, dim_return_reason_key, dim_return_reason_snkey, dim_unit_of_measure_inventory_key, dim_unit_of_measure_inventory_snkey, dim_unit_of_measure_purchase_key, dim_unit_of_measure_purchase_snkey, dim_vendor_invoice_key, dim_vendor_invoice_snkey, dim_vendor_order_key, dim_vendor_order_snkey, dim_worker_orderer_key, dim_worker_orderer_snkey, dim_worker_requester_key, dim_worker_requester_snkey, currency_code, default_dimension, delivery_mode_id, intra_stat_transaction_code, inventory_dimension_id, item_id, record_id_location, procurement_category, return_reason_id, unit_of_measure_code_inventory, unit_of_measure_code_purchase, vendor_account_id_invoice, vendor_account_id_order, record_id_orderer, record_id_requester, asset_transaction_type, delivery_type, document_status, is_stocked_product, purchase_line_status, purchase_header_status, purchase_type, accounting_date, inventory_date, purchase_line_expected_delivery_date, received_date, target_delivery_date, inventory_transaction_id, legal_entity, purchase_order_id, purchase_receipt_id, line_number, purchase_line_number, qty_inventory_unit, inventory_unit, qty_purchase_unit, purchase_unit, net_amount_transaction_currency, hk_hash_key, hk_source_name, hk_soft_delete_flag, hk_source_created_timestamp, hk_source_last_updated_timestamp, hk_created_job_run_id, hk_last_updated_job_run_id, hk_created_timestamp, hk_last_updated_timestamp, hk_warehouse_id)\n\tselect hash(a.source_name, '~', to_char(a.record_id))::number as FACT_PURCHASE_RECEIPTS_KEY\n\t\t, a.source_name as SOURCE_NAME, a.record_id as RECORD_ID\n\t\t\n\t\t, case when a.source_name = '' then -2\n\t\t\telse nvl(dss1.dim_source_system_key, -1)\n\t\t\tend::number as DIM_SOURCE_SYSTEM_KEY\n\t\t, a.dim_source_system_snkey as DIM_SOURCE_SYSTEM_SNKEY\n\t\t\n\t\t, nvl(dd1.dim_date_key, -1)::number as ACCOUNTING_DATE_DIM_DATE_KEY\n\t\t, a.accounting_date_dim_date_snkey as ACCOUNTING_DATE_DIM_DATE_SNKEY\n\t\t, nvl(dd2.dim_date_key, -1)::number as INVENTORY_DATE_DIM_DATE_KEY\n\t\t, a.inventory_date_dim_date_snkey as INVENTORY_DATE_DIM_DATE_SNKEY\n\t\t, nvl(dd3.dim_date_key, -1)::number as PURCHASE_LINE_EXPECTED_DELIVERY_DATE_DIM_DATE_KEY\n\t\t, a.purchase_line_expected_delivery_date_dim_date_snkey as PURCHASE_LINE_EXPECTED_DELIVERY_DATE_DIM_DATE_SNKEY\n\t\t, nvl(dd4.dim_date_key, -1)::number as RECEIVED_DATE_DIM_DATE_KEY\n\t\t, a.received_date_dim_date_snkey as RECEIVED_DATE_DIM_DATE_SNKEY\n\t\t, nvl(dd5.dim_date_key, -1)::number as TARGET_DELIVERY_DATE_DIM_DATE_KEY\n\t\t, a.target_delivery_date_dim_date_snkey as TARGET_DELIVERY_DATE_DIM_DATE_SNKEY\n\t\t\n\t\t\n\t\t/***************************************************************************************************************************************************************\n\t\tNOTE: any set of KEY/SNKEY combinations that are set to -1 are due to this FACT table being part of \"wave 3\" while the DIM tables are \"wave 2\".\n\t\t\tWe cannot guarantee that any \"wave 2\" DIMs are going to be migrated at or near the same time as \"wave 3\" tables; therefore, these DIMs will be technical debt\n\t\t\tand will be fixed later.\n\t\t****************************************************************************************************************************************************************/\n\t\t, case when a.dim_currency_snkey = -2 then -2\n\t\t\t\telse nvl(dcurr1.dim_currency_key, -1)\n\t\t\tend::number as DIM_CURRENCY_KEY\n\t\t, a.dim_currency_snkey as DIM_CURRENCY_SNKEY\n\t\t, case when a.dim_default_dimension_snkey = -2 then -2\n\t\t\t\telse nvl(ddim1.dim_default_dimension_key, -1)\n\t\t\tend::number as DIM_DEFAULT_DIMENSION_KEY\n\t\t, a.dim_default_dimension_snkey as DIM_DEFAULT_DIMENSION_SNKEY\n\t\t, case when a.dim_delivery_mode_snkey = -2 then -2\n\t\t\t\telse nvl(ddm1.dim_delivery_mode_key, -1)\n\t\t\tend::number as DIM_DELIVERY_MODE_KEY\n\t\t, a.dim_delivery_mode_snkey as DIM_DELIVERY_MODE_SNKEY\n\t\t, case when a.dim_intra_stat_transaction_code_snkey = -2 then -2\n\t\t\t\telse nvl(distc1.dim_intra_stat_transaction_code_key, -1)\n\t\t\tend::number as DIM_INTRA_STAT_TRANSACTION_CODE_KEY\n\t\t, a.dim_intra_stat_transaction_code_snkey as DIM_INTRA_STAT_TRANSACTION_CODE_SNKEY\n\t\t, case when a.dim_inventory_snkey = -2 then -2\n\t\t\t\telse nvl(dinv1.dim_inventory_key, -1)\n\t\t\tend::number as DIM_INVENTORY_KEY\n\t\t, case when a.dim_inventory_snkey = -2 then -2\n\t\t\t\telse a.dim_inventory_snkey\n\t\t\tend::number as DIM_INVENTORY_SNKEY\n\t\t, case when a.dim_item_snkey = -2 then -2\n\t\t\t\telse nvl(dit1.dim_item_key, -1)\n\t\t\tend::number as DIM_ITEM_KEY\n\t\t, a.dim_item_snkey as DIM_ITEM_SNKEY\n\t\t, case when a.dim_legal_entity_snkey = -2 then -2\n\t\t\t\telse nvl(dle1.dim_legal_entity_key, -1)\n\t\t\tend::number as DIM_LEGAL_ENTITY_KEY\n\t\t, a.dim_legal_entity_snkey as DIM_LEGAL_ENTITY_SNKEY\n\t\t, case when a.dim_location_snkey = -2 then -2\n\t\t\t\telse nvl(dl1.dim_location_key, -1)\n\t\t\tend::number as DIM_LOCATION_KEY\n\t\t, case when a.dim_location_snkey = -2 then -2\n\t\t\t\telse a.dim_location_snkey\n\t\t\tend::number as DIM_LOCATION_SNKEY\n\t\t, case when a.DIM_PROCUREMENT_CATEGORY_SNKEY= -2 then -2\n\t\t\t\telse nvl(dspc1.DIM_SALES_PROCUREMENT_CATEGORY_KEY, -1)\n\t\t\tend::number as DIM_PROCUREMENT_CATEGORY_KEY\n\t\t, a.dim_procurement_category_snkey as DIM_PROCUREMENT_CATEGORY_SNKEY\n\t\t, case when a.dim_purchase_order_snkey = -2 then -2\n\t\t\t\telse nvl(dpo1.dim_purchase_order_key, -1)\n\t\t\tend::number as DIM_PURCHASE_ORDER_KEY\n\t\t, a.dim_purchase_order_snkey as DIM_PURCHASE_ORDER_SNKEY\n\t\t, case when a.dim_return_reason_snkey = -2 then -2\n\t\t\t\telse nvl(drr1.dim_return_reason_key, -1)\n\t\t\tend::number as DIM_RETURN_REASON_KEY\n\t\t, a.dim_return_reason_snkey as DIM_RETURN_REASON_SNKEY\n\t\t, case when a.dim_unit_of_measure_inventory_snkey = -2 then -2\n\t\t\t\telse nvl(duomi1.dim_unit_of_measure_key, -1)\n\t\t\tend::number as DIM_UNIT_OF_MEASURE_INVENTORY_KEY\n\t\t, a.dim_unit_of_measure_inventory_snkey as DIM_UNIT_OF_MEASURE_INVENTORY_SNKEY\n\t\t, case when a.dim_unit_of_measure_purchase_snkey = -2 then -2\n\t\t\t\telse nvl(duomp1.dim_unit_of_measure_key, -1)\n\t\t\tend::number as DIM_UNIT_OF_MEASURE_PURCHASE_KEY\n\t\t, a.dim_unit_of_measure_purchase_snkey as DIM_UNIT_OF_MEASURE_PURCHASE_SNKEY\n\t\t, case when a.dim_vendor_invoice_snkey = -2 then -2\n\t\t\t\telse nvl(dvi1.dim_vendor_key, -1)\n\t\t\tend::number as DIM_VENDOR_INVOICE_KEY\n\t\t, a.dim_vendor_invoice_snkey as DIM_VENDOR_INVOICE_SNKEY\n\t\t, case when a.dim_vendor_order_snkey = -2 then -2\n\t\t\t\telse nvl(dvo1.dim_vendor_key, -1)\n\t\t\tend::number as DIM_VENDOR_ORDER_KEY\n\t\t, a.dim_vendor_order_snkey as DIM_VENDOR_ORDER_SNKEY\n\t\t, case when a.dim_worker_orderer_snkey = -2 then -2\n\t\t\t\telse nvl(dwo1.dim_worker_key, -1)\n\t\t\tend::number as DIM_WORKER_ORDERER_KEY\n\t\t, a.dim_worker_orderer_snkey as DIM_WORKER_ORDERER_SNKEY\n\t\t, case when a.dim_worker_requester_snkey = -2 then -2\n\t\t\t\telse nvl(dwr1.dim_worker_key, -1)\n\t\t\tend::number as DIM_WORKER_REQUESTER_KEY\n\t\t, a.dim_worker_requester_snkey as DIM_WORKER_REQUESTER_SNKEY\n\t\t, a.currency_code as CURRENCY_CODE, a.default_dimension as DEFAULT_DIMENSION, a.delivery_mode_id as DELIVERY_MODE_ID, a.intra_stat_transaction_code as INTRA_STAT_TRANSACTION_CODE, a.inventory_dimension_id as INVENTORY_DIMENSION_ID, a.item_id as ITEM_ID, a.record_id_location as RECORD_ID_LOCATION, a.procurement_category as PROCUREMENT_CATEGORY, a.return_reason_id as RETURN_REASON_ID, a.unit_of_measure_code_inventory as UNIT_OF_MEASURE_CODE_INVENTORY, a.unit_of_measure_code_purchase as UNIT_OF_MEASURE_CODE_PURCHASE, a.vendor_account_id_invoice as VENDOR_ACCOUNT_ID_INVOICE, a.vendor_account_id_order as VENDOR_ACCOUNT_ID_ORDER, a.record_id_orderer as RECORD_ID_ORDERER, a.record_id_requester as RECORD_ID_REQUESTER, a.asset_transaction_type as ASSET_TRANSACTION_TYPE, a.delivery_type as DELIVERY_TYPE, a.document_status as DOCUMENT_STATUS, a.is_stocked_product as IS_STOCKED_PRODUCT, a.purchase_line_status as PURCHASE_LINE_STATUS, a.purchase_header_status as PURCHASE_HEADER_STATUS, a.purchase_type as PURCHASE_TYPE, a.accounting_date as ACCOUNTING_DATE, a.inventory_date as INVENTORY_DATE, a.purchase_line_expected_delivery_date as PURCHASE_LINE_EXPECTED_DELIVERY_DATE, a.received_date as RECEIVED_DATE, a.target_delivery_date as TARGET_DELIVERY_DATE, a.inventory_transaction_id as INVENTORY_TRANSACTION_ID, a.legal_entity as LEGAL_ENTITY, a.purchase_order_id as PURCHASE_ORDER_ID, a.purchase_receipt_id as PURCHASE_RECEIPT_ID, a.line_number as LINE_NUMBER, a.purchase_line_number as PURCHASE_LINE_NUMBER, a.qty_inventory_unit as QTY_INVENTORY_UNIT, a.inventory_unit as INVENTORY_UNIT, a.qty_purchase_unit as QTY_PURCHASE_UNIT, a.purchase_unit as PURCHASE_UNIT, a.net_amount_transaction_currency as NET_AMOUNT_TRANSACTION_CURRENCY\n\t\t, hash(a.source_name, '~', to_char(a.record_id), '~', a.currency_code, '~', a.default_dimension, '~', a.delivery_mode_id, '~', a.intra_stat_transaction_code, '~', a.inventory_dimension_id, '~', a.item_id, '~', to_char(a.record_id_location), '~', to_char(a.procurement_category), '~', a.return_reason_id, '~', a.unit_of_measure_code_inventory, '~', a.unit_of_measure_code_purchase, '~', a.vendor_account_id_invoice, '~', a.vendor_account_id_order, '~', to_char(a.record_id_orderer), '~', to_char(a.record_id_requester), '~', a.asset_transaction_type, '~', a.delivery_type, '~', a.document_status, '~', a.is_stocked_product, '~', a.purchase_line_status, '~', a.purchase_header_status, '~', a.purchase_type, '~', to_char(a.accounting_date, 'yyyymmdd'), '~', to_char(a.inventory_date, 'yyyymmdd'), '~', to_char(a.purchase_line_expected_delivery_date, 'yyyymmdd'), '~', to_char(a.received_date, 'yyyymmdd'), '~', to_char(a.target_delivery_date, 'yyyymmdd'), '~', a.inventory_transaction_id, '~', a.legal_entity, '~', a.purchase_order_id, '~', a.purchase_receipt_id, '~', to_char(a.line_number), '~', to_char(a.purchase_line_number), '~', to_char(a.qty_inventory_unit), '~', a.inventory_unit, '~', to_char(a.qty_purchase_unit), '~', a.purchase_unit, '~', to_char(a.net_amount_transaction_currency))::number as HK_HASH_KEY\n\t\t, a.hk_source_name as HK_SOURCE_NAME\n\t\t, false::boolean as HK_SOFT_DELETE_FLAG\n\t\t, a.hk_source_created_timestamp as HK_SOURCE_CREATED_TIMESTAMP, a.hk_source_last_updated_timestamp as HK_SOURCE_LAST_UPDATED_TIMESTAMP, a.hk_created_job_run_id as HK_CREATED_JOB_RUN_ID, a.hk_last_updated_job_run_id as HK_LAST_UPDATED_JOB_RUN_ID\n\t\t, current_timestamp::timestamp_tz as HK_CREATED_TIMESTAMP\n\t\t, current_timestamp::timestamp_tz as HK_LAST_UPDATED_TIMESTAMP\n\t\t, uuid_string()::varchar as HK_WAREHOUSE_ID\n\t\n\tfrom (select 'AXNALA'::varchar as SOURCE_NAME\n\t\t\t, nvl(b.recordid, 0)::number(38, 0) as RECORD_ID\n\t\t\t\n\t\t\t, nvl(b.currencycode, '')::varchar as CURRENCY_CODE\n\t\t\t, nvl(b.defaultdimension, '')::varchar as DEFAULT_DIMENSION\n\t\t\t, nvl(b.deliverymodeid, '')::varchar as DELIVERY_MODE_ID\n\t\t\t, nvl(b.intrastattransactioncode, '')::varchar as INTRA_STAT_TRANSACTION_CODE\n\t\t\t, nvl(b.inventorydimensionid, '')::varchar as INVENTORY_DIMENSION_ID\n\t\t\t, nvl(b.itemid, '')::varchar as ITEM_ID\n\t\t\t, nvl(b.recordidlocation, 0)::number(38, 0) as RECORD_ID_LOCATION\n\t\t\t, nvl(b.procurementcategory, 0)::number(38, 0) as PROCUREMENT_CATEGORY\n\t\t\t, nvl(b.returnreasonid, '')::varchar as RETURN_REASON_ID\n\t\t\t, nvl(b.unitofmeasurecodeinventory, '')::varchar as UNIT_OF_MEASURE_CODE_INVENTORY\n\t\t\t, nvl(b.unitofmeasurecodepurchase, '')::varchar as UNIT_OF_MEASURE_CODE_PURCHASE\n\t\t\t, nvl(b.vendoraccountidinvoice, '')::varchar as VENDOR_ACCOUNT_ID_INVOICE\n\t\t\t, nvl(b.vendoraccountidorder, '')::varchar as VENDOR_ACCOUNT_ID_ORDER\n\t\t\t, nvl(b.recordidorderer, 0)::number(38, 0) as RECORD_ID_ORDERER\n\t\t\t, nvl(b.recordidrequester, 0)::number(38, 0) as RECORD_ID_REQUESTER\n\t\t\t, nvl(b.assettransactiontype, '')::varchar as ASSET_TRANSACTION_TYPE\n\t\t\t, nvl(b.deliverytype, '')::varchar as DELIVERY_TYPE\n\t\t\t, nvl(b.documentstatus, '')::varchar as DOCUMENT_STATUS\n\t\t\t, nvl(b.isstockedproduct, '')::varchar as IS_STOCKED_PRODUCT\n\t\t\t, nvl(b.purchaselinestatus, '')::varchar as PURCHASE_LINE_STATUS\n\t\t\t, nvl(b.purchaseheaderstatus, '')::varchar as PURCHASE_HEADER_STATUS\n\t\t\t, nvl(b.purchasetype, '')::varchar as PURCHASE_TYPE\n\t\t\t\n\t\t\t, case when nvl(b.accountingdate, '1900-01-01') in ('1900-01-01') then '1950-01-01'\n\t\t\t\t\twhen b.accountingdate < dd1.min_date_value then '1951-12-31'\n\t\t\t\t\twhen b.accountingdate > dd1.max_date_value then '9951-12-31'\n\t\t\t\telse b.accountingdate\n\t\t\t\tend::date as ACCOUNTING_DATE\n\t\t\t, case when nvl(b.inventorydate, '1900-01-01') in ('1900-01-01') then '1950-01-01'\n\t\t\t\t\twhen b.inventorydate < dd1.min_date_value then '1951-12-31'\n\t\t\t\t\twhen b.inventorydate > dd1.max_date_value then '9951-12-31'\n\t\t\t\telse b.inventorydate\n\t\t\t\tend::date as INVENTORY_DATE\n\t\t\t, case when nvl(b.purchaselineexpecteddeliverydate, '1900-01-01') in ('1900-01-01') then '1950-01-01'\n\t\t\t\t\twhen b.purchaselineexpecteddeliverydate < dd1.min_date_value then '1951-12-31'\n\t\t\t\t\twhen b.purchaselineexpecteddeliverydate > dd1.max_date_value then '9951-12-31'\n\t\t\t\telse b.purchaselineexpecteddeliverydate\n\t\t\t\tend::date as PURCHASE_LINE_EXPECTED_DELIVERY_DATE\n\t\t\t, case when nvl(b.receiveddate, '1900-01-01') in ('1900-01-01') then '1950-01-01'\n\t\t\t\t\twhen b.receiveddate < dd1.min_date_value then '1951-12-31'\n\t\t\t\t\twhen b.receiveddate > dd1.max_date_value then '9951-12-31'\n\t\t\t\telse b.receiveddate\n\t\t\t\tend::date as RECEIVED_DATE\n\t\t\t, case when nvl(b.targetdeliverydate, '1900-01-01') in ('1900-01-01') then '1950-01-01'\n\t\t\t\t\twhen b.targetdeliverydate < dd1.min_date_value then '1951-12-31'\n\t\t\t\t\twhen b.targetdeliverydate > dd1.max_date_value then '9951-12-31'\n\t\t\t\telse b.targetdeliverydate\n\t\t\t\tend::date as TARGET_DELIVERY_DATE\n\t\t\t\n\t\t\t, nvl(b.inventorytransactionid, '')::varchar as INVENTORY_TRANSACTION_ID\n\t\t\t, nvl(b.legalentity, '')::varchar as LEGAL_ENTITY\n\t\t\t, nvl(b.purchaseorderid, '')::varchar as PURCHASE_ORDER_ID\n\t\t\t, nvl(b.purchasereceiptid, '')::varchar as PURCHASE_RECEIPT_ID\n\t\t\t, nvl(b.linenumber, 0)::number(25, 16) as LINE_NUMBER\n\t\t\t, nvl(b.purchaselinenumber, 0)::number(38, 0) as PURCHASE_LINE_NUMBER\n\t\t\t, nvl(b.qtyinventoryunit, 0)::number(28, 16) as QTY_INVENTORY_UNIT\n\t\t\t, nvl(b.inventoryunit, '')::varchar as INVENTORY_UNIT\n\t\t\t, nvl(b.qtypurchaseunit, 0)::number(28, 16) as QTY_PURCHASE_UNIT\n\t\t\t, nvl(b.purchaseunit, '')::varchar as PURCHASE_UNIT\n\t\t\t, nvl(b.netamounttransactioncurrency, 0)::number(28, 16) as NET_AMOUNT_TRANSACTION_CURRENCY\n\t\t\t\n\t\t\t, nvl(b.dw_sourcecode, '')::varchar as HK_SOURCE_NAME\n\t\t\t, '1950-01-01 00:00:00'::timestamp_tz as HK_SOURCE_CREATED_TIMESTAMP\n\t\t\t, nvl(b.dw_timestamp, '1950-01-01 00:00:00')::timestamp_tz as HK_SOURCE_LAST_UPDATED_TIMESTAMP\n\t\t\t, '-1'::varchar as HK_CREATED_JOB_RUN_ID\n\t\t\t, nvl(b.dw_batch, '-1')::varchar as HK_LAST_UPDATED_JOB_RUN_ID\n\t\t\t\n\t\t\t, case when nvl(SOURCE_NAME, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME)\n\t\t\t\tend::number as DIM_SOURCE_SYSTEM_SNKEY\n\t\t\t, case when nvl(ACCOUNTING_DATE, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(ACCOUNTING_DATE, 'yyyymmdd'))\n\t\t\t\tend::number as ACCOUNTING_DATE_DIM_DATE_SNKEY\n\t\t\t, case when nvl(INVENTORY_DATE, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(INVENTORY_DATE, 'yyyymmdd'))\n\t\t\t\tend::number as INVENTORY_DATE_DIM_DATE_SNKEY\n\t\t\t, case when nvl(PURCHASE_LINE_EXPECTED_DELIVERY_DATE, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(PURCHASE_LINE_EXPECTED_DELIVERY_DATE, 'yyyymmdd'))\n\t\t\t\tend::number as PURCHASE_LINE_EXPECTED_DELIVERY_DATE_DIM_DATE_SNKEY\n\t\t\t, case when nvl(RECEIVED_DATE, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(RECEIVED_DATE, 'yyyymmdd'))\n\t\t\t\tend::number as RECEIVED_DATE_DIM_DATE_SNKEY\n\t\t\t, case when nvl(TARGET_DELIVERY_DATE, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(TARGET_DELIVERY_DATE, 'yyyymmdd'))\n\t\t\t\tend::number as TARGET_DELIVERY_DATE_DIM_DATE_SNKEY\n\t\t\t, case when nvl(CURRENCY_CODE, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', CURRENCY_CODE)\n\t\t\t\tend::number as DIM_CURRENCY_SNKEY\n\t\t\t, case when nvl(DEFAULT_DIMENSION, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', DEFAULT_DIMENSION)\n\t\t\t\tend::number as DIM_DEFAULT_DIMENSION_SNKEY\n\t\t\t, case when nvl(LEGAL_ENTITY, '') = '' or nvl(DELIVERY_MODE_ID, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', LEGAL_ENTITY, '~', DELIVERY_MODE_ID)\n\t\t\t\tend::number as DIM_DELIVERY_MODE_SNKEY\n\t\t\t, case when nvl(LEGAL_ENTITY,'') = '' or nvl(INTRA_STAT_TRANSACTION_CODE,'') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', LEGAL_ENTITY, '~', INTRA_STAT_TRANSACTION_CODE)\n\t\t\t\tend::number as DIM_INTRA_STAT_TRANSACTION_CODE_SNKEY\n\t\t\t, case when nvl(LEGAL_ENTITY, '') = '' or nvl(INVENTORY_DIMENSION_ID, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', LEGAL_ENTITY, '~', INVENTORY_DIMENSION_ID)\n\t\t\t\tend::number as DIM_INVENTORY_SNKEY\n\t\t\t, case when nvl(LEGAL_ENTITY, '') = '' or nvl(ITEM_ID, '') = '' then -2\n\t\t\t\telse hash('', '~', LEGAL_ENTITY, '~', ITEM_ID)\t-- (NOTE: ITEM_KEY is unique across all source systems; therefore, this field will always be set to '')\n\t\t\t\tend::number as DIM_ITEM_SNKEY\n\t\t\t, case when nvl(LEGAL_ENTITY, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', LEGAL_ENTITY)\n\t\t\t\tend::number as DIM_LEGAL_ENTITY_SNKEY\n\t\t\t, case when nvl(RECORD_ID_LOCATION, 0) = 0 then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', to_char(RECORD_ID_LOCATION))\n\t\t\t\tend::number as DIM_LOCATION_SNKEY\n\t\t\t, case when  nvl(PROCUREMENT_CATEGORY, 0) = 0 then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', to_char(PROCUREMENT_CATEGORY)) \n                end::number(38, 0) as DIM_PROCUREMENT_CATEGORY_SNKEY\n\t\t\t, case when nvl(LEGAL_ENTITY, '') = '' or nvl(PURCHASE_ORDER_ID, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', LEGAL_ENTITY, '~', PURCHASE_ORDER_ID)\n\t\t\t\tend::number as DIM_PURCHASE_ORDER_SNKEY\n\t\t\t, case when nvl(LEGAL_ENTITY, '') = '' or nvl(RETURN_REASON_ID, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', LEGAL_ENTITY, '~', RETURN_REASON_ID)\n\t\t\t\tend::number as DIM_RETURN_REASON_SNKEY\n\t\t\t, case when nvl(UNIT_OF_MEASURE_CODE_INVENTORY,'') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', UNIT_OF_MEASURE_CODE_INVENTORY)\n\t\t\t\tend::number as DIM_UNIT_OF_MEASURE_INVENTORY_SNKEY\n\t\t\t, case when nvl(UNIT_OF_MEASURE_CODE_PURCHASE,'') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', UNIT_OF_MEASURE_CODE_PURCHASE)\n\t\t\t\tend::number as DIM_UNIT_OF_MEASURE_PURCHASE_SNKEY\n\t\t\t, case when nvl(LEGAL_ENTITY,'') = '' or nvl(VENDOR_ACCOUNT_ID_INVOICE,'') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', LEGAL_ENTITY, '~', VENDOR_ACCOUNT_ID_INVOICE)\n\t\t\t\tend::number as DIM_VENDOR_INVOICE_SNKEY\n\t\t\t, case when nvl(LEGAL_ENTITY,'') = '' or nvl(VENDOR_ACCOUNT_ID_ORDER,'') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', LEGAL_ENTITY, '~', VENDOR_ACCOUNT_ID_ORDER)\n\t\t\t\tend::number as DIM_VENDOR_ORDER_SNKEY\n\t\t\t, case when nvl(RECORD_ID_ORDERER, 0) = 0 then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', to_char(RECORD_ID_ORDERER))\n\t\t\t\tend::number as DIM_WORKER_ORDERER_SNKEY\n\t\t\t, case when nvl(RECORD_ID_REQUESTER, 0) = 0 then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', to_char(RECORD_ID_REQUESTER))\n\t\t\t\tend::number as DIM_WORKER_REQUESTER_SNKEY\n\t\t\t\n\t\tfrom (select hk_source_name, hk_job_run_id, hk_created_timestamp, hk_warehouse_id, dw_id, currencykey, datasourcekey, defaultdimensionkey, deliverymodekey, intrastattransactioncodekey, inventorykey, itemkey, legalentitykey, locationkey, procurementcategorykey, purchaseorderkey, purchaseorderdetailskey, returnreasonkey, unitofmeasurepurchasekey, unitofmeasureinventorykey, vendorinvoicekey, vendorinvoicehistorykey, vendororderkey, vendororderhistorykey, workerordererkey, workerrequesterkey, accountingdate, inventorydate, purchaselineexpecteddeliverydate, receiveddate, targetdeliverydate, recordid, inventorytransactionid, legalentity, purchaseorderid, purchasereceiptid, linenumber, purchaselinenumber, qtyinventoryunit, inventoryunit, qtypurchaseunit, purchaseunit, netamounttransactioncurrency, incrementaltimestamp, currencycode, defaultdimension, deliverymodeid, intrastattransactioncode, inventorydimensionid, itemid, recordidlocation, procurementcategory, returnreasonid, unitofmeasurecodeinventory, unitofmeasurecodepurchase, vendoraccountidinvoice, vendoraccountidorder, recordidorderer, recordidrequester, assettransactiontype, deliverytype, documentstatus, isstockedproduct, purchaselinestatus, purchaseheaderstatus, purchasetype, dw_batch, dw_sourcecode, dw_timestamp\n\t\t\tfrom @{pipeline().globalParameters.environment}_raw.edw_dwh.FACTPURCHASERECEIPTS\n\t\t\t) b\n\t\t\tinner join (select min(date_value) as MIN_DATE_VALUE\n\t\t\t\t\t\t\t, max(date_value) as MAX_DATE_VALUE\n\t\t\t\t\t\tfrom global.DIM_DATE\n\t\t\t\t\t\twhere date_value not in ('1950-01-01', '1951-12-31', '9000-01-01', '9951-12-31')) dd1 on\n\t\t\t\t1=1\n\t\t) a\n\tleft join global.DIM_SOURCE_SYSTEM dss1 on\n\t\ta.dim_source_system_snkey = dss1.dim_source_system_snkey\n\tleft join global.DIM_DATE dd1 on\n\t\ta.accounting_date_dim_date_snkey = dd1.dim_date_snkey\n\tleft join global.DIM_DATE dd2 on\n\t\ta.inventory_date_dim_date_snkey = dd2.dim_date_snkey\n\tleft join global.DIM_DATE dd3 on\n\t\ta.purchase_line_expected_delivery_date_dim_date_snkey = dd3.dim_date_snkey\n\tleft join global.DIM_DATE dd4 on\n\t\ta.received_date_dim_date_snkey = dd4.dim_date_snkey\n\tleft join global.DIM_DATE dd5 on\n\t\ta.target_delivery_date_dim_date_snkey = dd5.dim_date_snkey\n\tleft join global.DIM_CURRENCY dcurr1 on\n\t\ta.dim_currency_snkey = dcurr1.dim_currency_snkey\n\tleft join global.DIM_DEFAULT_DIMENSION ddim1 on\n\t\ta.dim_default_dimension_snkey = ddim1.dim_default_dimension_snkey\n\tleft join global.DIM_DELIVERY_MODE ddm1 on\n\t\ta.dim_delivery_mode_snkey = ddm1.dim_delivery_mode_snkey\n\tleft join global.DIM_INTRA_STAT_TRANSACTION_CODE distc1 on\n\t\ta.dim_intra_stat_transaction_code_snkey = distc1.dim_intra_stat_transaction_code_snkey\n\tleft join global.DIM_INVENTORY dinv1 on\n\t\ta.dim_inventory_snkey = dinv1.dim_inventory_snkey\n\tleft join global.DIM_ITEM dit1 on\n\t\ta.dim_item_snkey = dit1.dim_item_snkey\n\tleft join global.DIM_LEGAL_ENTITY dle1 on\n\t\ta.dim_legal_entity_snkey = dle1.dim_legal_entity_snkey\n\tleft join global.DIM_LOCATION dl1 on\n\t\ta.dim_location_snkey = dl1.dim_location_snkey\n    left join global.DIM_SALES_PROCUREMENT_CATEGORY dspc1 on\n\t\ta.dim_procurement_category_snkey = dspc1.dim_sales_procurement_category_snkey\n\tleft join global.DIM_PURCHASE_ORDER dpo1 on\n\t\ta.dim_purchase_order_snkey = dpo1.dim_purchase_order_snkey\n\tleft join global.DIM_RETURN_REASON drr1 on\n\t\ta.dim_return_reason_snkey = drr1.dim_return_reason_snkey\n\tleft join global.DIM_UNIT_OF_MEASURE duomi1 on\n\t\ta.dim_unit_of_measure_inventory_snkey = duomi1.dim_unit_of_measure_snkey\n\tleft join global.DIM_UNIT_OF_MEASURE duomp1 on\n\t\ta.dim_unit_of_measure_purchase_snkey = duomp1.dim_unit_of_measure_snkey\n\tleft join global.DIM_VENDOR dvi1 on\n\t\ta.dim_vendor_invoice_snkey = dvi1.dim_vendor_snkey and\n\t\ta.received_date >= dvi1.hk_effective_start_timestamp and\n\t\ta.received_date < dvi1.hk_effective_end_timestamp\n\tleft join global.DIM_VENDOR dvo1 on\n\t\ta.dim_vendor_order_snkey = dvo1.dim_vendor_snkey and\n\t\ta.received_date >= dvo1.hk_effective_start_timestamp and\n\t\ta.received_date < dvo1.hk_effective_end_timestamp\n\tleft join global.DIM_WORKER dwo1 on\n\t\ta.dim_worker_orderer_snkey = dwo1.dim_worker_snkey\n\tleft join global.DIM_WORKER dwr1 on\n\t\ta.dim_worker_requester_snkey = dwr1.dim_worker_snkey\n;",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "FACTPURCHASERECEIPTS"
+			},
+			"p_temp_directory": {
+				"type": "string",
+				"defaultValue": "temp_files"
+			},
+			"p_tgt_schema_nm": {
+				"type": "string",
+				"defaultValue": "EDW_DWH"
+			},
+			"p_curate_table_name": {
+				"type": "string",
+				"defaultValue": "FACT_PURCHASE_RECEIPTS"
+			}
+		},
+		"folder": {
+			"name": "history_fact"
+		},
+		"annotations": []
+	}
+}

@@ -1,0 +1,614 @@
+{
+	"name": "pp_ax_weekly_salesline_recon",
+	"properties": {
+		"activities": [
+			{
+				"name": "switch_nala",
+				"type": "Switch",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.p_src_code",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "1",
+							"activities": [
+								{
+									"name": "sql_nala_to_raw",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "LATEST_MODIFIEDDATETIME",
+													"value": {
+														"value": "@pipeline().TriggerTime",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": "select \r\n    ltrim(rtrim(sl1.DATAAREAID)) as DATAAREAID,\r\n    ltrim(rtrim(sl1.INVENTTRANSID)) as INVENTTRANSID\r\n from\r\n    dbo.SALESLINE sl1\r\nwhere sl1.MODIFIEDDATETIME > dateadd(dd ,-120, getdate())",
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "SnowflakeSink",
+											"importSettings": {
+												"type": "SnowflakeImportCopyCommand"
+											}
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ls_blob_storage",
+												"type": "LinkedServiceReference"
+											},
+											"path": {
+												"value": "@pipeline().globalParameters.rootDir",
+												"type": "Expression"
+											},
+											"enableCompression": true
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_CREATED_TIMESTAMP",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "DATAAREAID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "DATAAREAID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTTRANSID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTTRANSID",
+														"type": "String"
+													}
+												}
+											]
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_sql_server",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_src_table_name": {
+													"value": "@pipeline().parameters.p_src_table_nm",
+													"type": "Expression"
+												},
+												"p_src_schema_name": {
+													"value": "@pipeline().parameters.p_src_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_serverName": {
+													"value": "@pipeline().globalParameters.nala_sql_serverName",
+													"type": "Expression"
+												},
+												"p_ls_dbName": {
+													"value": "@pipeline().globalParameters.nala_sql_dbName",
+													"type": "Expression"
+												},
+												"p_ls_sqlUsername": {
+													"value": "@pipeline().globalParameters.sql_userName",
+													"type": "Expression"
+												},
+												"p_ls_sqlPassword": {
+													"value": "@pipeline().globalParameters.sql_password",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_snowflake",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_tgt_table_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+													"type": "Expression"
+												},
+												"p_tgt_schema_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_DbName": {
+													"value": "@pipeline().globalParameters.snow_rawDb",
+													"type": "Expression"
+												},
+												"p_ls_Env": {
+													"value": "@pipeline().globalParameters.environment",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "nala_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "sql_nala_to_raw",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('sql_nala_to_raw').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('sql_nala_to_raw').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('sql_nala_to_raw').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('sql_nala_to_raw').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_nala_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "nala_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('sql_nala_to_raw').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "raw_to_curate_sp_call",
+				"type": "Script",
+				"state": "Inactive",
+				"onInactiveMarkAs": "Failed",
+				"dependsOn": [
+					{
+						"activity": "switch_nala",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_rawDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('CALL ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_auditDb,'.CONTROL.SP_TASK_INITIALIZE(','''',pipeline().RunId,'''',',','''',pipeline().globalParameters.environment,'''',',','''',pipeline().parameters.p_tgt_curate_table_nm,'''',',',pipeline().parameters.p_src_code,')')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "pipeline_execution_notification",
+				"type": "IfCondition",
+				"state": "Inactive",
+				"onInactiveMarkAs": "Succeeded",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(equals(activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE'],'TRUE'),bool('TRUE'), bool('FALSE'))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "pp_stored_procedure_failure_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@toUpper('failed')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "curate_load_failure",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "pp_stored_procedure_failure_notification",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": {
+									"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+									"type": "Expression"
+								},
+								"errorCode": "500"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "stored_procedure_success_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@activity('raw_to_curate_sp_call').Status",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat(pipeline().parameters.p_tgt_curate_table_nm, ' is successfully loaded')",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "stored_procedure_failure_notification",
+				"type": "ExecutePipeline",
+				"state": "Inactive",
+				"onInactiveMarkAs": "Succeeded",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_adf_pipeline_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"subscription": {
+							"value": "@pipeline().globalParameters.subscriptionId",
+							"type": "Expression"
+						},
+						"resourceGroup": {
+							"value": "@pipeline().globalParameters.resourceGroup",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@coalesce(pipeline().RunId,-1)",
+							"type": "Expression"
+						},
+						"name": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"triggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"status": {
+							"value": "@activity('raw_to_curate_sp_call').Status",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@activity('raw_to_curate_sp_call').Error['message']",
+							"type": "Expression"
+						},
+						"executionEndTime": {
+							"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+							"type": "Expression"
+						},
+						"runDuration": {
+							"value": "@activity('raw_to_curate_sp_call').Duration",
+							"type": "Expression"
+						},
+						"teamWebhookUrl": {
+							"value": "@pipeline().globalParameters.teamsWebhookUrl",
+							"type": "Expression"
+						},
+						"notificationTime": {
+							"value": "@utcNow()",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "VENDPAYMMODESPEC"
+			},
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_tgt_raw_table_nm": {
+				"type": "string",
+				"defaultValue": "VENDPAYMMODESPEC"
+			},
+			"p_tgt_raw_schema_nm": {
+				"type": "string",
+				"defaultValue": "AX_NALA"
+			},
+			"p_tgt_curate_table_nm": {
+				"type": "string",
+				"defaultValue": "DIM_VENDOR_PAYMENT_SPECIFICATION"
+			},
+			"p_tgt_curate_schema_nm": {
+				"type": "string",
+				"defaultValue": "GLOBAL"
+			},
+			"p_src_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA"
+			},
+			"p_src_code": {
+				"type": "string",
+				"defaultValue": "1"
+			}
+		},
+		"folder": {
+			"name": "True_up"
+		},
+		"annotations": []
+	}
+}

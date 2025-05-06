@@ -1,0 +1,24 @@
+{
+	"name": "trg_ax_accounts_receivable_dependency",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "pp_facts_accounts_receivable",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2024-10-03T04:00:00",
+				"timeZone": "Eastern Standard Time"
+			}
+		}
+	}
+}

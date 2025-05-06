@@ -1,0 +1,34 @@
+{
+	"name": "trg_ax_retail_salesorigin_to_dim_sales_origin",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "pp_ax_salesorigin_to_dim_sales_origin",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"p_src_table_nm": "SALESORIGIN",
+					"p_src_schema_nm": "dbo",
+					"p_tgt_raw_table_nm": "SALESORIGIN",
+					"p_tgt_raw_schema_nm": "AX_RETAIL",
+					"p_tgt_curate_table_nm": "DIM_SALES_ORIGIN",
+					"p_tgt_curate_schema_nm": "GLOBAL",
+					"p_src_nm": "AXRETAIL",
+					"p_src_code": "2"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2024-06-07T05:00:00",
+				"timeZone": "Eastern Standard Time"
+			}
+		}
+	}
+}

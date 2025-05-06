@@ -1,0 +1,173 @@
+{
+	"name": "df_load_dim_ledger_dimension",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_parquet",
+						"type": "DatasetReference"
+					},
+					"name": "SrcLedgerDimension"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_opsfinance_excel",
+						"type": "DatasetReference"
+					},
+					"name": "SrcOpsFinanceMapping"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference"
+					},
+					"name": "InsertLedgerDimension"
+				}
+			],
+			"transformations": [
+				{
+					"name": "JoinSizeGroupColumns"
+				},
+				{
+					"name": "RankOverSrcOpsFinanceMapping"
+				},
+				{
+					"name": "AggregateOverRank"
+				},
+				{
+					"name": "CalculateLatestModifiedDateTime",
+					"description": "Creating/updating the columns \nRAW_MODIFIEDDATETIME'"
+				},
+				{
+					"name": "PullLatestRecords"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     df_prev_max_timestamp as string ('2024-09-14 00:00:00'),",
+				"     df_last_mod_tmstmp_opsfinancemapping as string ('2024-04-04T15:29:09+00:00')",
+				"}",
+				"source(output(",
+				"          DIMENSIONATTRIBUTEVALUESET as long,",
+				"          DISPLAYVALUE_A_DEPARTMENT as string,",
+				"          DISPLAYVALUE_B_INTERCOMPANY as string,",
+				"          DISPLAYVALUE_C_SALES_CHANNEL as string,",
+				"          DISPLAYVALUE_D_TYPE as string,",
+				"          DISPLAYVALUE_E_CATEGORY as string,",
+				"          DISPLAYVALUE_F_FAMILY as string,",
+				"          DISPLAYVALUE_G_SIZE as string,",
+				"          DISPLAYVALUE_H_VERSION as string,",
+				"          DISPLAYVALUE_I_CUSTOMER as string,",
+				"          DISPLAYVALUE_J_VENDOR as string,",
+				"          DISPLAYVALUE_K_FOAM_SOURCED as string,",
+				"          DISPLAYVALUE_L_STORE as string,",
+				"          DISPLAYVALUE_M_SALES_DISTRI as string,",
+				"          DISPLAYVALUE_BUSINESS_UNIT as string,",
+				"          DISPLAYVALUE_MAIN_ACCOUNT as string,",
+				"          DISPLAYVALUE_PROJECTS as string,",
+				"          DISPLAYVALUE_SITE as string,",
+				"          DIRPARTYTABLE1_NAME_DEPARTMENT as string,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_INTERCOMPANY as string,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_SALES_CHANNEL as string,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_TYPE as string,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_CATEGORY as string,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_FAMILY as string,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_SIZE as string,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_VERSION as string,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_FOAM_SOURCED as string,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_M_SALES_DISTRI as string,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_PROJECTS as string,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_SITE as string,",
+				"          DIRPARTYTABLE2_NAME_STORE as string,",
+				"          DIRPARTYTABLE3_NAME_BUSINESS_UNIT as string,",
+				"          LATEST_MODIFIEDDATETIME as timestamp,",
+				"          HK_JOB_RUN_ID as string,",
+				"          HK_SOURCE_NAME as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> SrcLedgerDimension",
+				"source(output(",
+				"          BusinessUnit as string,",
+				"          OPERATIONSREGION as string,",
+				"          OPERATIONSREGIONDESCRIPTION as string,",
+				"          FINANCEREGION as string,",
+				"          FINANCEREGIONDESCRIPTION as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> SrcOpsFinanceMapping",
+				"SrcLedgerDimension, AggregateOverRank join(DISPLAYVALUE_BUSINESS_UNIT == BusinessUnit,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> JoinSizeGroupColumns",
+				"SrcOpsFinanceMapping rank(asc(BusinessUnit, true),",
+				"     caseInsensitive: true,",
+				"     output(id as long),",
+				"     dense: true) ~> RankOverSrcOpsFinanceMapping",
+				"RankOverSrcOpsFinanceMapping aggregate(groupBy(id),",
+				"     each(match(name!='id'), $$ = first($$))) ~> AggregateOverRank",
+				"JoinSizeGroupColumns derive(LATEST_MODIFIEDDATETIME = greatest(LATEST_MODIFIEDDATETIME,toTimestamp($df_last_mod_tmstmp_opsfinancemapping, 'yyyy-MM-dd\\'T\\'HH:mm')),",
+				"          RAW_MODIFIEDDATETIME = toTimestamp($df_prev_max_timestamp)) ~> CalculateLatestModifiedDateTime",
+				"CalculateLatestModifiedDateTime filter(LATEST_MODIFIEDDATETIME>RAW_MODIFIEDDATETIME) ~> PullLatestRecords",
+				"PullLatestRecords sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     stageInsert: true,",
+				"     mapColumn(",
+				"          DIMENSIONATTRIBUTEVALUESET,",
+				"          DISPLAYVALUE_A_DEPARTMENT,",
+				"          DISPLAYVALUE_B_INTERCOMPANY,",
+				"          DISPLAYVALUE_C_SALES_CHANNEL,",
+				"          DISPLAYVALUE_D_TYPE,",
+				"          DISPLAYVALUE_E_CATEGORY,",
+				"          DISPLAYVALUE_F_FAMILY,",
+				"          DISPLAYVALUE_G_SIZE,",
+				"          DISPLAYVALUE_H_VERSION,",
+				"          DISPLAYVALUE_I_CUSTOMER,",
+				"          DISPLAYVALUE_J_VENDOR,",
+				"          DISPLAYVALUE_K_FOAM_SOURCED,",
+				"          DISPLAYVALUE_L_STORE,",
+				"          DISPLAYVALUE_M_SALES_DISTRI,",
+				"          DISPLAYVALUE_BUSINESS_UNIT,",
+				"          DISPLAYVALUE_MAIN_ACCOUNT,",
+				"          DISPLAYVALUE_PROJECTS,",
+				"          DISPLAYVALUE_SITE,",
+				"          DIRPARTYTABLE1_NAME_DEPARTMENT,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_INTERCOMPANY,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_SALES_CHANNEL,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_TYPE,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_CATEGORY,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_FAMILY,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_SIZE,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_VERSION,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_FOAM_SOURCED,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_M_SALES_DISTRI,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_PROJECTS,",
+				"          DIMENSIONFINANCIALTAG_DESCRIPTION_SITE,",
+				"          DIRPARTYTABLE2_NAME_STORE,",
+				"          DIRPARTYTABLE3_NAME_BUSINESS_UNIT,",
+				"          LATEST_MODIFIEDDATETIME,",
+				"          HK_JOB_RUN_ID,",
+				"          HK_SOURCE_NAME,",
+				"          OPERATIONSREGION,",
+				"          OPERATIONSREGIONDESCRIPTION,",
+				"          FINANCEREGION,",
+				"          FINANCEREGIONDESCRIPTION",
+				"     )) ~> InsertLedgerDimension"
+			]
+		}
+	}
+}

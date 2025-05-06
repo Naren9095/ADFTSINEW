@@ -1,0 +1,89 @@
+{
+	"name": "df_load_dim_line_return_reason",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_parquet",
+						"type": "DatasetReference"
+					},
+					"name": "SrcLineReturnReasonCode"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_returnreasongrpmap_excel",
+						"type": "DatasetReference"
+					},
+					"name": "ReturnReasonGroupMap"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference"
+					},
+					"name": "TpxLinereturnreasoncode",
+					"description": "Export data to ds_snowflake"
+				}
+			],
+			"transformations": [
+				{
+					"name": "lkpOnReturnReasonGroupMap"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          HK_SOURCE_NAME as string,",
+				"          HK_JOB_RUN_ID as string,",
+				"          DATAAREAID as string,",
+				"          REASONCODEID as string,",
+				"          RETURNREASONCODEGROUPID as string,",
+				"          DESCRIPTION as string,",
+				"          DESCRIPTION_CODEGROUP as string,",
+				"          LATEST_MODIFIEDDATETIME as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> SrcLineReturnReasonCode",
+				"source(output(",
+				"          ReturnReasonGroupID as string,",
+				"          ReturnReasonGroup as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> ReturnReasonGroupMap",
+				"SrcLineReturnReasonCode, ReturnReasonGroupMap lookup(left(REASONCODEID,1) == ReturnReasonGroupID,",
+				"     multiple: false,",
+				"     pickup: 'first',",
+				"     asc(ReturnReasonGroupID, true),",
+				"     broadcast: 'auto')~> lkpOnReturnReasonGroupMap",
+				"lkpOnReturnReasonGroupMap sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     stageInsert: true,",
+				"     mapColumn(",
+				"          HK_SOURCE_NAME,",
+				"          HK_JOB_RUN_ID,",
+				"          DATAAREAID,",
+				"          REASONCODEID,",
+				"          RETURNREASONCODEGROUPID,",
+				"          DESCRIPTION,",
+				"          DESCRIPTION_CODEGROUP,",
+				"          LATEST_MODIFIEDDATETIME,",
+				"          EXCEL_LINERETURNREASONGROUPID = ReturnReasonGroupID,",
+				"          EXCEL_LINERETURNREASONGROUP = ReturnReasonGroup",
+				"     )) ~> TpxLinereturnreasoncode"
+			]
+		}
+	}
+}

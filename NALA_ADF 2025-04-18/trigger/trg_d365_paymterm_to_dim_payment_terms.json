@@ -1,0 +1,34 @@
+{
+	"name": "trg_d365_paymterm_to_dim_payment_terms",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "pp_ax_paymterm_to_dim_payment_terms",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"p_src_table_nm": "PAYMTERM",
+					"p_src_schema_nm": "dbo",
+					"p_tgt_raw_table_nm": "PAYMTERM",
+					"p_tgt_raw_schema_nm": "D365",
+					"p_tgt_curate_table_nm": "DIM_PAYMENT_TERMS",
+					"p_tgt_curate_schema_nm": "GLOBAL",
+					"p_src_nm": "D365",
+					"p_src_code": "3"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2024-06-28T10:00:00",
+				"timeZone": "Eastern Standard Time"
+			}
+		}
+	}
+}

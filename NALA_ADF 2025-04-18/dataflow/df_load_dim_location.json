@@ -1,0 +1,191 @@
+{
+	"name": "df_load_dim_location",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_parquet",
+						"type": "DatasetReference"
+					},
+					"name": "srcLocationParquet"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_fipszipxref_excel",
+						"type": "DatasetReference"
+					},
+					"name": "srcFipsZipsXref"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_geoxref_excel",
+						"type": "DatasetReference"
+					},
+					"name": "srcGeoXref"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_isparegion_excel",
+						"type": "DatasetReference"
+					},
+					"name": "srcISPARegion"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference"
+					},
+					"name": "logisticsPostalAddress"
+				}
+			],
+			"transformations": [
+				{
+					"name": "joinFipsCode"
+				},
+				{
+					"name": "joinGeoXref"
+				},
+				{
+					"name": "getMaxTimestamp"
+				},
+				{
+					"name": "joinISPARegions"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     df_prev_max_ts_FipsZipsXref as string,",
+				"     df_prev_max_ts_GeoXref as string,",
+				"     df_prev_max_ts_ISPARegion as string,",
+				"     df_prev_max_raw_postalAddr as string",
+				"}",
+				"source(output(",
+				"          RECID as long,",
+				"          CITY as string,",
+				"          COUNTY as string,",
+				"          COUNTRYREGIONID as string,",
+				"          LATITUDE as decimal(32,16),",
+				"          LONGITUDE as decimal(32,16),",
+				"          ZIPCODE as string,",
+				"          STATE as string,",
+				"          STREET as string,",
+				"          ISPRIVATE as integer,",
+				"          MODIFIEDDATETIME as timestamp,",
+				"          LOCATIONID as string,",
+				"          DESCRIPTION as string,",
+				"          LOGISTICSLOCATION_MODIFIEDDATETIME as timestamp,",
+				"          TIMEZONEKEYNAME as string,",
+				"          HK_JOB_RUN_ID as string,",
+				"          HK_SOURCE_NAME as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> srcLocationParquet",
+				"source(output(",
+				"          FIPSCode as string,",
+				"          Zipcode as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> srcFipsZipsXref",
+				"source(output(",
+				"          RegionLongName as string,",
+				"          RegionShortName as string,",
+				"          RegionCode as string,",
+				"          DistrictLongName as string,",
+				"          DistrictShortName as string,",
+				"          DistrictCode as string,",
+				"          SMACode as string,",
+				"          SMALongName as string,",
+				"          BTACode as string,",
+				"          BTALongName as string,",
+				"          FIPSCode as string,",
+				"          MsCntyLongName as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> srcGeoXref",
+				"source(output(",
+				"          Country as string,",
+				"          State as string,",
+				"          {ISPA region ID} as string,",
+				"          {ISPA region Description} as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> srcISPARegion",
+				"joinISPARegions, srcFipsZipsXref lookup(left(srcLocationParquet@ZIPCODE, 5) == srcFipsZipsXref@Zipcode,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> joinFipsCode",
+				"joinFipsCode, srcGeoXref join(srcFipsZipsXref@FIPSCode == srcGeoXref@FIPSCode,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> joinGeoXref",
+				"joinGeoXref derive(LATEST_MODIFIEDDATETIME = greatest(MODIFIEDDATETIME, LOGISTICSLOCATION_MODIFIEDDATETIME, toTimestamp($df_prev_max_ts_FipsZipsXref, 'yyyy-MM-dd\\'T\\'HH:mm'), toTimestamp($df_prev_max_ts_GeoXref,  'yyyy-MM-dd\\'T\\'HH:mm'), toTimestamp($df_prev_max_ts_ISPARegion,  'yyyy-MM-dd\\'T\\'HH:mm')),",
+				"          FIPSZIPS_MODIFIEDDATETIME = toTimestamp($df_prev_max_ts_FipsZipsXref, 'yyyy-MM-dd\\'T\\'HH:mm'),",
+				"          ISPA_REGION_MODIFIEDDATETIME = toTimestamp($df_prev_max_ts_ISPARegion, 'yyyy-MM-dd\\'T\\'HH:mm'),",
+				"          GEO_MODIFIEDDATETIME = toTimestamp($df_prev_max_ts_GeoXref, 'yyyy-MM-dd\\'T\\'HH:mm'),",
+				"          RAW_MODIFIEDDATETIME = toTimestamp($df_prev_max_raw_postalAddr)) ~> getMaxTimestamp",
+				"srcLocationParquet, srcISPARegion lookup(COUNTRYREGIONID == Country",
+				"     && srcLocationParquet@STATE == srcISPARegion@State,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> joinISPARegions",
+				"getMaxTimestamp sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     truncate:true,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 1,",
+				"     stageInsert: true,",
+				"     mapColumn(",
+				"          RECID,",
+				"          CITY,",
+				"          COUNTY,",
+				"          COUNTRYREGIONID,",
+				"          LATITUDE,",
+				"          LONGITUDE,",
+				"          ZIPCODE = srcLocationParquet@ZIPCODE,",
+				"          STATE = srcLocationParquet@STATE,",
+				"          STREET,",
+				"          ISPRIVATE,",
+				"          MODIFIEDDATETIME,",
+				"          LOCATIONID,",
+				"          DESCRIPTION,",
+				"          LOGISTICSLOCATION_MODIFIEDDATETIME,",
+				"          TIMEZONEKEYNAME,",
+				"          HK_JOB_RUN_ID,",
+				"          HK_SOURCE_NAME,",
+				"          ISPAREGIONID = {ISPA region ID},",
+				"          ISPAREGIONDESCRIPTION = {ISPA region Description},",
+				"          FIPSCODE = srcFipsZipsXref@FIPSCode,",
+				"          REGIONLONGNAME = RegionLongName,",
+				"          REGIONCODE = RegionCode,",
+				"          DISTRICTLONGNAME = DistrictLongName,",
+				"          DISTRICTCODE = DistrictCode,",
+				"          SMACODE = SMACode,",
+				"          SMALONGNAME = SMALongName,",
+				"          BTACODE = BTACode,",
+				"          BTALONGNAME = BTALongName,",
+				"          MSCNTYLONGNAME = MsCntyLongName,",
+				"          LATEST_MODIFIEDDATETIME,",
+				"          FIPSZIPS_MODIFIEDDATETIME,",
+				"          ISPA_REGION_MODIFIEDDATETIME,",
+				"          GEO_MODIFIEDDATETIME",
+				"     )) ~> logisticsPostalAddress"
+			]
+		}
+	}
+}

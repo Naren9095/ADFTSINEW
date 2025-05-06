@@ -1,0 +1,498 @@
+{
+	"name": "pp_pbi_refresh_api",
+	"properties": {
+		"activities": [
+			{
+				"name": "loopStatusCheck",
+				"type": "Until",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@bool(variables('loopUntil'))",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "bufferTime",
+							"type": "Wait",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 120
+							}
+						},
+						{
+							"name": "checkSuccessRefresh",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "dataset_refresh_status",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(activity('dataset_refresh_status').output.value[0].status, 'Completed')",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "disableLoop_success_fullrefresh",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "dataset_refresh_pbi_succeeded",
+												"dependencyConditions": [
+													"Completed"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "loopUntil",
+											"value": true
+										}
+									},
+									{
+										"name": "dataset_refresh_pbi_succeeded",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"policy": {
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "pp_pbi_notification",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"runId": {
+													"value": "@coalesce(pipeline().RunId, -1)",
+													"type": "Expression"
+												},
+												"name": {
+													"value": "@pipeline().parameters.p_dataset_nm",
+													"type": "Expression"
+												},
+												"triggerTime": {
+													"value": "@activity('dataset_refresh_status').output.value[0].startTime",
+													"type": "Expression"
+												},
+												"status": {
+													"value": "@concat(activity('dataset_refresh_status').output.value[0].status,' - PBI success')",
+													"type": "Expression"
+												},
+												"message": {
+													"value": "@activity('dataset_refresh_status').output.value[0].status",
+													"type": "Expression"
+												},
+												"executionEndTime": {
+													"value": "@activity('dataset_refresh_status').output.value[0].endTime",
+													"type": "Expression"
+												},
+												"teamWebhookUrl": {
+													"value": "@pipeline().parameters.p_webhook_url",
+													"type": "Expression"
+												},
+												"notificationTime": {
+													"value": "@utcNow()",
+													"type": "Expression"
+												},
+												"extendedStatus": {
+													"value": "@coalesce(activity('dataset_refresh_status').output.value[0]?.extendedStatus,'Success')",
+													"type": "Expression"
+												},
+												"color": "008000",
+												"refreshType": {
+													"value": "@pipeline().parameters.p_refreshType",
+													"type": "Expression"
+												}
+											}
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "dataset_refresh_status",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "bufferTime",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"method": "GET",
+								"url": {
+									"value": "@concat('https://api.powerbi.com/v1.0/myorg/groups/',pipeline().parameters.p_group_id,'/datasets/',pipeline().parameters.p_dataset_id,'/refreshes/?$top=1')",
+									"type": "Expression"
+								},
+								"connectVia": {
+									"referenceName": "IR-Snowflake-NALA",
+									"type": "IntegrationRuntimeReference"
+								},
+								"authentication": {
+									"type": "ServicePrincipal",
+									"userTenant": {
+										"value": "@pipeline().globalParameters.pbi_tenant_id",
+										"type": "Expression"
+									},
+									"username": {
+										"value": "@pipeline().globalParameters.pbi_service_principal_id",
+										"type": "Expression"
+									},
+									"resource": "https://analysis.windows.net/powerbi/api",
+									"password": {
+										"type": "AzureKeyVaultSecret",
+										"store": {
+											"referenceName": "ls_key_vault",
+											"type": "LinkedServiceReference"
+										},
+										"secretName": "PowerBI-SnowflakeADF-DEV"
+									}
+								}
+							}
+						},
+						{
+							"name": "checkFailureRefresh",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "checkSuccessRefresh",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(activity('dataset_refresh_status').output.value[0].status, 'Failed')",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "disableLoopFailure_PbiFail",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "dataset_refresh_pbi_failed",
+												"dependencyConditions": [
+													"Completed"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "loopUntil",
+											"value": true
+										}
+									},
+									{
+										"name": "dataset_refresh_pbi_failed",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"policy": {
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "pp_pbi_notification",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"runId": {
+													"value": "@coalesce(pipeline().RunId, -1)",
+													"type": "Expression"
+												},
+												"name": {
+													"value": "@pipeline().parameters.p_dataset_nm",
+													"type": "Expression"
+												},
+												"triggerTime": {
+													"value": "@activity('dataset_refresh_status').output.value[0].startTime",
+													"type": "Expression"
+												},
+												"status": {
+													"value": "@concat(activity('dataset_refresh_status').output.value[0].status, ' - PBI Failure')",
+													"type": "Expression"
+												},
+												"message": {
+													"value": "@json(activity('dataset_refresh_status').output.value[0]?.serviceExceptionJson)?.errorDescription",
+													"type": "Expression"
+												},
+												"executionEndTime": {
+													"value": "@activity('dataset_refresh_status').output.value[0].endTime",
+													"type": "Expression"
+												},
+												"teamWebhookUrl": {
+													"value": "@pipeline().parameters.p_webhook_url",
+													"type": "Expression"
+												},
+												"notificationTime": {
+													"value": "@utcNow()",
+													"type": "Expression"
+												},
+												"extendedStatus": {
+													"value": "@activity('dataset_refresh_status').output.value[0].extendedStatus",
+													"type": "Expression"
+												},
+												"color": "FF0000",
+												"refreshType": {
+													"value": "@pipeline().parameters.p_refreshType",
+													"type": "Expression"
+												}
+											}
+										}
+									},
+									{
+										"name": "Fail1",
+										"type": "Fail",
+										"dependsOn": [
+											{
+												"activity": "dataset_refresh_pbi_failed",
+												"dependencyConditions": [
+													"Completed"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"message": "PowerBi Failure",
+											"errorCode": "100100"
+										}
+									}
+								]
+							}
+						},
+						{
+							"name": "disableLoopFailure_AdfFail",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "dataset_refresh_status",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "loopUntil",
+								"value": true
+							}
+						}
+					],
+					"timeout": "0.12:00:00"
+				}
+			},
+			{
+				"name": "dataset_refresh",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": {
+						"value": "@concat('https://api.powerbi.com/v1.0/myorg/groups/',pipeline().parameters.p_group_id,'/datasets/',pipeline().parameters.p_dataset_id,'/refreshes')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IR-Snowflake-NALA",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "@json(pipeline().parameters.p_web_body)",
+						"type": "Expression"
+					},
+					"authentication": {
+						"type": "ServicePrincipal",
+						"userTenant": {
+							"value": "@pipeline().globalParameters.pbi_tenant_id",
+							"type": "Expression"
+						},
+						"username": {
+							"value": "@pipeline().globalParameters.pbi_service_principal_id",
+							"type": "Expression"
+						},
+						"resource": "https://analysis.windows.net/powerbi/api",
+						"password": {
+							"type": "AzureKeyVaultSecret",
+							"store": {
+								"referenceName": "ls_key_vault",
+								"type": "LinkedServiceReference"
+							},
+							"secretName": "PowerBI-SnowflakeADF-DEV"
+						}
+					}
+				}
+			},
+			{
+				"name": "TokenExpired_or_not",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "dataset_refresh",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(\n    if(and(and(contains(activity('dataset_refresh').Error['message'],'{'),contains(activity('dataset_refresh').Error['message'],'}')),contains(activity('dataset_refresh').Error['message'],':')), \n       json(activity('dataset_refresh')?.Error['message'])?.error?.code ,\n       activity('dataset_refresh').Error['message']) \n    ,'TokenExpired' )",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "web_activity_fail_post",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "dataset_refresh_failed_post",
+									"dependencyConditions": [
+										"Completed"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "Web activity POST failed",
+								"errorCode": "1010"
+							}
+						},
+						{
+							"name": "dataset_refresh_failed_post",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_pbi_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().parameters.p_dataset_nm",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@concat(activity('dataset_refresh').Status,'-','ADF activity failure')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@replace(\n    if(and(and(contains(activity('dataset_refresh').Error['message'],'{'),contains(activity('dataset_refresh').Error['message'],'}')),contains(activity('dataset_refresh').Error['message'],':')), \n       json(activity('dataset_refresh')?.Error['message'])?.error?.message ,\n       activity('dataset_refresh').Error['message'])\n    ,'\"','''')",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('dataset_refresh').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().parameters.p_webhook_url",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"extendedStatus": {
+										"value": "@activity('dataset_refresh').Status",
+										"type": "Expression"
+									},
+									"color": "FF0000",
+									"refreshType": {
+										"value": "@pipeline().parameters.p_refreshType",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"p_group_id": {
+				"type": "string"
+			},
+			"p_dataset_id": {
+				"type": "string"
+			},
+			"p_web_body": {
+				"type": "string"
+			},
+			"p_dataset_nm": {
+				"type": "string"
+			},
+			"p_webhook_url": {
+				"type": "string"
+			},
+			"p_refreshType": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"loopUntil": {
+				"type": "Boolean"
+			}
+		},
+		"folder": {
+			"name": "pbi_incremental_refresh/pbi_reusables"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-10-21T13:41:47Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

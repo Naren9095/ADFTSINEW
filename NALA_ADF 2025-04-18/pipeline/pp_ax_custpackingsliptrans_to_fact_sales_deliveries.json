@@ -1,0 +1,3273 @@
+{
+	"name": "pp_ax_custpackingsliptrans_to_fact_sales_deliveries",
+	"properties": {
+		"activities": [
+			{
+				"name": "load_fact_sales_deliveries",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "switch_nala_retail",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_fact_sales_deliveries",
+						"type": "DataFlowReference",
+						"parameters": {
+							"df_prev_max_timestamp": {
+								"value": "'@{variables('v_prev_max_timestamp')}'",
+								"type": "Expression"
+							}
+						},
+						"datasetParameters": {
+							"SrcCustPackingSlipTrans": {
+								"p_directory": {
+									"value": "@pipeline().parameters.p_temp_directory",
+									"type": "Expression"
+								},
+								"p_root_system": {
+									"value": "@pipeline().globalParameters.rootDir",
+									"type": "Expression"
+								},
+								"p_file_name": {
+									"value": "@pipeline().parameters.p_temp_file_nm",
+									"type": "Expression"
+								}
+							},
+							"SrcCustPackingSlipTransExt": {
+								"p_tgt_table_name": {
+									"value": "@pipeline().parameters.p_tgt_raw_table_nm_2",
+									"type": "Expression"
+								},
+								"p_tgt_schema_name": {
+									"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+									"type": "Expression"
+								},
+								"p_ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_rawDb",
+									"type": "Expression"
+								},
+								"p_ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							},
+							"CustPackingSlipTrans": {
+								"p_tgt_table_name": {
+									"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+									"type": "Expression"
+								},
+								"p_tgt_schema_name": {
+									"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+									"type": "Expression"
+								},
+								"p_ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_rawDb",
+									"type": "Expression"
+								},
+								"p_ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							},
+							"CustPackingSlipTransExt": {
+								"p_tgt_table_name": {
+									"value": "@pipeline().parameters.p_tgt_raw_table_nm_2",
+									"type": "Expression"
+								},
+								"p_tgt_schema_name": {
+									"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+									"type": "Expression"
+								},
+								"p_ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_rawDb",
+									"type": "Expression"
+								},
+								"p_ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"integrationRuntime": {
+						"referenceName": "IR-Snowflake-NALA",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "lkp_raw_last_modified_date",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SnowflakeSource",
+						"query": {
+							"value": "@concat('select max(to_varchar(LATEST_MODIFIEDDATETIME::timestamp, ''','yyyy-mm-dd hh24:mi:ss',''')) as max_date from ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_rawDb,'.',pipeline().parameters.p_tgt_raw_schema_nm, '.', pipeline().parameters.p_tgt_raw_table_nm)",
+							"type": "Expression"
+						},
+						"exportSettings": {
+							"type": "SnowflakeExportCopyCommand"
+						}
+					},
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_tgt_table_name": {
+								"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+								"type": "Expression"
+							},
+							"p_tgt_schema_name": {
+								"value": "@pipeline().parameters.p_tgt_curate_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_DbName": {
+								"value": "@pipeline().globalParameters.snow_rawDb",
+								"type": "Expression"
+							},
+							"p_ls_Env": {
+								"value": "@pipeline().globalParameters.environment",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "set_last_modified_date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkp_raw_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_prev_max_timestamp",
+					"value": {
+						"value": "@coalesce(activity('lkp_raw_last_modified_date').output.firstRow.max_date, '1950-01-01 00:00:00')\n\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "raw_to_curate_sp_call",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "load_fact_sales_deliveries",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_auditDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('CALL ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_auditDb,'.CONTROL.SP_TASK_INITIALIZE(','''',pipeline().RunId,'''',',','''',pipeline().globalParameters.environment,'''',',','''',pipeline().parameters.p_tgt_curate_table_nm,'''',',',pipeline().parameters.p_src_code,')')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "load_fact_sales_deliveries_failure_notification",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "load_fact_sales_deliveries",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_adf_pipeline_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"subscription": {
+							"value": "@pipeline().globalParameters.subscriptionId",
+							"type": "Expression"
+						},
+						"resourceGroup": {
+							"value": "@pipeline().globalParameters.resourceGroup",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@coalesce(pipeline().RunId, -1)",
+							"type": "Expression"
+						},
+						"name": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"triggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"status": {
+							"value": "@activity('load_fact_sales_deliveries').Status",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@activity('load_fact_sales_deliveries').Error['message']",
+							"type": "Expression"
+						},
+						"executionEndTime": {
+							"value": "@activity('load_fact_sales_deliveries').ExecutionEndTime",
+							"type": "Expression"
+						},
+						"runDuration": {
+							"value": "@activity('load_fact_sales_deliveries').Duration",
+							"type": "Expression"
+						},
+						"teamWebhookUrl": {
+							"value": "@pipeline().globalParameters.teamsWebhookUrl",
+							"type": "Expression"
+						},
+						"notificationTime": {
+							"value": "@utcNow()",
+							"type": "Expression"
+						},
+						"taskName": {
+							"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+							"type": "Expression"
+						},
+						"taskStepNumber": {
+							"value": "@pipeline().parameters.p_src_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "raw_to_curate_storedprocedure_failure_notification",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_adf_pipeline_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"subscription": {
+							"value": "@pipeline().globalParameters.subscriptionId",
+							"type": "Expression"
+						},
+						"resourceGroup": {
+							"value": "@pipeline().globalParameters.resourceGroup",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@coalesce(pipeline().RunId, -1)",
+							"type": "Expression"
+						},
+						"name": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"triggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"status": {
+							"value": "@activity('raw_to_curate_sp_call').Status",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@activity('raw_to_curate_sp_call').Error['message']",
+							"type": "Expression"
+						},
+						"executionEndTime": {
+							"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+							"type": "Expression"
+						},
+						"runDuration": {
+							"value": "@activity('raw_to_curate_sp_call').Duration",
+							"type": "Expression"
+						},
+						"teamWebhookUrl": {
+							"value": "@pipeline().globalParameters.teamsWebhookUrl",
+							"type": "Expression"
+						},
+						"notificationTime": {
+							"value": "@utcNow()",
+							"type": "Expression"
+						},
+						"taskName": {
+							"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+							"type": "Expression"
+						},
+						"taskStepNumber": {
+							"value": "@pipeline().parameters.p_src_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pipeline_execution_notification",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(equals(activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE'],'TRUE'),bool('TRUE'), bool('FALSE'))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "pp_stored_procedure_failure_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@toUpper('failed')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": {
+										"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+										"type": "Expression"
+									},
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "curate_load_failure",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "pp_stored_procedure_failure_notification",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": {
+									"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+									"type": "Expression"
+								},
+								"errorCode": "500"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "stored_procedure_success_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@activity('raw_to_curate_sp_call').Status",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat(pipeline().parameters.p_tgt_curate_table_nm, ' is successfully loaded')",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": {
+										"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+										"type": "Expression"
+									},
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "switch_nala_retail",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "set_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.p_src_code",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "1",
+							"activities": [
+								{
+									"name": "custpackingsliptrans_to_adls_nala",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": {
+												"value": "SELECT\ncpst1.recid as RECID\n,cpst1.defaultdimension as DEFAULTDIMENSION\n,cpst1.transactioncode as TRANSACTIONCODE\n,cpst1.inventdimid as INVENTDIMID\n,cpst1.itemid as ITEMID\n,cpst1.deliverypostaladdress as DELIVERYPOSTALADDRESS\n,cpst1.salesgroup as SALESGROUP\n,cpst1.salesunit as SALESUNIT\n,cpst1.deliverydate as DELIVERYDATE\n,cpst1.saleslineshippingdateconfirmed as SALESLINESHIPPINGDATECONFIRMED\n,cpst1.saleslineshippingdaterequested as SALESLINESHIPPINGDATEREQUESTED\n,cpst1.inventtransid as INVENTTRANSID\n,cpst1.dataareaid as DATAAREAID\n,cpst1.linenum as LINENUM\n,cpst1.origsalesid as ORIGSALESID\n,cpst1.packingslipid as PACKINGSLIPID\n,cpst1.salesid as SALESID\n,cpst1.deliverytype as DELIVERYTYPE\n,cpst1.inventqty as INVENTQTY\n,cpst1.qty as QTY\n,cpst1.priceunit as PRICEUNIT\n,cpst1.valuemst as VALUEMST\n,cpst1.modifieddatetime as MODIFIEDDATETIME\n,def1.BUSINESS_UNIT as DEFAULTDIMENSION_BUSINESS_UNIT\n,def1.DEFAULTDIMENSION_MODIFIEDDATETIME\n,st1.smmcampaignid as SALESTABLE_SMMCAMPAIGNID\n,st1.markupgroup as SALESTABLE_MARKUPGROUP\n,st1.linedisc as SALESTABLE_LINEDISC\n,st1.salespoolid as SALESTABLE_SALESPOOLID\n,st1.pricegroupid as SALESTABLE_PRICEGROUPID\n,st1.workersalesresponsible as SALESTABLE_WORKERSALESRESPONSIBLE\n,st1.documentstatus as SALESTABLE_DOCUMENTSTATUS\n,st1.returnstatus as SALESTABLE_RETURNSTATUS\n,'2' as SALESTABLE_SALESSTATUS\n,st1.salestype as SALESTABLE_SALESTYPE\n,st1.atagent as SALESTABLE_ATAGENT\n,st1.shipcarrierblindshipment as SALESTABLE_SHIPCARRIERBLINDSHIPMENT\n,st1.shipcarrierexpeditedshipment as SALESTABLE_SHIPCARRIEREXPEDITEDSHIPMENT\n,st1.orderblocked as SALESTABLE_ORDERBLOCKED\n,st1.mcrorderstopped as SALESTABLE_MCRORDERSTOPPED\n,st1.shipcarrierfuelsurcharge as SALESTABLE_SHIPCARRIERFUELSURCHARGE\n,st1.modifieddatetime as SALESTABLE_MODIFIEDDATETIME\n,cpsj1.invoiceaccount as CUSTPACKINGSLIPJOUR_INVOICEACCOUNT\n,cpsj1.orderaccount as CUSTPACKINGSLIPJOUR_ORDERACCOUNT\n,cpsj1.dlvmode as CUSTPACKINGSLIPJOUR_DLVMODE\n,cpsj1.dlvterm as CUSTPACKINGSLIPJOUR_DLVTERM\n,cpsj1.invoicepostaladdress as CUSTPACKINGSLIPJOUR_INVOICEPOSTALADDRESS\n,cpsj1.shipcarrierid as CUSTPACKINGSLIPJOUR_SHIPCARRIERID\n,cpsj1.inventlocationid as CUSTPACKINGSLIPJOUR_INVENTLOCATIONID\n,cpsj1.workersalestaker as CUSTPACKINGSLIPJOUR_WORKERSALESTAKER\n,cpsj1.ntt_deliverystatus as CUSTPACKINGSLIPJOUR_NTT_DELIVERYSTATUS\n,cpsj1.documentdate as CUSTPACKINGSLIPJOUR_DOCUMENTDATE\n,cpsj1.billofladingid as CUSTPACKINGSLIPJOUR_BILLOFLADINGID\n,cpsj1.internalpackingslipid as CUSTPACKINGSLIPJOUR_INTERNALPACKINGSLIPID\n,cpsj1.ledgervoucher as CUSTPACKINGSLIPJOUR_LEDGERVOUCHER\n,cpsj1.purchaseorder as CUSTPACKINGSLIPJOUR_PURCHASEORDER\n,cpsj1.ebcoverridestatus as CUSTPACKINGSLIPJOUR_EBCOVERRIDESTATUS\n,cpsj1.modifieddatetime as CUSTPACKINGSLIPJOUR_MODIFIEDDATETIME\n,id1.configid as INVENTDIM1_CONFIGID\n,id1.modifieddatetime as INVENTDIM1_MODIFIEDDATETIME\n,idc1.pdmstatus as INVENTDIMCOMBINATION_PDMSTATUS\n,idc1.modifieddatetime as INVENTDIMCOMBINATION_MODIFIEDDATETIME\n,scp1.carrierid as SHIPCARRIERPACKAGE1_ORIG_CARRIERID\n,scp1.shipdate as SHIPCARRIERPACKAGE1_ORIG_SHIPDATE\n,scp1.carriername as SHIPCARRIERPACKAGE1_ORIG_CARRIERNAME\n,scp2.shipdate as SHIPCARRIERPACKAGE2_SHIPDATE\n,sl1.linedisc as SALESLINE_LINEDISC\n,sl1.linepercent as SALESLINE_LINEPERCENT\n,sl1.returnstatus as SALESLINE_RETURNSTATUS\n,'2' as SALESLINE_SALESSTATUS\n,sl1.shipcarrierdlvtype as SALESLINE_SHIPCARRIERDLVTYPE\n,sl1.complete as SALESLINE_COMPLETE\n,sl1.orderblocked as SALESLINE_ORDERBLOCKED\n,sl1.scrap as SALESLINE_SCRAP\n,sl1.stockedproduct as SALESLINE_STOCKEDPRODUCT\n,sl1.modifieddatetime as SALESLINE_MODIFIEDDATETIME\n,mslds1.dropshipment as MCRSALESLINEDROPSHIPMENT_DROPSHIPMENT\n,sct1.ntt_deliverydate as SHIPCARRIERTRACKING_NTT_DELIVERYDATE\n,sct1.trackingnumber as SHIPCARRIERTRACKING_TRACKINGNUMBER\n,tet1.enumvaluelabel as TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_DOCUMENTSTATUS\n,tet2.enumvaluelabel as TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_RETURNSTATUSHEADER\n,tet3.enumvaluelabel as TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_SALESSTATUSHEADER\n,tet4.enumvaluelabel as TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_RETURNSTATUSLINE\n,tet5.enumvaluelabel as TIMEXTENDERENUMTABLE5_ENUMVALUELABEL_SALESSTATUSLINE\n,tet6.enumvaluelabel as TIMEXTENDERENUMTABLE6_ENUMVALUELABEL_SALESTYPE\n,tet7.enumvaluelabel as TIMEXTENDERENUMTABLE7_ENUMVALUELABEL_SHIPCARRIERDLVTYPE\n,tet8.enumvaluelabel as TIMEXTENDERENUMTABLE8_ENUMVALUELABEL_NTT_DELIVERYSTATUS\n,tet9.enumvaluelabel as TIMEXTENDERENUMTABLE9_ENUMVALUELABEL_TRADELINEDLVTYPE,\nps1.name as PDMSTATUS_NAME\n,convert(varchar(max),hashbytes('SHA2_256', concat(isnull(cpst1.recid, 0), \n'~', isnull(scp1.carrierid, ''), '~',\n isnull(scp1.shipdate, '1950-01-01 00:00:00'), '~',\n  isnull(scp1.carriername, ''), '~',\n   isnull(scp2.shipdate, '1950-01-01 00:00:00'), '~',\n    isnull(mslds1.dropshipment, 0), '~',\n\t isnull(sct1.ntt_deliverydate, '1950-01-01 00:00:00'), '~', \n\t isnull(sct1.trackingnumber, ''))),2) as HK_CUSTPACKINGSLIPTRANS_EXT_HASH_KEY\n,(SELECT MAX(LastUpdateDate)\n FROM (VALUES (cpst1.modifieddatetime),\n  (isnull(def1.DEFAULTDIMENSION_MODIFIEDDATETIME, '1950-01-01'))\n  , (isnull(st1.modifieddatetime, '1950-01-01'))\n  , (isnull(id1.modifieddatetime, '1950-01-01'))\n  , (isnull(sl1.modifieddatetime, '1950-01-01'))\n) AS UpdateDate(LastUpdateDate)) as LATEST_MODIFIEDDATETIME\nFROM\ndbo.CUSTPACKINGSLIPTRANS cpst1\nleft join (select distinct cpst1.DEFAULTDIMENSION\n\t\t\t\t, max(\n\t\t\t\t\tcase when da1.NAME = 'BusinessUnit' then davsi1.DISPLAYVALUE\n\t\t\t\t\t\telse null\n\t\t\t\t\t\tend\n\t\t\t\t\t) over (partition by cpst1.DEFAULTDIMENSION) as BUSINESS_UNIT\n\t\t\t\t, max(\n\t\t\t\t\t(select max(i) from (values (davsi1.MODIFIEDDATETIME), (dav1.MODIFIEDDATETIME), (da1.MODIFIEDDATETIME), (desc1.DESC_MODIFIEDDATETIME)) AS T(i))\n\t\t\t\t\t) over (partition by cpst1.DEFAULTDIMENSION) as DEFAULTDIMENSION_MODIFIEDDATETIME\n\t\t\tfrom (select distinct DEFAULTDIMENSION from dbo.CUSTPACKINGSLIPTRANS) cpst1\n\t\t\tleft join dbo.DIMENSIONATTRIBUTEVALUESETITEM davsi1 on\n\t\t\t\tcpst1.DEFAULTDIMENSION = davsi1.DIMENSIONATTRIBUTEVALUESET\n\t\t\tleft join dbo.DIMENSIONATTRIBUTEVALUE dav1 on\n\t\t\t\tdavsi1.DIMENSIONATTRIBUTEVALUE = dav1.RECID\n\t\t\tleft join dbo.DIMENSIONATTRIBUTE da1 on\n\t\t\t\tdav1.DIMENSIONATTRIBUTE = da1.RECID\n\t\t\tleft join (select dft1.VALUE, da2.NAME, dft1.DESCRIPTION\n\t\t\t\t\t\t\t, (select max(i) from (values (dft1.MODIFIEDDATETIME), (dadc1.MODIFIEDDATETIME), (da2.MODIFIEDDATETIME)) AS T(i)) as DESC_MODIFIEDDATETIME\n\t\t\t\t\t\tfrom dbo.DIMENSIONFINANCIALTAG dft1\n\t\t\t\t\t\tleft join dbo.DIMENSIONATTRIBUTEDIRCATEGORY dadc1 on\n\t\t\t\t\t\t\tdft1.FINANCIALTAGCATEGORY = dadc1.DIRCATEGORY\n\t\t\t\t\t\tleft join dbo.DIMENSIONATTRIBUTE da2 on\n\t\t\t\t\t\t\tdadc1.DIMENSIONATTRIBUTE = da2.RECID) desc1 on\n\t\t\t\tdavsi1.DISPLAYVALUE = desc1.VALUE and\n\t\t\t\tda1.NAME = desc1.NAME\n\t\t\t) def1 on\n\tcpst1.DEFAULTDIMENSION = def1.DEFAULTDIMENSION\nleft join dbo.SALESTABLE st1 on\n\tcpst1.DATAAREAID = st1.DATAAREAID and\n\tcpst1.SALESID = st1.SALESID\nleft join (select DATAAREAID, PACKINGSLIPID, SALESID, DELIVERYDATE\n\t\t\t, INVOICEACCOUNT, ORDERACCOUNT, DLVMODE, DLVTERM, INVOICEPOSTALADDRESS, SHIPCARRIERID, INVENTLOCATIONID, WORKERSALESTAKER, NTT_DELIVERYSTATUS, DOCUMENTDATE, BILLOFLADINGID, INTERNALPACKINGSLIPID, LEDGERVOUCHER, PURCHASEORDER, EBCOVERRIDESTATUS\n\t\t\t, MODIFIEDDATETIME\n\t\tfrom dbo.CUSTPACKINGSLIPJOUR cpsj10\n\t\tinner join (select RECID\n\t\t\t\t\t, row_number() over (partition by DATAAREAID, PACKINGSLIPID, SALESID, DELIVERYDATE order by MODIFIEDDATETIME desc) as ROW_NUM\n\t\t\t\tfrom dbo.CUSTPACKINGSLIPJOUR) cpsj11 on\n\t\t\tcpsj11.ROW_NUM = 1 and\n\t\t\tcpsj10.RECID = cpsj11.RECID) cpsj1 on\n\tcpst1.DATAAREAID = cpsj1.DATAAREAID and\n\tcpst1.PACKINGSLIPID = cpsj1.PACKINGSLIPID and\n\tcpst1.SALESID = cpsj1.SALESID and\n\tcpst1.DELIVERYDATE = cpsj1.DELIVERYDATE\nleft join dbo.INVENTDIM id1 on\n\tcpst1.DATAAREAID = id1.DATAAREAID and\n\tcpst1.INVENTDIMID = id1.INVENTDIMID\nleft join (select idc10.DATAAREAID, idc10.ITEMID, id10.CONFIGID, idc10.PDMSTATUS\n\t\t\t, max(id10.MODIFIEDDATETIME) as MODIFIEDDATETIME\n\t\tfrom dbo.INVENTDIMCOMBINATION idc10\n\t\tleft join dbo.INVENTDIM id10 on\n\t\t\tidc10.DATAAREAID = id10.DATAAREAID and\n\t\t\tidc10.INVENTDIMID = id10.INVENTDIMID\n\t\tgroup by idc10.DATAAREAID, idc10.ITEMID, id10.CONFIGID, idc10.PDMSTATUS) idc1 on\n\tcpst1.DATAAREAID = idc1.DATAAREAID and\n\tid1.CONFIGID = idc1.CONFIGID and\n\tcpst1.ITEMID = idc1.ITEMID\nleft join dbo.SHIPCARRIERPACKAGE scp1 on\n\tcpst1.DATAAREAID = scp1.DATAAREAID and\n\tcpst1.PACKINGSLIPID = scp1.PACKINGSLIPID and\n\tcpst1.ORIGSALESID = scp1.SALESID\nleft join dbo.SHIPCARRIERPACKAGE scp2 on\n\tcpst1.DATAAREAID = scp2.DATAAREAID and\n\tcpst1.PACKINGSLIPID = scp2.PACKINGSLIPID and\n\tcpst1.SALESID = scp2.SALESID\nleft join dbo.SALESLINE sl1 on\n\tcpst1.DATAAREAID = sl1.DATAAREAID and\n\tcpst1.INVENTTRANSID = sl1.INVENTTRANSID\nleft join dbo.MCRSALESLINEDROPSHIPMENT mslds1 on\n\tsl1.DATAAREAID = mslds1.DATAAREAID and\n\tsl1.RECID = mslds1.SALESLINE\nleft join (select DATAAREAID, PACKINGSLIPID, SALESID, NTT_DELIVERYSTATUS\n\t\t\t, max(NTT_DELIVERYDATE) as NTT_DELIVERYDATE\n\t\t\t, max(TRACKINGNUMBER) as TRACKINGNUMBER\n\t\tfrom dbo.SHIPCARRIERTRACKING\n\t\tgroup by DATAAREAID, PACKINGSLIPID, SALESID, NTT_DELIVERYSTATUS) sct1 on\n\tcpst1.DATAAREAID = sct1.DATAAREAID and\n\tcpst1.PACKINGSLIPID = sct1.PACKINGSLIPID and\n\tcpst1.ORIGSALESID = sct1.SALESID and\n\tcpsj1.NTT_DELIVERYSTATUS = sct1.NTT_DELIVERYSTATUS\nleft join (select ENUMNAME, ENUMVALUE\n\t\t\t, max(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom dbo.TIMEXTENDERENUMTABLE\n\t\twhere ENUMNAME = 'DocumentStatus'\n\t\tgroup by ENUMNAME, ENUMVALUE) tet1 on\n\tst1.DOCUMENTSTATUS = tet1.ENUMVALUE\nleft join (select ENUMNAME, ENUMVALUE\n\t\t\t, max(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom dbo.TIMEXTENDERENUMTABLE\n\t\twhere ENUMNAME = 'ReturnStatusHeader'\n\t\tgroup by ENUMNAME, ENUMVALUE) tet2 on\n\tst1.RETURNSTATUS = tet2.ENUMVALUE\nleft join (select ENUMNAME, ENUMVALUE\n\t\t\t, max(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom dbo.TIMEXTENDERENUMTABLE\n\t\twhere ENUMNAME = 'SalesStatus'\n\t\tgroup by ENUMNAME, ENUMVALUE) tet3 on\n\t'2' = tet3.ENUMVALUE\nleft join (select ENUMNAME, ENUMVALUE\n\t\t\t, max(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom dbo.TIMEXTENDERENUMTABLE\n\t\twhere ENUMNAME = 'ReturnStatusLine'\n\t\tgroup by ENUMNAME, ENUMVALUE) tet4 on\n\tsl1.RETURNSTATUS = tet4.ENUMVALUE\nleft join (select ENUMNAME, ENUMVALUE\n\t\t\t, max(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom dbo.TIMEXTENDERENUMTABLE\n\t\twhere ENUMNAME = 'SalesStatus'\n\t\tgroup by ENUMNAME, ENUMVALUE) tet5 on\n\t '2' = tet5.ENUMVALUE\nleft join (select ENUMNAME, ENUMVALUE\n\t\t\t, max(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom dbo.TIMEXTENDERENUMTABLE\n\t\twhere ENUMNAME = 'SalesType'\n\t\tgroup by ENUMNAME, ENUMVALUE) tet6 on\n\tst1.SALESTYPE = tet6.ENUMVALUE\nleft join (select ENUMNAME, ENUMVALUE\n\t\t\t, max(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom dbo.TIMEXTENDERENUMTABLE\n\t\twhere ENUMNAME = 'ShipCarrierDlvType'\n\t\tgroup by ENUMNAME, ENUMVALUE) tet7 on\n\tsl1.SHIPCARRIERDLVTYPE = tet7.ENUMVALUE\nleft join (select ENUMNAME, ENUMVALUE\n\t\t\t, max(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom dbo.TIMEXTENDERENUMTABLE\n\t\twhere ENUMNAME = 'NTT_DeliveryStatus'\n\t\tgroup by ENUMNAME, ENUMVALUE) tet8 on\n\tcpsj1.NTT_DELIVERYSTATUS = tet8.ENUMVALUE\nleft join (select ENUMNAME, ENUMVALUE\n\t\t\t, max(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom dbo.TIMEXTENDERENUMTABLE\n\t\twhere ENUMNAME = 'TradeLineDlvType'\n\t\tgroup by ENUMNAME, ENUMVALUE) tet9 on\n\tcpst1.DELIVERYTYPE = tet9.ENUMVALUE\n\tleft join dbo.PDMSTATUS ps1 on\n\tidc1.PDMSTATUS = ps1.RECID",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "RECID",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "RECID",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "TRANSACTIONCODE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TRANSACTIONCODE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIMID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "INVENTDIMID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "ITEMID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "ITEMID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DELIVERYPOSTALADDRESS",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "DELIVERYPOSTALADDRESS",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESGROUP",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESGROUP",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESUNIT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESUNIT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DELIVERYDATE",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "DELIVERYDATE",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINESHIPPINGDATECONFIRMED",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "SALESLINESHIPPINGDATECONFIRMED",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINESHIPPINGDATEREQUESTED",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "SALESLINESHIPPINGDATEREQUESTED",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTTRANSID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "INVENTTRANSID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DATAAREAID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DATAAREAID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LINENUM",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "LINENUM",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "ORIGSALESID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "ORIGSALESID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "PACKINGSLIPID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "PACKINGSLIPID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DELIVERYTYPE",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "DELIVERYTYPE",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTQTY",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "INVENTQTY",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "QTY",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "QTY",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "PRICEUNIT",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "PRICEUNIT",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "VALUEMST",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "VALUEMST",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION_BUSINESS_UNIT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION_BUSINESS_UNIT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_SMMCAMPAIGNID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESTABLE_SMMCAMPAIGNID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_MARKUPGROUP",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESTABLE_MARKUPGROUP",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_LINEDISC",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESTABLE_LINEDISC",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_SALESPOOLID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESTABLE_SALESPOOLID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_PRICEGROUPID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESTABLE_PRICEGROUPID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_WORKERSALESRESPONSIBLE",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "SALESTABLE_WORKERSALESRESPONSIBLE",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_DOCUMENTSTATUS",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_DOCUMENTSTATUS",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_RETURNSTATUS",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_RETURNSTATUS",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_SALESSTATUS",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "SALESTABLE_SALESSTATUS",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_SALESTYPE",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_SALESTYPE",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_ATAGENT",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_ATAGENT",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_SHIPCARRIERBLINDSHIPMENT",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_SHIPCARRIERBLINDSHIPMENT",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_SHIPCARRIEREXPEDITEDSHIPMENT",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_SHIPCARRIEREXPEDITEDSHIPMENT",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_ORDERBLOCKED",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_ORDERBLOCKED",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_MCRORDERSTOPPED",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_MCRORDERSTOPPED",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_SHIPCARRIERFUELSURCHARGE",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_SHIPCARRIERFUELSURCHARGE",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "SALESTABLE_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_INVOICEACCOUNT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_INVOICEACCOUNT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_ORDERACCOUNT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_ORDERACCOUNT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_DLVMODE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_DLVMODE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_DLVTERM",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_DLVTERM",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_INVOICEPOSTALADDRESS",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_INVOICEPOSTALADDRESS",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_SHIPCARRIERID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_SHIPCARRIERID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_INVENTLOCATIONID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_INVENTLOCATIONID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_WORKERSALESTAKER",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_WORKERSALESTAKER",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_NTT_DELIVERYSTATUS",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_NTT_DELIVERYSTATUS",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_DOCUMENTDATE",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_DOCUMENTDATE",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_BILLOFLADINGID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_BILLOFLADINGID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_INTERNALPACKINGSLIPID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_INTERNALPACKINGSLIPID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_LEDGERVOUCHER",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_LEDGERVOUCHER",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_PURCHASEORDER",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_PURCHASEORDER",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_EBCOVERRIDESTATUS",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_EBCOVERRIDESTATUS",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM1_CONFIGID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "INVENTDIM1_CONFIGID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM1_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "INVENTDIM1_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIMCOMBINATION_PDMSTATUS",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "INVENTDIMCOMBINATION_PDMSTATUS",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIMCOMBINATION_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "INVENTDIMCOMBINATION_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERPACKAGE1_ORIG_CARRIERID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SHIPCARRIERPACKAGE1_ORIG_CARRIERID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERPACKAGE1_ORIG_SHIPDATE",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "SHIPCARRIERPACKAGE1_ORIG_SHIPDATE",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERPACKAGE1_ORIG_CARRIERNAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SHIPCARRIERPACKAGE1_ORIG_CARRIERNAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERPACKAGE2_SHIPDATE",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "SHIPCARRIERPACKAGE2_SHIPDATE",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_LINEDISC",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "SALESLINE_LINEDISC",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_LINEPERCENT",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "SALESLINE_LINEPERCENT",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_RETURNSTATUS",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESLINE_RETURNSTATUS",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_SALESSTATUS",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "SALESLINE_SALESSTATUS",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_SHIPCARRIERDLVTYPE",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESLINE_SHIPCARRIERDLVTYPE",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_COMPLETE",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESLINE_COMPLETE",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_ORDERBLOCKED",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESLINE_ORDERBLOCKED",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_SCRAP",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESLINE_SCRAP",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_STOCKEDPRODUCT",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESLINE_STOCKEDPRODUCT",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "SALESLINE_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "MCRSALESLINEDROPSHIPMENT_DROPSHIPMENT",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "MCRSALESLINEDROPSHIPMENT_DROPSHIPMENT",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERTRACKING_NTT_DELIVERYDATE",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "SHIPCARRIERTRACKING_NTT_DELIVERYDATE",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERTRACKING_TRACKINGNUMBER",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SHIPCARRIERTRACKING_TRACKINGNUMBER",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_DOCUMENTSTATUS",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_DOCUMENTSTATUS",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_RETURNSTATUSHEADER",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_RETURNSTATUSHEADER",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_SALESSTATUSHEADER",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_SALESSTATUSHEADER",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_RETURNSTATUSLINE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_RETURNSTATUSLINE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE5_ENUMVALUELABEL_SALESSTATUSLINE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE5_ENUMVALUELABEL_SALESSTATUSLINE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE6_ENUMVALUELABEL_SALESTYPE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE6_ENUMVALUELABEL_SALESTYPE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE7_ENUMVALUELABEL_SHIPCARRIERDLVTYPE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE7_ENUMVALUELABEL_SHIPCARRIERDLVTYPE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE8_ENUMVALUELABEL_NTT_DELIVERYSTATUS",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE8_ENUMVALUELABEL_NTT_DELIVERYSTATUS",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE9_ENUMVALUELABEL_TRADELINEDLVTYPE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE9_ENUMVALUELABEL_TRADELINEDLVTYPE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "PDMSTATUS_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "PDMSTATUS_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_CUSTPACKINGSLIPTRANS_EXT_HASH_KEY",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "HK_CUSTPACKINGSLIPTRANS_EXT_HASH_KEY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_sql_server",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_src_table_name": {
+													"value": "@pipeline().parameters.p_src_table_nm",
+													"type": "Expression"
+												},
+												"p_src_schema_name": {
+													"value": "@pipeline().parameters.p_src_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_serverName": {
+													"value": "@pipeline().globalParameters.nala_sql_serverName",
+													"type": "Expression"
+												},
+												"p_ls_dbName": {
+													"value": "@pipeline().globalParameters.nala_sql_dbName",
+													"type": "Expression"
+												},
+												"p_ls_sqlUsername": {
+													"value": "@pipeline().globalParameters.sql_userName",
+													"type": "Expression"
+												},
+												"p_ls_sqlPassword": {
+													"value": "@pipeline().globalParameters.sql_password",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_directory": {
+													"value": "@pipeline().parameters.p_temp_directory",
+													"type": "Expression"
+												},
+												"p_root_system": {
+													"value": "@pipeline().globalParameters.rootDir",
+													"type": "Expression"
+												},
+												"p_file_name": {
+													"value": "@pipeline().parameters.p_temp_file_nm",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "nala_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "custpackingsliptrans_to_adls_nala",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('custpackingsliptrans_to_adls_nala').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('custpackingsliptrans_to_adls_nala').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('custpackingsliptrans_to_adls_nala').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('custpackingsliptrans_to_adls_nala').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											},
+											"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+											"taskStepNumber": {
+												"value": "@pipeline().parameters.p_src_code",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_nala_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "nala_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('custpackingsliptrans_to_adls_nala').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						},
+						{
+							"value": "3",
+							"activities": [
+								{
+									"name": "custpackingsliptrans_to_adls_d365",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "WarehouseSource",
+											"additionalColumns": [
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": "select cpst1.recid                          as RECID\n     , cpst1.defaultdimension               as DEFAULTDIMENSION\n     , cpst1.transactioncode                as TRANSACTIONCODE\n     , cpst1.inventdimid                    as INVENTDIMID\n     , cpst1.itemid                         as ITEMID\n     , cpst1.deliverypostaladdress          as DELIVERYPOSTALADDRESS\n     , cpst1.salesgroup                     as SALESGROUP\n     , cpst1.salesunit                      as SALESUNIT\n     , cpst1.deliverydate                   as DELIVERYDATE\n     , cpst1.saleslineshippingdateconfirmed as SALESLINESHIPPINGDATECONFIRMED\n     , cpst1.saleslineshippingdaterequested as SALESLINESHIPPINGDATEREQUESTED\n     , cpst1.inventtransid                  as INVENTTRANSID\n     , cpst1.dataareaid                     as DATAAREAID\n     , cpst1.linenum                        as LINENUM\n     , cpst1.origsalesid                    as ORIGSALESID\n     , cpst1.packingslipid                  as PACKINGSLIPID\n     , cpst1.salesid                        as SALESID\n     , cpst1.deliverytype                   as DELIVERYTYPE\n     , cpst1.inventqty                      as INVENTQTY\n     , cpst1.qty                            as QTY\n     , cpst1.priceunit                      as PRICEUNIT\n     , cpst1.valuemst                       as VALUEMST\n     , cpst1.modifieddatetime               as MODIFIEDDATETIME\n     , def1.business_unit                   as DEFAULTDIMENSION_BUSINESS_UNIT\n     , def1.DEFAULTDIMENSION_MODIFIEDDATETIME\n     , st1.smmcampaignid                    as SALESTABLE_SMMCAMPAIGNID\n     , st1.markupgroup                      as SALESTABLE_MARKUPGROUP\n     , st1.linedisc                         as SALESTABLE_LINEDISC\n     , st1.salespoolid                      as SALESTABLE_SALESPOOLID\n     , st1.pricegroupid                     as SALESTABLE_PRICEGROUPID\n     , st1.workersalesresponsible           as SALESTABLE_WORKERSALESRESPONSIBLE\n     , st1.documentstatus                   as SALESTABLE_DOCUMENTSTATUS\n     , st1.returnstatus                     as SALESTABLE_RETURNSTATUS\n     , st1.salesstatus                      as SALESTABLE_SALESSTATUS\n     , st1.salestype                        as SALESTABLE_SALESTYPE\n     , st1.atagent                          as SALESTABLE_ATAGENT\n     , st1.shipcarrierblindshipment         as SALESTABLE_SHIPCARRIERBLINDSHIPMENT\n     , st1.shipcarrierexpeditedshipment     as SALESTABLE_SHIPCARRIEREXPEDITEDSHIPMENT\n     , st1.orderblocked                     as SALESTABLE_ORDERBLOCKED\n     , st1.mcrorderstopped                  as SALESTABLE_MCRORDERSTOPPED\n     , st1.shipcarrierfuelsurcharge         as SALESTABLE_SHIPCARRIERFUELSURCHARGE\n     , st1.modifieddatetime                 as SALESTABLE_MODIFIEDDATETIME\n     , cpsj1.invoiceaccount                 as CUSTPACKINGSLIPJOUR_INVOICEACCOUNT\n     , cpsj1.orderaccount                   as CUSTPACKINGSLIPJOUR_ORDERACCOUNT\n     , cpsj1.dlvmode                        as CUSTPACKINGSLIPJOUR_DLVMODE\n     , cpsj1.dlvterm                        as CUSTPACKINGSLIPJOUR_DLVTERM\n     , cpsj1.invoicepostaladdress           as CUSTPACKINGSLIPJOUR_INVOICEPOSTALADDRESS\n     , cpsj1.shipcarrierid                  as CUSTPACKINGSLIPJOUR_SHIPCARRIERID\n     , cpsj1.inventlocationid               as CUSTPACKINGSLIPJOUR_INVENTLOCATIONID\n     , cpsj1.workersalestaker               as CUSTPACKINGSLIPJOUR_WORKERSALESTAKER\n     , cpsj1.ntt_deliverystatus             as CUSTPACKINGSLIPJOUR_NTT_DELIVERYSTATUS\n     , cpsj1.documentdate                   as CUSTPACKINGSLIPJOUR_DOCUMENTDATE\n     , cpsj1.billofladingid                 as CUSTPACKINGSLIPJOUR_BILLOFLADINGID\n     , cpsj1.internalpackingslipid          as CUSTPACKINGSLIPJOUR_INTERNALPACKINGSLIPID\n     , cpsj1.ledgervoucher                  as CUSTPACKINGSLIPJOUR_LEDGERVOUCHER\n     , cpsj1.purchaseorder                  as CUSTPACKINGSLIPJOUR_PURCHASEORDER\n     , cpsj1.ebcoverridestatus              as CUSTPACKINGSLIPJOUR_EBCOVERRIDESTATUS\n     , cpsj1.modifieddatetime               as CUSTPACKINGSLIPJOUR_MODIFIEDDATETIME\n     , id1.configid                         as INVENTDIM1_CONFIGID\n     , id1.modifieddatetime                 as INVENTDIM1_MODIFIEDDATETIME\n     , idc1.productlifecyclestateid         as INVENTDIMCOMBINATION_PDMSTATUS\n     , idc1.modifieddatetime                as INVENTDIMCOMBINATION_MODIFIEDDATETIME\n     , scp1.tpxcarriercode                  as SHIPCARRIERPACKAGE1_ORIG_CARRIERID\n     , scp1.deliverydate                    as SHIPCARRIERPACKAGE1_ORIG_SHIPDATE\n     , scp1.name                            as SHIPCARRIERPACKAGE1_ORIG_CARRIERNAME\n     , cpsj1.tpxscpshipdate                 as SHIPCARRIERPACKAGE2_SHIPDATE\n     , sl1.linedisc                         As SALESLINE_LINEDISC\n     , sl1.linepercent                      As SALESLINE_LINEPERCENT\n     , sl1.returnstatus                     As SALESLINE_RETURNSTATUS\n     , sl1.salesstatus                      As SALESLINE_SALESSTATUS\n     , sl1.shipcarrierdlvtype               As SALESLINE_SHIPCARRIERDLVTYPE\n     , sl1.complete                         As SALESLINE_COMPLETE\n     , sl1.orderblocked                     As SALESLINE_ORDERBLOCKED\n     , sl1.scrap                            As SALESLINE_SCRAP\n     , sl1.stockedproduct                   As SALESLINE_STOCKEDPRODUCT\n     , sl1.modifieddatetime                 As SALESLINE_MODIFIEDDATETIME\n     , mslds1.dropshipment                  As MCRSALESLINEDROPSHIPMENT_DROPSHIPMENT\n     , sct1.ntt_deliverydate                As SHIPCARRIERTRACKING_NTT_DELIVERYDATE\n     , sct1.trackingnumber                  As SHIPCARRIERTRACKING_TRACKINGNUMBER\n     , tet1.enumvaluelabel                  As TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_DOCUMENTSTATUS\n     , tet2.enumvaluelabel                  As TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_RETURNSTATUSHEADER\n     , tet3.enumvaluelabel                  As TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_SALESSTATUSHEADER\n     , tet4.enumvaluelabel                  As TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_RETURNSTATUSLINE\n     , tet5.enumvaluelabel                  As TIMEXTENDERENUMTABLE5_ENUMVALUELABEL_SALESSTATUSLINE\n     , tet6.enumvaluelabel                  As TIMEXTENDERENUMTABLE6_ENUMVALUELABEL_SALESTYPE\n     , tet7.enumvaluelabel                  As TIMEXTENDERENUMTABLE7_ENUMVALUELABEL_SHIPCARRIERDLVTYPE\n     , tet8.enumvaluelabel                  As TIMEXTENDERENUMTABLE8_ENUMVALUELABEL_NTT_DELIVERYSTATUS\n     , tet9.enumvaluelabel                  As TIMEXTENDERENUMTABLE9_ENUMVALUELABEL_TRADELINEDLVTYPE\n     , scp1.tpxcarriercode                  as SHIPCARRIERPACKAGE1_ORIG_CARRIERID\n     , scp1.deliverydate                    as SHIPCARRIERPACKAGE1_ORIG_SHIPDATE\n     , scp1.name                            as SHIPCARRIERPACKAGE1_ORIG_CARRIERNAME\n     , cpsj1.tpxscpshipdate                 as SHIPCARRIERPACKAGE2_SHIPDATE\n     , convert(   varchar (Max)\n                , hashbytes(   'sha2_256'\n                             , concat(   isnull(   cpst1.recid\n                                                 , 0\n                                               )\n                                       , '~'\n                                       , isnull(   scp1.tpxcarriercode\n                                                 , ''\n                                               )\n                                       , '~'\n                                       , isnull(   scp1.deliverydate\n                                                 , '1950-01-01 00:00:00'\n                                               )\n                                       , '~'\n                                       , isnull(   scp1.name\n                                                 , ''\n                                               )\n                                       , '~'\n                                       , isnull(   cpsj1.tpxscpshipdate\n                                                 , '1950-01-01 00:00:00'\n                                               )\n                                       , '~'\n                                       , isnull(   mslds1.dropshipment\n                                                 , 0\n                                               )\n                                       , '~'\n                                       , isnull(   sct1.ntt_deliverydate\n                                                 , '1950-01-01 00:00:00'\n                                               )\n                                       , '~'\n                                       , isnull(   sct1.trackingnumber\n                                                 , ''\n                                               )\n                                       , getdate()\n                                     )\n                           )\n                , 2\n              )                             As HK_CUSTPACKINGSLIPTRANS_EXT_HASH_KEY\n     , (\n           Select max(lastupdatedate)\n            From\n            (\n                Values --(cpst1.modifieddatetime),\n                    (\n                        isnull(   def1.DEFAULTDIMENSION_MODIFIEDDATETIME\n                                , '1950-01-01'\n                              )\n                    )\n                  , (\n                        isnull(   st1.modifieddatetime\n                                , '1950-01-01'\n                              )\n                    )\n                  , (\n                        isnull(   id1.modifieddatetime\n                                , '1950-01-01'\n                              )\n                    )\n                  , (\n                        isnull(   sl1.modifieddatetime\n                                , '1950-01-01'\n                              )\n                    )\n            ) As updatedate ( lastupdatedate )\n       )                                    As LATEST_MODIFIEDDATETIME\n From\n    dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.custpackingsliptrans                     cpst1\n     Left Join\n     (\n         Select distinct\n                cpst1.defaultdimension\n              , max(   case\n                           when da1.name = 'businessunit'\n                               then davsi1.displayvalue\n                           else null\n                       end\n                   ) over ( partition by cpst1.defaultdimension ) as business_unit\n              , max((\n                        select max(i)\n                         from\n                         (\n                             values\n                                 (\n                                     davsi1.modifieddatetime\n                                 )\n                               , (\n                                     dav1.modifieddatetime\n                                 )\n                               , (\n                                     da1.modifieddatetime\n                                 )\n                               , (\n                                     desc1.desc_modifieddatetime\n                                 )\n                         ) as t ( i )\n                    )\n                   ) over ( partition by cpst1.defaultdimension ) as DEFAULTDIMENSION_MODIFIEDDATETIME\n          from\n          (\n              select distinct\n                     defaultdimension\n               from\n                  dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.custpackingsliptrans\n          )                                                                                                            cpst1\n              left join\n                  dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionattributevaluesetitem davsi1\n              on\n                  cpst1.defaultdimension = davsi1.dimensionattributevalueset\n              left join\n                  dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionattributevalue        dav1\n              on\n                  davsi1.dimensionattributevalue = dav1.recid\n              left join\n                  dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionattribute             da1\n              on\n                  dav1.dimensionattribute = da1.recid\n              left join\n              (\n                  select dft1.value\n                       , da2.name\n                       , dft1.description\n                       , (\n                             select max(i)\n                              from\n                              (\n                                  values\n                                      (\n                                          dft1.modifieddatetime\n                                      )\n                                    , (\n                                          dadc1.modifieddatetime\n                                      )\n                                    , (\n                                          da2.modifieddatetime\n                                      )\n                              ) as t ( i )\n                         ) as desc_modifieddatetime\n                   from\n                      dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionfinancialtag              dft1\n                       left join\n                           dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionattributedircategory dadc1\n                       on\n                           dft1.financialtagcategory = dadc1.dircategory\n                       left join\n                           dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionattribute            da2\n                       on\n                           dadc1.dimensionattribute = da2.recid\n              )                                                                                                        desc1\n              on\n                  davsi1.displayvalue = desc1.value\n                  and da1.name = desc1.name\n     )                                                                                                             def1\n     on\n         cpst1.defaultdimension = def1.defaultdimension\n     left join\n         dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.salestable                          st1\n     on\n         cpst1.dataareaid = st1.dataareaid\n         and cpst1.salesid = st1.salesid\n     left join\n     (\n         select dataareaid\n              , packingslipid\n              , salesid\n              , deliverydate\n              , tpxscpshipdate\n              , invoiceaccount\n              , orderaccount\n              , dlvmode\n              , dlvterm\n              , invoicepostaladdress\n              , shipcarrierid\n              , inventlocationid\n              , workersalestaker\n              , ntt_deliverystatus\n              , documentdate\n              , billofladingid\n              , internalpackingslipid\n              , ledgervoucher\n              , purchaseorder\n              , ebcoverridestatus\n              , modifieddatetime\n          from\n             dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.custpackingslipjour cpsj10\n              inner join\n              (\n                  select recid\n                       , row_number() over ( partition by dataareaid\n                                                        , packingslipid\n                                                        , salesid\n                                                        , deliverydate\n                                             order by\n                                                 modifieddatetime desc\n                                           ) as row_num\n                   from\n                      dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.custpackingslipjour\n              )                                                                                        cpsj11\n              on\n                  cpsj11.row_num = 1\n                  and cpsj10.recid = cpsj11.recid\n     )                                                                                                             cpsj1\n     on\n         cpst1.dataareaid = cpsj1.dataareaid\n         and cpst1.packingslipid = cpsj1.packingslipid\n         and cpst1.salesid = cpsj1.salesid\n         and cpst1.deliverydate = cpsj1.deliverydate\n     left join\n         dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.inventdim                           id1\n     on\n         cpst1.dataareaid = id1.dataareaid\n         and cpst1.inventdimid = id1.inventdimid\n     left join\n     (\n         select idc10.dataareaid\n              , idc10.itemid\n              , id10.configid\n              , idc10.productlifecyclestateid\n              , max(id10.modifieddatetime) as modifieddatetime\n          from\n             dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.inventdimcombination idc10\n              left join\n                  dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.inventdim       id10\n              on\n                  idc10.dataareaid = id10.dataareaid\n                  and idc10.inventdimid = id10.inventdimid\n          group by\n             idc10.dataareaid\n           , idc10.itemid\n           , id10.configid\n           , idc10.productlifecyclestateid\n     )                                                                                                             idc1\n     on\n         cpst1.dataareaid = idc1.dataareaid\n         and id1.configid = idc1.configid\n         and cpst1.itemid = idc1.itemid\n     left join\n         dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.salespackingsliptrackinginformation spsti\n     on\n         spsti.salesid = cpsj1.salesid\n         and spsti.packingslipid = cpsj1.packingslipid\n         and spsti.dataareaid = cpsj1.dataareaid\n     Left Join\n         dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.custpackingsliptrans                cpst\n     on\n         cpst.salesid = cpsj1.salesid\n         and cpst.packingslipid = cpsj1.packingslipid\n         and cpst.dataareaid = cpsj1.dataareaid\n     left join\n     (\n         Select cpsj20.dataareaid\n              , cpsj20.packingslipid\n              , cpsj20.salesid\n              , cpsj20.tpxcarriercode\n              , cpsj20.deliverydate\n              , tc.name\n          From\n             dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.custpackingslipjour cpsj20\n              Inner Join\n                  dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.tmscarrier     tc\n              On\n                  cpsj20.dataareaid = tc.dataareaid\n                  And cpsj20.tpxcarriercode = tc.carriercode\n     )                                                                                                             scp1\n     On\n         cpst1.dataareaid = scp1.dataareaid\n         and cpst1.packingslipid = scp1.packingslipid\n         and cpst1.origsalesid = scp1.salesid\n     left join\n         dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.custpackingslipjour                 scp2\n     on\n         cpst1.dataareaid = scp2.dataareaid\n         and cpst1.packingslipid = scp2.packingslipid\n         and cpst1.salesid = scp2.salesid\n     left join\n         dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.salesline                           sl1\n     on\n         cpst1.dataareaid = sl1.dataareaid\n         and cpst1.inventtransid = sl1.inventtransid\n     left join\n         dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.mcrsaleslinedropshipment            mslds1\n     on\n         sl1.dataareaid = mslds1.dataareaid\n         and sl1.recid = mslds1.salesline\n     left join\n     (\n         select dataareaid\n              , packingslipid\n              , salesid\n              , ntt_deliverystatus\n              , max(ntt_deliverydate) as ntt_deliverydate\n              , max(trackingnumber)   as trackingnumber\n          from\n             dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.salespackingsliptrackinginformation --dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.shipcarriertracking\n          group by\n             dataareaid\n           , packingslipid\n           , salesid\n           , ntt_deliverystatus\n     )                                                                                                             sct1\n     On\n         sct1.salesid = cpsj1.salesid\n         and sct1.packingslipid = cpsj1.packingslipid\n         and sct1.dataareaid = cpsj1.dataareaid\n     --cpst1.dataareaid = sct1.dataareaid and\n     --cpst1.packingslipid = sct1.packingslipid and\n     --cpst1.origsalesid = sct1.salesid and\n     --cpsj1.ntt_deliverystatus = sct1.ntt_deliverystatus\n     left join\n     (\n         select enumname\n              , enumvalue\n              , max(enumvaluelabel) as enumvaluelabel\n          from\n             dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.timextenderenumtable\n          where\n             enumname = 'documentstatus'\n          group by\n             enumname\n           , enumvalue\n     )                                                                                                             tet1\n     on\n         st1.documentstatus = tet1.enumvalue\n     left join\n     (\n         select enumname\n              , enumvalue\n              , max(enumvaluelabel) as enumvaluelabel\n          from\n             dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.timextenderenumtable\n          where\n             enumname = 'returnstatusheader'\n          group by\n             enumname\n           , enumvalue\n     )                                                                                                             tet2\n     on\n         st1.returnstatus = tet2.enumvalue\n     left join\n     (\n         select enumname\n              , enumvalue\n              , max(enumvaluelabel) as enumvaluelabel\n          from\n             dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.timextenderenumtable\n          where\n             enumname = 'salesstatus'\n          group by\n             enumname\n           , enumvalue\n     )                                                                                                             tet3\n     on\n         st1.salesstatus = tet3.enumvalue\n     left join\n     (\n         select enumname\n              , enumvalue\n              , max(enumvaluelabel) as enumvaluelabel\n          from\n             dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.timextenderenumtable\n          where\n             enumname = 'returnstatusline'\n          group by\n             enumname\n           , enumvalue\n     )                                                                                                             tet4\n     on\n         sl1.returnstatus = tet4.enumvalue\n     left join\n     (\n         select enumname\n              , enumvalue\n              , max(enumvaluelabel) as enumvaluelabel\n          from\n             dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.timextenderenumtable\n          where\n             enumname = 'salesstatus'\n          group by\n             enumname\n           , enumvalue\n     )                                                                                                             tet5\n     on\n         '2' = tet5.enumvalue\n     left join\n     (\n         select enumname\n              , enumvalue\n              , max(enumvaluelabel) as enumvaluelabel\n          from\n             dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.timextenderenumtable\n          where\n             enumname = 'salestype'\n          group by\n             enumname\n           , enumvalue\n     )                                                                                                             tet6\n     on\n         st1.salestype = tet6.enumvalue\n     left join\n     (\n         select enumname\n              , enumvalue\n              , max(enumvaluelabel) as enumvaluelabel\n          from\n             dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.timextenderenumtable\n          where\n             enumname = 'shipcarrierdlvtype'\n          group by\n             enumname\n           , enumvalue\n     )                                                                                                             tet7\n     on\n         sl1.shipcarrierdlvtype = tet7.enumvalue\n     left join\n     (\n         select enumname\n              , enumvalue\n              , max(enumvaluelabel) as enumvaluelabel\n          from\n             dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.timextenderenumtable\n          where\n             enumname = 'ntt_deliverystatus'\n          group by\n             enumname\n           , enumvalue\n     )                                                                                                             tet8\n     on\n         cpsj1.ntt_deliverystatus = tet8.enumvalue\n     left join\n     (\n         select enumname\n              , enumvalue\n              , max(enumvaluelabel) as enumvaluelabel\n          from\n             dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.timextenderenumtable\n          where\n             enumname = 'tradelinedlvtype'\n          group by\n             enumname\n           , enumvalue\n     )                                                                                                             tet9\n     on\n         cpst1.deliverytype = tet9.enumvalue;",
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "RECID",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "RECID",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "TRANSACTIONCODE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TRANSACTIONCODE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIMID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "INVENTDIMID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "ITEMID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "ITEMID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DELIVERYPOSTALADDRESS",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "DELIVERYPOSTALADDRESS",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESGROUP",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESGROUP",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESUNIT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESUNIT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DELIVERYDATE",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "DELIVERYDATE",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINESHIPPINGDATECONFIRMED",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "SALESLINESHIPPINGDATECONFIRMED",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINESHIPPINGDATEREQUESTED",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "SALESLINESHIPPINGDATEREQUESTED",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTTRANSID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "INVENTTRANSID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DATAAREAID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DATAAREAID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LINENUM",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "LINENUM",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "ORIGSALESID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "ORIGSALESID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "PACKINGSLIPID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "PACKINGSLIPID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTQTY",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "INVENTQTY",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "QTY",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "QTY",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "PRICEUNIT",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "PRICEUNIT",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "VALUEMST",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "VALUEMST",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION_BUSINESS_UNIT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION_BUSINESS_UNIT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_SMMCAMPAIGNID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESTABLE_SMMCAMPAIGNID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_MARKUPGROUP",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESTABLE_MARKUPGROUP",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_LINEDISC",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESTABLE_LINEDISC",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_SALESPOOLID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESTABLE_SALESPOOLID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_PRICEGROUPID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESTABLE_PRICEGROUPID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_WORKERSALESRESPONSIBLE",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "SALESTABLE_WORKERSALESRESPONSIBLE",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_DOCUMENTSTATUS",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_DOCUMENTSTATUS",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_RETURNSTATUS",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_RETURNSTATUS",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_SALESSTATUS",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_SALESSTATUS",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_SALESTYPE",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_SALESTYPE",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_ATAGENT",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_ATAGENT",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_SHIPCARRIERBLINDSHIPMENT",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_SHIPCARRIERBLINDSHIPMENT",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_SHIPCARRIEREXPEDITEDSHIPMENT",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_SHIPCARRIEREXPEDITEDSHIPMENT",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_ORDERBLOCKED",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_ORDERBLOCKED",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_MCRORDERSTOPPED",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_MCRORDERSTOPPED",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_SHIPCARRIERFUELSURCHARGE",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESTABLE_SHIPCARRIERFUELSURCHARGE",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESTABLE_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "SALESTABLE_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_INVOICEACCOUNT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_INVOICEACCOUNT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_ORDERACCOUNT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_ORDERACCOUNT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_DLVMODE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_DLVMODE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_DLVTERM",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_DLVTERM",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_INVOICEPOSTALADDRESS",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_INVOICEPOSTALADDRESS",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_SHIPCARRIERID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_SHIPCARRIERID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_INVENTLOCATIONID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_INVENTLOCATIONID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_WORKERSALESTAKER",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_WORKERSALESTAKER",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_NTT_DELIVERYSTATUS",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_NTT_DELIVERYSTATUS",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_DOCUMENTDATE",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_DOCUMENTDATE",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_BILLOFLADINGID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_BILLOFLADINGID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_INTERNALPACKINGSLIPID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_INTERNALPACKINGSLIPID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_LEDGERVOUCHER",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_LEDGERVOUCHER",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_PURCHASEORDER",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_PURCHASEORDER",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_EBCOVERRIDESTATUS",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_EBCOVERRIDESTATUS",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPACKINGSLIPJOUR_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "CUSTPACKINGSLIPJOUR_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM1_CONFIGID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "INVENTDIM1_CONFIGID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM1_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "INVENTDIM1_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIMCOMBINATION_PDMSTATUS",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "INVENTDIMCOMBINATION_PDMSTATUS",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIMCOMBINATION_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "INVENTDIMCOMBINATION_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERPACKAGE1_ORIG_CARRIERID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SHIPCARRIERPACKAGE1_ORIG_CARRIERID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERPACKAGE1_ORIG_SHIPDATE",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "SHIPCARRIERPACKAGE1_ORIG_SHIPDATE",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERPACKAGE1_ORIG_CARRIERNAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SHIPCARRIERPACKAGE1_ORIG_CARRIERNAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERPACKAGE2_SHIPDATE",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "SHIPCARRIERPACKAGE2_SHIPDATE",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_LINEDISC",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "SALESLINE_LINEDISC",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_LINEPERCENT",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "SALESLINE_LINEPERCENT",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_RETURNSTATUS",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESLINE_RETURNSTATUS",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_SALESSTATUS",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESLINE_SALESSTATUS",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_SHIPCARRIERDLVTYPE",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESLINE_SHIPCARRIERDLVTYPE",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_COMPLETE",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESLINE_COMPLETE",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_ORDERBLOCKED",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESLINE_ORDERBLOCKED",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_SCRAP",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESLINE_SCRAP",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_STOCKEDPRODUCT",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "SALESLINE_STOCKEDPRODUCT",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESLINE_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "SALESLINE_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "MCRSALESLINEDROPSHIPMENT_DROPSHIPMENT",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "MCRSALESLINEDROPSHIPMENT_DROPSHIPMENT",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERTRACKING_NTT_DELIVERYDATE",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "SHIPCARRIERTRACKING_NTT_DELIVERYDATE",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERTRACKING_TRACKINGNUMBER",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SHIPCARRIERTRACKING_TRACKINGNUMBER",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_DOCUMENTSTATUS",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_DOCUMENTSTATUS",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_RETURNSTATUSHEADER",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_RETURNSTATUSHEADER",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_SALESSTATUSHEADER",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_SALESSTATUSHEADER",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_RETURNSTATUSLINE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_RETURNSTATUSLINE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE5_ENUMVALUELABEL_SALESSTATUSLINE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE5_ENUMVALUELABEL_SALESSTATUSLINE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE6_ENUMVALUELABEL_SALESTYPE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE6_ENUMVALUELABEL_SALESTYPE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE7_ENUMVALUELABEL_SHIPCARRIERDLVTYPE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE7_ENUMVALUELABEL_SHIPCARRIERDLVTYPE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE8_ENUMVALUELABEL_NTT_DELIVERYSTATUS",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE8_ENUMVALUELABEL_NTT_DELIVERYSTATUS",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE9_ENUMVALUELABEL_TRADELINEDLVTYPE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE9_ENUMVALUELABEL_TRADELINEDLVTYPE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_CUSTPACKINGSLIPTRANS_EXT_HASH_KEY",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "HK_CUSTPACKINGSLIPTRANS_EXT_HASH_KEY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_fabric_wh",
+											"type": "DatasetReference"
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_directory": {
+													"value": "@pipeline().parameters.p_temp_directory",
+													"type": "Expression"
+												},
+												"p_root_system": {
+													"value": "@pipeline().globalParameters.rootDir",
+													"type": "Expression"
+												},
+												"p_file_name": {
+													"value": "@pipeline().parameters.p_temp_file_nm",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "d365_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "custpackingsliptrans_to_adls_d365",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('custpackingsliptrans_to_adls_d365').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('custpackingsliptrans_to_adls_d365').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('custpackingsliptrans_to_adls_d365').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('custpackingsliptrans_to_adls_d365').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											},
+											"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+											"taskStepNumber": {
+												"value": "@pipeline().parameters.p_src_code",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_d365_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "d365_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('custpackingsliptrans_to_adls_d365').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "CUSTPACKINGSLIPTRANS"
+			},
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_tgt_raw_table_nm": {
+				"type": "string",
+				"defaultValue": "CUSTPACKINGSLIPTRANS"
+			},
+			"p_tgt_raw_schema_nm": {
+				"type": "string",
+				"defaultValue": "AX_NALA"
+			},
+			"p_tgt_curate_table_nm": {
+				"type": "string",
+				"defaultValue": "FACT_SALES_DELIVERIES"
+			},
+			"p_tgt_curate_schema_nm": {
+				"type": "string",
+				"defaultValue": "GLOBAL"
+			},
+			"p_src_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA"
+			},
+			"p_src_directory": {
+				"type": "string",
+				"defaultValue": "business_files"
+			},
+			"p_temp_file_nm": {
+				"type": "string",
+				"defaultValue": "custpackingsliptrans_nala.parquet"
+			},
+			"p_tgt_raw_table_nm_2": {
+				"type": "string",
+				"defaultValue": "CUSTPACKINGSLIPTRANS_EXT"
+			},
+			"p_src_code": {
+				"type": "string",
+				"defaultValue": "1"
+			},
+			"p_temp_directory": {
+				"type": "string",
+				"defaultValue": "temp_files"
+			}
+		},
+		"variables": {
+			"v_prev_max_timestamp": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-06-21T11:28:05Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

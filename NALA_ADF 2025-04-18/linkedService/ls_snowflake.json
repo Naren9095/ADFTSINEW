@@ -1,0 +1,38 @@
+{
+	"name": "ls_snowflake",
+	"properties": {
+		"parameters": {
+			"ls_DbName": {
+				"type": "string"
+			},
+			"ls_Env": {
+				"type": "string",
+				"defaultValue": "DEV"
+			}
+		},
+		"annotations": [],
+		"type": "SnowflakeV2",
+		"typeProperties": {
+			"authenticationType": "Basic",
+			"accountIdentifier": "tempursealy-nala.privatelink",
+			"user": "SVCDEVSNOWFLAKEETL",
+			"database": "@{concat(linkedService().ls_Env,'_',linkedService().ls_DbName)}",
+			"warehouse": "DEV_SERVICE_ETL_WH",
+			"role": "DEV_SERVICE_ETL_ROLE",
+			"host": "tempursealy-nala.snowflakecomputing.com",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "ls_key_vault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "sfetlpassword"
+			}
+		},
+		"connectVia": {
+			"referenceName": "IR-Snowflake-NALA",
+			"type": "IntegrationRuntimeReference"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/linkedservices"
+}

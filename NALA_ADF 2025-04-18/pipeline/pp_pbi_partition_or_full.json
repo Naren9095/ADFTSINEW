@@ -1,0 +1,545 @@
+{
+	"name": "pp_pbi_partition_or_full",
+	"properties": {
+		"activities": [
+			{
+				"name": "get_pbi_partition_details",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "set_pbi_dataset_id",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SnowflakeSource",
+						"query": {
+							"value": "@concat('SELECT \npsi.PBI_DB_NAME, \npsi.PBI_TABLE_NAME,\npsi.PBI_GROUP_ID,\npsi.PBI_DATASET_ID,\npspd.PARTITION,\npspd.PARTITION_REFRESH_FLAG,\npspd.SNOWFLAKE_TABLE_NAME\nFROM ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_auditDb, '.CONTROL.PBI_SNOWFLAKE_BRIDGE psi\nLEFT JOIN ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_auditDb, '.CONTROL.PBI_SNOWFLAKE_PARTITION_DETAILS pspd\nON psi.SNOWFLAKE_TABLE_NAME = concat(''V_'' ,pspd.SNOWFLAKE_TABLE_NAME)\nWHERE psi.PBI_DB_NAME = ''',pipeline().parameters.p_dataset_nm,''' and pspd.PBI_DB_NAME = ''',pipeline().parameters.p_dataset_nm,\n''' and pspd.SNOWFLAKE_TABLE_NAME in (',pipeline().parameters.p_table_nm,') \nand replace(pspd.PARTITION,''Q'')::number < (year(current_date()) ||  quarter(current_date()) || to_char(current_date(),''MM''))::number\nand pspd.PARTITION_REFRESH_FLAG = TRUE')",
+							"type": "Expression"
+						},
+						"exportSettings": {
+							"type": "SnowflakeExportCopyCommand"
+						}
+					},
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_tgt_table_name": {
+								"value": "@pipeline().parameters.p_tgt_audit_table_nm",
+								"type": "Expression"
+							},
+							"p_tgt_schema_name": {
+								"value": "@pipeline().parameters.p_tgt_audit_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_DbName": {
+								"value": "@pipeline().globalParameters.snow_auditDb",
+								"type": "Expression"
+							},
+							"p_ls_Env": {
+								"value": "@pipeline().globalParameters.environment",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "create_refresh_objects",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "get_pbi_partition_details",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('get_pbi_partition_details').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "construct_json",
+							"type": "AppendVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "v_objects",
+								"value": {
+									"value": "@json(concat('', \n    concat(\n        '{ \"database\": \"', item().PBI_DB_NAME, \n        '\", \"table\": \"', item().PBI_TABLE_NAME, \n        '\", \"partition\": \"', item().PARTITION, '\" }'\n    ),\n''))",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "construct_partition_false_update",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "construct_json",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "v_objects_false_update",
+								"value": {
+									"value": "@concat('''',item().SNOWFLAKE_TABLE_NAME,item().PARTITION,'''')",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "get_pbi_distinct_details",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SnowflakeSource",
+						"query": {
+							"value": "@concat('SELECT distinct\npsi.PBI_GROUP_ID,\npsi.PBI_DATASET_ID\nFROM ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_auditDb, '.CONTROL.PBI_SNOWFLAKE_BRIDGE psi\nLEFT JOIN ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_auditDb, '.CONTROL.PBI_SNOWFLAKE_PARTITION_DETAILS pspd\nON psi.SNOWFLAKE_TABLE_NAME = concat(''V_'' ,pspd.SNOWFLAKE_TABLE_NAME)\nWHERE psi.PBI_DB_NAME = ''',pipeline().parameters.p_dataset_nm,\n''' and pspd.SNOWFLAKE_TABLE_NAME in (' , pipeline().parameters.p_table_nm, ') \nand replace(pspd.PARTITION,''Q'')::number < (year(current_date()) ||  quarter(current_date()) || to_char(current_date(),''MM''))::number\n' )\n",
+							"type": "Expression"
+						},
+						"exportSettings": {
+							"type": "SnowflakeExportCopyCommand"
+						}
+					},
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_tgt_table_name": {
+								"value": "@pipeline().parameters.p_tgt_audit_table_nm",
+								"type": "Expression"
+							},
+							"p_tgt_schema_name": {
+								"value": "@pipeline().parameters.p_tgt_audit_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_DbName": {
+								"value": "@pipeline().globalParameters.snow_auditDb",
+								"type": "Expression"
+							},
+							"p_ls_Env": {
+								"value": "@pipeline().globalParameters.environment",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "set_pbi_group_id",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "get_pbi_distinct_details",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_pbi_group_id",
+					"value": {
+						"value": "@activity('get_pbi_distinct_details').output.firstRow.PBI_GROUP_ID",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "set_pbi_dataset_id",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "set_pbi_group_id",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_dataset_id",
+					"value": {
+						"value": "@activity('get_pbi_distinct_details').output.firstRow.PBI_DATASET_ID",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "pbi_partition_refresh",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "create_refresh_objects",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(equals(pipeline().parameters.p_dataset_nm,'Accounts Receivable Gold Dataset'),\n    bool(0),\n    greater(activity('get_pbi_partition_details').output.count,0))",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "refresh_partitions_dataset",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_pbi_refresh_api",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"p_group_id": {
+										"value": "@variables('v_pbi_group_id')",
+										"type": "Expression"
+									},
+									"p_dataset_id": {
+										"value": "@variables('v_dataset_id')",
+										"type": "Expression"
+									},
+									"p_web_body": {
+										"value": "@concat('{\n  \"type\": \"full\",\n  \"commitMode\": \"transactional\",\n  \"objects\": ', variables('v_objects'), ',\n  \"applyRefreshPolicy\": \"false\",\n  \"maxParallelism\" : \"30\",\n   \"retryCount\" : \"3\"\n}')",
+										"type": "Expression"
+									},
+									"p_dataset_nm": {
+										"value": "@pipeline().parameters.p_dataset_nm",
+										"type": "Expression"
+									},
+									"p_webhook_url": {
+										"value": "@pipeline().parameters.p_webhook_url",
+										"type": "Expression"
+									},
+									"p_refreshType": "Partition"
+								}
+							}
+						},
+						{
+							"name": "false_update_script",
+							"type": "Script",
+							"dependsOn": [
+								{
+									"activity": "refresh_partitions_dataset",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "ls_snowflake",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"ls_DbName": {
+										"value": "@pipeline().globalParameters.snow_auditDb",
+										"type": "Expression"
+									},
+									"ls_Env": {
+										"value": "@pipeline().globalParameters.environment",
+										"type": "Expression"
+									}
+								}
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"type": "Query",
+										"text": {
+											"value": "@concat(\n'Update ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_auditDb,' .CONTROL.pbi_snowflake_partition_details set partition_refresh_flag = false\n where pbi_db_name = ''',pipeline().parameters.p_dataset_nm,\n''' and concat(SNOWFLAKE_TABLE_NAME,PARTITION) in (',\njoin(variables('v_objects_false_update'),','),\n')')",
+											"type": "Expression"
+										}
+									}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "pbi_full_refresh",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "pbi_partition_refresh",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@pipeline().parameters.p_web_body_fullrefresh",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "loop_exit_condition_onFailure",
+							"type": "IfCondition",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(variables('foreach_exit'),bool(0))",
+									"type": "Expression"
+								},
+								"ifTrueActivities": [
+									{
+										"name": "refresh_full_dataset",
+										"type": "ExecutePipeline",
+										"dependsOn": [],
+										"policy": {
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"pipeline": {
+												"referenceName": "pp_pbi_refresh_api",
+												"type": "PipelineReference"
+											},
+											"waitOnCompletion": true,
+											"parameters": {
+												"p_group_id": {
+													"value": "@variables('v_pbi_group_id')",
+													"type": "Expression"
+												},
+												"p_dataset_id": {
+													"value": "@variables('v_dataset_id')",
+													"type": "Expression"
+												},
+												"p_web_body": {
+													"value": "@item()",
+													"type": "Expression"
+												},
+												"p_dataset_nm": {
+													"value": "@pipeline().parameters.p_dataset_nm",
+													"type": "Expression"
+												},
+												"p_webhook_url": {
+													"value": "@pipeline().parameters.p_webhook_url",
+													"type": "Expression"
+												},
+												"p_refreshType": "Full"
+											}
+										}
+									},
+									{
+										"name": "foreach_exit",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "refresh_full_dataset",
+												"dependencyConditions": [
+													"Failed"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "foreach_exit",
+											"value": {
+												"value": "@bool(1)",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "Fail1",
+										"type": "Fail",
+										"dependsOn": [
+											{
+												"activity": "foreach_exit",
+												"dependencyConditions": [
+													"Completed"
+												]
+											}
+										],
+										"userProperties": [],
+										"typeProperties": {
+											"message": "Full Refresh - Pipeline failed as one of the API failed",
+											"errorCode": "1111"
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "refresh_pbi_succeeded",
+				"description": "",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pbi_full_refresh",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"runId": {
+							"value": "@coalesce(pipeline().RunId, -1)",
+							"type": "Expression"
+						},
+						"name": {
+							"value": "@pipeline().parameters.p_dataset_nm",
+							"type": "Expression"
+						},
+						"triggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"status": {
+							"value": "@concat('Succeeded')",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@concat('Dataset refresh is completed and can be used by the users for analysis')",
+							"type": "Expression"
+						},
+						"executionEndTime": {
+							"value": "@utcNow()",
+							"type": "Expression"
+						},
+						"teamWebhookUrl": {
+							"value": "@pipeline().parameters.p_webhook_url",
+							"type": "Expression"
+						},
+						"notificationTime": {
+							"value": "@utcNow()",
+							"type": "Expression"
+						},
+						"extendedStatus": {
+							"value": "@concat('Dataset is updated')",
+							"type": "Expression"
+						},
+						"color": "008000",
+						"refreshType": {
+							"value": "@concat('Complete')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"p_table_nm": {
+				"type": "string"
+			},
+			"p_tgt_audit_table_nm": {
+				"type": "string"
+			},
+			"p_tgt_audit_schema_nm": {
+				"type": "string"
+			},
+			"p_webhook_url": {
+				"type": "string"
+			},
+			"p_dataset_nm": {
+				"type": "string"
+			},
+			"p_web_body_fullrefresh": {
+				"type": "array"
+			}
+		},
+		"variables": {
+			"v_objects": {
+				"type": "Array"
+			},
+			"v_pbi_group_id": {
+				"type": "String"
+			},
+			"v_dataset_id": {
+				"type": "String"
+			},
+			"foreach_exit": {
+				"type": "Boolean",
+				"defaultValue": false
+			},
+			"v_objects_false_update": {
+				"type": "Array"
+			}
+		},
+		"folder": {
+			"name": "pbi_incremental_refresh"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-11-06T14:48:20Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

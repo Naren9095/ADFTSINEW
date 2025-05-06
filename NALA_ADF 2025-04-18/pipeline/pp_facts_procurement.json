@@ -1,0 +1,116 @@
+{
+	"name": "pp_facts_procurement",
+	"properties": {
+		"activities": [
+			{
+				"name": "sp_fact_purchase_order",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_PURCHASE_ORDERS"
+					}
+				}
+			},
+			{
+				"name": "sp_fact_purchase_invoices",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_PURCHASE_INVOICES"
+					}
+				}
+			},
+			{
+				"name": "sp_fact_purchase_receipts",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_PURCHASE_RECEIPTS"
+					}
+				}
+			},
+			{
+				"name": "trigger_pbi_procurement",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "sp_fact_purchase_order",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "sp_fact_purchase_invoices",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "sp_fact_purchase_receipts",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_partition_or_full",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_table_nm": "'FACT_PURCHASE_INVOICES', 'FACT_PURCHASE_RECEIPTS', 'FACT_PURCHASE_ORDERS'",
+						"p_tgt_audit_table_nm": "PBI_SNOWFLAKE_BRIDGE",
+						"p_tgt_audit_schema_nm": "CONTROL",
+						"p_webhook_url": "https://tempursealyinc.webhook.office.com/webhookb2/7aa89678-96e1-4bbf-a53a-a4ed05939336@7c6c07f6-1ef4-4368-8d5d-4686d15efd79/IncomingWebhook/0daf9093215d4d2c8eb3556b3fab583a/4c6968dc-2ec8-4f99-b936-1206cdf30aeb/V2EWC7ZrIJlPeCNzW3QGgqmk93qr38uw86Qp59rZNHVjQ1",
+						"p_dataset_nm": "Procurement Gold Dataset",
+						"p_web_body_fullrefresh": {
+							"value": "@createArray('{\n  \"type\": \"full\",\n  \"commitMode\": \"transactional\",\n  \"applyRefreshPolicy\": \"true\"\n}')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "pbi_dataset_refresh_pipelines"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-10-21T13:36:40Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

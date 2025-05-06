@@ -1,0 +1,92 @@
+{
+	"name": "df_load_dim_line_return_reason_bak",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_parquet",
+						"type": "DatasetReference"
+					},
+					"name": "SrcLineReturnReasonCode"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_excel",
+						"type": "DatasetReference"
+					},
+					"name": "SMMCReasonCodeMap"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference"
+					},
+					"name": "TpxLinereturnreasoncode"
+				}
+			],
+			"transformations": [
+				{
+					"name": "lkpOnSMMCReasonCodeMap"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          HK_SOURCE_NAME as string,",
+				"          HK_JOB_RUN_ID as string,",
+				"          DATAAREAID as string,",
+				"          REASONCODEID as string,",
+				"          RETURNREASONCODEGROUPID as string,",
+				"          DESCRIPTION as string,",
+				"          DESCRIPTION_CODEGROUP as string,",
+				"          LATEST_MODIFIEDDATETIME as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> SrcLineReturnReasonCode",
+				"source(output(",
+				"          LineReturnReasonKey as short,",
+				"          LegalEntity as string,",
+				"          LineReturnReasonID as string,",
+				"          LineReturnReason as string,",
+				"          LineReturnReasonGroupID as string,",
+				"          LineReturnReasonGroup as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> SMMCReasonCodeMap",
+				"SrcLineReturnReasonCode, SMMCReasonCodeMap lookup(REASONCODEID == LineReturnReasonID,",
+				"     multiple: false,",
+				"     pickup: 'first',",
+				"     asc(LineReturnReasonID, true),",
+				"     broadcast: 'auto')~> lkpOnSMMCReasonCodeMap",
+				"lkpOnSMMCReasonCodeMap sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     stageInsert: true,",
+				"     mapColumn(",
+				"          HK_SOURCE_NAME,",
+				"          HK_JOB_RUN_ID,",
+				"          DATAAREAID,",
+				"          REASONCODEID,",
+				"          RETURNREASONCODEGROUPID,",
+				"          DESCRIPTION,",
+				"          DESCRIPTION_CODEGROUP,",
+				"          LATEST_MODIFIEDDATETIME,",
+				"          EXCEL_LINERETURNREASONGROUPID = LineReturnReasonGroupID,",
+				"          EXCEL_LINERETURNREASONGROUP = LineReturnReasonGroup",
+				"     )) ~> TpxLinereturnreasoncode"
+			]
+		}
+	}
+}

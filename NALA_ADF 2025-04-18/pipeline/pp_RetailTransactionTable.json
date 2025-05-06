@@ -1,0 +1,1127 @@
+{
+	"name": "pp_RetailTransactionTable",
+	"properties": {
+		"description": "Raw tables needed for fact_sales_orders",
+		"activities": [
+			{
+				"name": "LoadStageTable",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "TruncateStageTable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"additionalColumns": [
+							{
+								"name": "HK_SOURCE_NAME",
+								"value": {
+									"value": "@pipeline().parameters.p_src_schema_nm",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "HK_JOB_RUN_ID",
+								"value": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "HK_LAST_UPDATED_TIMESTAMP",
+								"value": {
+									"value": "@pipeline().TriggerTime",
+									"type": "Expression"
+								}
+							}
+						],
+						"sqlReaderQuery": {
+							"value": "SELECT [INVOICEID]\n      ,[TRANSACTIONID]\n      ,[TYPE]\n      ,[RECEIPTID]\n      ,[STORE]\n      ,[TERMINAL]\n      ,[STAFF]\n      ,[TRANSDATE]\n      ,[TRANSTIME]\n      ,[SHIFT]\n      ,[SHIFTDATE]\n      ,[WRONGSHIFT]\n      ,[INFOCODEDISCGROUP]\n      ,[CUSTACCOUNT]\n      ,[TRANSCODE]\n      ,[SALESPAYMENTDIFFERENCE]\n      ,[NETAMOUNT]\n      ,[COSTAMOUNT]\n      ,[GROSSAMOUNT]\n      ,[PAYMENTAMOUNT]\n      ,[DISCAMOUNT]\n      ,[CUSTDISCAMOUNT]\n      ,[TOTALDISCAMOUNT]\n      ,[NUMBEROFITEMS]\n      ,[AMOUNTTOACCOUNT]\n      ,[ROUNDEDAMOUNT]\n      ,[ENTRYSTATUS]\n      ,[NUMBEROFINVOICES]\n      ,[NUMBEROFITEMLINES]\n      ,[STATEMENTCODE]\n      ,[STATEMENTID]\n      ,[REFUNDRECEIPTID]\n      ,[INCOMEEXPENSEAMOUNT]\n      ,[TOACCOUNT]\n      ,[NUMBEROFPAYMENTLINES]\n      ,[SALEISRETURNSALE]\n      ,[COUNTER]\n      ,[TIMEWHENTOTALPRESSED]\n      ,[TIMEWHENTRANSCLOSED]\n      ,[CURRENCY]\n      ,[TRANSTABLEID]\n      ,[OPENDRAWER]\n      ,[REPLICATED]\n      ,[INCLUDEDINSTATISTICS]\n      ,[RETRIEVEDFROMRECEIPTID]\n      ,[CREATEDONPOSTERMINAL]\n      ,[POSTASSHIPMENT]\n      ,[ITEMSPOSTED]\n      ,[REPLICATIONCOUNTERFROMORIGIN]\n      ,[SELLTOCONTACTID]\n      ,[LOYALTYCARDID]\n      ,[CUSTPURCHASEORDER]\n      ,[COMMENT_]\n      ,[SALESORDERAMOUNT]\n      ,[SALESINVOICEAMOUNT]\n      ,[RECEIPTEMAIL]\n      ,[RECEIPTEMAILSENT]\n      ,[EXCHRATE]\n      ,[SALESORDERID]\n      ,[BATCHID]\n      ,[BATCHTERMINALID]\n      ,[CREATEDOFFLINE]\n      ,[DEFAULTDIMENSION]\n      ,[MODIFIEDDATETIME]\n      ,[MODIFIEDBY]\n      ,[CREATEDDATETIME]\n      ,[CREATEDBY]\n      ,[DATAAREAID]\n      ,[RECVERSION]\n      ,[RECID]\n      ,[DESCRIPTION]\n      ,[DLVMODE]\n      ,[INVENTLOCATIONID]\n      ,[INVENTSITEID]\n      ,[LOGISTICSPOSTALADDRESS]\n      ,[ORIGIN]\n      ,[RECEIPTDATEREQUESTED]\n      ,[SHIPPINGDATEREQUESTED]\n      ,[CHANNEL]\n      ,[CHANNELREFERENCEID]\n      ,[DEL_MODIFIEDTIME]\n      ,[DEL_CREATEDTIME]\n      ,[PARTITION]\n      ,[SKIPAGGREGATION]\n      ,[BUSINESSDATE]\n      ,[LOYALTYDISCAMOUNT_RU]\n      ,[TOTALMANUALDISCOUNTAMOUNT]\n      ,[TOTALMANUALDISCOUNTPERCENTAGE]\n      ,[FISCALDOCUMENTID]\n      ,[FISCALSERIALID]\n      ,[INVOICECOMMENT]\n  FROM [dbo].[RETAILTRANSACTIONTABLE]",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "SnowflakeV2Sink",
+						"importSettings": {
+							"type": "SnowflakeImportCopyCommand"
+						}
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ls_blob_storage",
+							"type": "LinkedServiceReference"
+						},
+						"path": {
+							"value": "@pipeline().globalParameters.rootDir",
+							"type": "Expression"
+						}
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "HK_SOURCE_NAME",
+									"type": "String"
+								},
+								"sink": {
+									"name": "HK_SOURCE_NAME",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "HK_JOB_RUN_ID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "HK_JOB_RUN_ID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "HK_LAST_UPDATED_TIMESTAMP",
+									"type": "String"
+								},
+								"sink": {
+									"name": "HK_LAST_UPDATED_TIMESTAMP",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "INVOICEID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVOICEID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TRANSACTIONID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TRANSACTIONID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TYPE",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "TYPE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "RECEIPTID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "RECEIPTID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "STORE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "STORE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TERMINAL",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TERMINAL",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "STAFF",
+									"type": "String"
+								},
+								"sink": {
+									"name": "STAFF",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TRANSDATE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "TRANSDATE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "TRANSTIME",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "TRANSTIME",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SHIFT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SHIFT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SHIFTDATE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "SHIFTDATE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "WRONGSHIFT",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "WRONGSHIFT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "INFOCODEDISCGROUP",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INFOCODEDISCGROUP",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CUSTACCOUNT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CUSTACCOUNT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TRANSCODE",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "TRANSCODE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SALESPAYMENTDIFFERENCE",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "SALESPAYMENTDIFFERENCE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "NETAMOUNT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "NETAMOUNT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "COSTAMOUNT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "COSTAMOUNT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "GROSSAMOUNT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "GROSSAMOUNT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "PAYMENTAMOUNT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "PAYMENTAMOUNT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "DISCAMOUNT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "DISCAMOUNT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "CUSTDISCAMOUNT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "CUSTDISCAMOUNT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "TOTALDISCAMOUNT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "TOTALDISCAMOUNT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "NUMBEROFITEMS",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "NUMBEROFITEMS",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "AMOUNTTOACCOUNT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "AMOUNTTOACCOUNT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "ROUNDEDAMOUNT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "ROUNDEDAMOUNT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "ENTRYSTATUS",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "ENTRYSTATUS",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "NUMBEROFINVOICES",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "NUMBEROFINVOICES",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "NUMBEROFITEMLINES",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "NUMBEROFITEMLINES",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "STATEMENTCODE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "STATEMENTCODE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "STATEMENTID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "STATEMENTID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "REFUNDRECEIPTID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "REFUNDRECEIPTID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INCOMEEXPENSEAMOUNT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "INCOMEEXPENSEAMOUNT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "TOACCOUNT",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "TOACCOUNT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "NUMBEROFPAYMENTLINES",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "NUMBEROFPAYMENTLINES",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SALEISRETURNSALE",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "SALEISRETURNSALE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "COUNTER",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "COUNTER",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "TIMEWHENTOTALPRESSED",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "TIMEWHENTOTALPRESSED",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "TIMEWHENTRANSCLOSED",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "TIMEWHENTRANSCLOSED",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "CURRENCY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CURRENCY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TRANSTABLEID",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "TRANSTABLEID",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "OPENDRAWER",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "OPENDRAWER",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "REPLICATED",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "REPLICATED",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "INCLUDEDINSTATISTICS",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "INCLUDEDINSTATISTICS",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "RETRIEVEDFROMRECEIPTID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "RETRIEVEDFROMRECEIPTID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CREATEDONPOSTERMINAL",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CREATEDONPOSTERMINAL",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "POSTASSHIPMENT",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "POSTASSHIPMENT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "ITEMSPOSTED",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "ITEMSPOSTED",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "REPLICATIONCOUNTERFROMORIGIN",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "REPLICATIONCOUNTERFROMORIGIN",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SELLTOCONTACTID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SELLTOCONTACTID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "LOYALTYCARDID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "LOYALTYCARDID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CUSTPURCHASEORDER",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CUSTPURCHASEORDER",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "COMMENT_",
+									"type": "String"
+								},
+								"sink": {
+									"name": "COMMENT_",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SALESORDERAMOUNT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "SALESORDERAMOUNT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SALESINVOICEAMOUNT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "SALESINVOICEAMOUNT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "RECEIPTEMAIL",
+									"type": "String"
+								},
+								"sink": {
+									"name": "RECEIPTEMAIL",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RECEIPTEMAILSENT",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "RECEIPTEMAILSENT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "EXCHRATE",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "EXCHRATE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SALESORDERID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SALESORDERID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "BATCHID",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "BATCHID",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "BATCHTERMINALID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "BATCHTERMINALID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CREATEDOFFLINE",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "CREATEDOFFLINE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "DEFAULTDIMENSION",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "DEFAULTDIMENSION",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "MODIFIEDDATETIME",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "MODIFIEDDATETIME",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "MODIFIEDBY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "MODIFIEDBY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CREATEDDATETIME",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "CREATEDDATETIME",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "CREATEDBY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CREATEDBY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DATAAREAID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DATAAREAID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RECVERSION",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "RECVERSION",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "RECID",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "RECID",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "DESCRIPTION",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DESCRIPTION",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DLVMODE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DLVMODE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INVENTLOCATIONID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVENTLOCATIONID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INVENTSITEID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVENTSITEID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "LOGISTICSPOSTALADDRESS",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "LOGISTICSPOSTALADDRESS",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "ORIGIN",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ORIGIN",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RECEIPTDATEREQUESTED",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "RECEIPTDATEREQUESTED",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "SHIPPINGDATEREQUESTED",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "SHIPPINGDATEREQUESTED",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "CHANNEL",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "CHANNEL",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "CHANNELREFERENCEID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CHANNELREFERENCEID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DEL_MODIFIEDTIME",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "DEL_MODIFIEDTIME",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "DEL_CREATEDTIME",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "DEL_CREATEDTIME",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "PARTITION",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "PARTITION",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SKIPAGGREGATION",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "SKIPAGGREGATION",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "BUSINESSDATE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "BUSINESSDATE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "LOYALTYDISCAMOUNT_RU",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "LOYALTYDISCAMOUNT_RU",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "TOTALMANUALDISCOUNTAMOUNT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "TOTALMANUALDISCOUNTAMOUNT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "TOTALMANUALDISCOUNTPERCENTAGE",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "TOTALMANUALDISCOUNTPERCENTAGE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "FISCALDOCUMENTID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "FISCALDOCUMENTID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "FISCALSERIALID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "FISCALSERIALID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INVOICECOMMENT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVOICECOMMENT",
+									"type": "String"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_sql_server",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_src_table_name": "@pipeline().parameters.p_src_table_nm",
+							"p_src_schema_name": "@pipeline().parameters.p_src_schema_nm",
+							"p_ls_serverName": "@pipeline().globalParameters.nala_sql_serverName",
+							"p_ls_dbName": "@pipeline().globalParameters.nala_sql_dbName",
+							"p_ls_sqlUsername": "@pipeline().globalParameters.sql_userName",
+							"p_ls_sqlPassword": "@pipeline().globalParameters.sql_password"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_tgt_table_name": "@pipeline().parameters.p_tgt_raw_table_nm",
+							"p_tgt_schema_name": "@pipeline().parameters.p_tgt_raw_schema_nm",
+							"p_ls_DbName": "@pipeline().globalParameters.snow_rawDb",
+							"p_ls_Env": "@pipeline().globalParameters.environment"
+						}
+					}
+				]
+			},
+			{
+				"name": "TruncateStageTable",
+				"type": "Script",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_rawDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('TRUNCATE TABLE ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_rawDb,'.',pipeline().parameters.p_tgt_raw_schema_nm,'.',pipeline().parameters.p_tgt_raw_table_nm)",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"p_src_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA_STAGE"
+			},
+			"p_tgt_raw_table_nm": {
+				"type": "string",
+				"defaultValue": "RETAILTRANSACTIONTABLE"
+			},
+			"p_tgt_raw_schema_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA_STAGE"
+			},
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "RETAILTRANSACTIONTABLE"
+			},
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_temp_directory": {
+				"type": "string",
+				"defaultValue": "temp_files"
+			}
+		},
+		"variables": {
+			"v_prv_max_upd_timestamp": {
+				"type": "String"
+			},
+			"v_prv_max_upd_timestamp2": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "AXNALA_Staging"
+		},
+		"annotations": []
+	}
+}

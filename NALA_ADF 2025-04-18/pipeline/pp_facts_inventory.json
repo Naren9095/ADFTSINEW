@@ -1,0 +1,146 @@
+{
+	"name": "pp_facts_inventory",
+	"properties": {
+		"activities": [
+			{
+				"name": "sp_fact_inventory_journal",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_INVENTORY_JOURNAL"
+					}
+				}
+			},
+			{
+				"name": "sp_fact_inventory_transactions",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_INVENTORY_TRANSACTIONS"
+					}
+				}
+			},
+			{
+				"name": "trigger_pbi_inventory",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "sp_fact_inventory_journal",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "sp_fact_inventory_transactions",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "sp_dim_ledger_dimension",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "sp_dim_inventory",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_partitions_inventory",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_table_nm": "'FACT_INVENTORY_JOURNAL', 'FACT_INVENTORY_TRANSACTIONS','DIM_INVENTORY','DIM_LEDGER_DIMENSION'",
+						"p_tgt_audit_table_nm": "\nPBI_SNOWFLAKE_BRIDGE",
+						"p_tgt_audit_schema_nm": "CONTROL",
+						"p_dataset_nm": "Inventory Gold Dataset",
+						"p_webhook_url": "https://tempursealyinc.webhook.office.com/webhookb2/7aa89678-96e1-4bbf-a53a-a4ed05939336@7c6c07f6-1ef4-4368-8d5d-4686d15efd79/IncomingWebhook/4905165a872141dc9be9b4991b7739d7/4c6968dc-2ec8-4f99-b936-1206cdf30aeb/V2d9v5N5gZ39UfJ-QCw-OHTE5bVzIK1i4mYRICBbCrt381",
+						"p_web_body_fullrefresh": {
+							"value": "@createArray('{\n    \"type\": \"full\",\n    \"objects\": [\n        {\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Inventory Journal\"\n        }\n        ,{\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Company\"\n        }\n        ,{\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Date\"\n        }\n        ,{\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Items\"\n        }\n        ,{\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Inventory Transaction Details\"\n        }\n        ,{\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Currency\"\n        }\n        ,{\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Default Dimension\"\n        }\n        \n        ,{\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"User Info\"\n        }\n        ,{\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Inventory Journal Details\"\n        }\n\t\t,{\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Inventory Journal Transactions\"\n        }\n    ],\n    \"applyRefreshPolicy\": \"true\"\n}',\n'{\n    \"type\": \"full\",\n    \"objects\": [\n        {\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Ledger Dimension\"\n        },\n        {\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Inventory\"\n        },\n        {\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Receiving Inventory\"\n        }\n    ],\n    \"applyRefreshPolicy\": \"true\"\n}')",
+							"type": "Expression"
+						},
+						"p_fn_app_url": {
+							"value": "https://invpartitiondtu.azurewebsites.net/api/Dailyrun?code=quleFU4VQP1uHREYa2CwQAAyappqD2FfbY3r-IUiD-Z-AzFuh82B1w%3D%3D",
+							"type": "Expression"
+						},
+						"p_server_nm": "powerbi://api.powerbi.com/v1.0/myorg/MDW%20Inventory%20Dev"
+					}
+				}
+			},
+			{
+				"name": "sp_dim_ledger_dimension",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "DIM_LEDGER_DIMENSION"
+					}
+				}
+			},
+			{
+				"name": "sp_dim_inventory",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "DIM_INVENTORY"
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "pbi_dataset_refresh_pipelines"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-11-13T05:19:41Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

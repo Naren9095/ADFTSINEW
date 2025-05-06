@@ -1,0 +1,118 @@
+{
+	"name": "ds_parquet",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_adls",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"p_directory": {
+				"type": "string"
+			},
+			"p_root_system": {
+				"type": "string"
+			},
+			"p_file_name": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Reusable_Datasets"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().p_file_name",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@dataset().p_directory",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().p_root_system",
+					"type": "Expression"
+				}
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": [
+			{
+				"name": "RECID",
+				"type": "INT64"
+			},
+			{
+				"name": "CITY",
+				"type": "UTF8"
+			},
+			{
+				"name": "COUNTY",
+				"type": "UTF8"
+			},
+			{
+				"name": "COUNTRYREGIONID",
+				"type": "UTF8"
+			},
+			{
+				"name": "LATITUDE",
+				"type": "DECIMAL",
+				"precision": 32,
+				"scale": 16
+			},
+			{
+				"name": "LONGITUDE",
+				"type": "DECIMAL",
+				"precision": 32,
+				"scale": 16
+			},
+			{
+				"name": "ZIPCODE",
+				"type": "UTF8"
+			},
+			{
+				"name": "STATE",
+				"type": "UTF8"
+			},
+			{
+				"name": "STREET",
+				"type": "UTF8"
+			},
+			{
+				"name": "ISPRIVATE",
+				"type": "INT32"
+			},
+			{
+				"name": "MODIFIEDDATETIME",
+				"type": "INT96"
+			},
+			{
+				"name": "LOCATIONID",
+				"type": "UTF8"
+			},
+			{
+				"name": "DESCRIPTION",
+				"type": "UTF8"
+			},
+			{
+				"name": "LOGISTICSLOCATION_MODIFIEDDATETIME",
+				"type": "INT96"
+			},
+			{
+				"name": "TIMEZONEKEYNAME",
+				"type": "UTF8"
+			},
+			{
+				"name": "HK_JOB_RUN_ID",
+				"type": "UTF8"
+			},
+			{
+				"name": "HK_SOURCE_NAME",
+				"type": "UTF8"
+			}
+		]
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

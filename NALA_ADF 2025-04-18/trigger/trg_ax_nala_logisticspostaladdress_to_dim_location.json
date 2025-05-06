@@ -1,0 +1,37 @@
+{
+	"name": "trg_ax_nala_logisticspostaladdress_to_dim_location",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "pp_ax_logisticspostaladdress_to_dim_location",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"p_src_table_nm": "LOGISTICSPOSTALADDRESS",
+					"p_src_schema_nm": "dbo",
+					"p_tgt_raw_schema_nm": "AX_NALA",
+					"p_tgt_raw_table_nm": "LOGISTICSPOSTALADDRESS",
+					"p_src_directory": "business_files",
+					"p_temp_file_nm": "logisticsPostalAddress_nala.parquet",
+					"p_temp_directory": "temp_files",
+					"p_src_nm": "AXNALA",
+					"p_tgt_curate_table_nm": "DIM_LOCATION",
+					"p_tgt_curate_schema_nm": "GLOBAL",
+					"p_src_code": "1"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2024-06-07T05:00:00",
+				"timeZone": "Eastern Standard Time"
+			}
+		}
+	}
+}

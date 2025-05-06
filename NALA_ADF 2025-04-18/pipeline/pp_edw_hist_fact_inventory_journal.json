@@ -1,0 +1,235 @@
+{
+	"name": "pp_edw_hist_fact_inventory_journal",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy from sqlserver to ADLS",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "SELECT --TOP (100) \n\t\tf1.DW_ID\n      ,f1.DEFAULTDIMENSIONKEY\n      ,f1.INVENTORYJOURNALDETAILSKEY\n      ,f1.INVENTORYJOURNALKEY\n      ,f1.INVENTORYKEY\n      ,f1.ITEMKEY\n      ,f1.LEDGERDIMENSIONKEY\n      ,f1.LEGALENTITYKEY\n      ,f1.RECEIVINGINVENTORYKEY\n      ,f1.USERINFOKEY\n      ,f1.POSTEDDATE\n      ,f1.TRANSACTIONDATE\n      ,f1.LEGALENTITY\n      ,f1.JOURNALID\n      ,f1.LINENUMBER\n      ,f1.VOUCHER\n      ,f1.QUANTITY\n      ,f1.COUNTEDQUANTITY\n      ,f1.ONHANDQUANTITY\n      ,f1.COSTAMOUNT\n      ,f1.COSTPRICE\n      ,f1.PRICEUNIT\n      ,f1.INCREMENTALTIMESTAMP\n\t  ,cast(case when f1.defaultdimensionkey in (-1, -2) then f2.DEFAULTDIMENSION \n\t\telse dd1.defaultdimension end as varchar) as DEFAULTDIMENSION\n\t ,f2.JOURNALNAMEID\n\t  ,case when f1.InventoryKey in (-1, -2) then f2.INVENTDIMID \n\t\telse di1.InventoryDimensionID end as INVENTDIMID\n\t  ,case when f1.ItemKey in (-1, -2) then f2.itemid \n\t\t\telse dit1.itemid end as ITEMID\n\t  ,cast(case when f1.LedgerDimensionKey in (-1, -2) then f2.LEDGERDIMENSION \n\t\t\telse dld1.LedgerDimension end as varchar) as LEDGERDIMENSION\n\t  ,case when f1.RECEIVINGINVENTORYKEY in (-1, -2) then f2.TOINVENTDIMID \n\t\telse di2.InventoryDimensionID end as TOINVENTDIMID\n\t  ,case when f1.USERINFOKEY in (-1, -2) then f2.POSTEDUSERID  \n\t\telse dui1.USERID end as POSTEDUSERID\n\t  ,dijd1.JOURNALTYPE\n      ,dijd1.ISINVENTORYJOURNALPOSTED\n      ,dijd1.ISINVENTORYJOURNALBLOCKED\n      ,dijd1.DROPSHIPMENT\n      ,f1.DW_BATCH\n      ,f1.DW_SOURCECODE\n      ,f1.DW_TIMESTAMP\n  FROM\tEDW_DWH.DBO.FACTINVENTORYJOURNAL f1 with (nolock)\n\t\tLEFT JOIN EDW_HKA.DBO.FACTINVENTORYJOURNAL f2 with (nolock) ON\n\t\tf1.DW_Id = f2.DW_Id\n\t\tleft join edw_hka.dbo.DIMDEFAULTDIMENSION dd1 with (nolock) on\n\t\tf1.defaultdimensionkey = dd1.defaultdimensionkey\n\t\tleft join dbo.DimInventory di1 with (nolock) on\n\t\tf1.InventoryKey = di1.InventoryKey\n\t\tleft join dbo.DimInventory di2 with (nolock) on\n\t\tf1.RECEIVINGINVENTORYKEY = di2.InventoryKey\n\t\tleft join dbo.DIMITEM dit1 with (nolock) on\n\t\tf1.itemkey = dit1.itemkey\t\n\t\tleft join dbo.DIMUSERINFO dui1 with (nolock) on\n\t\tf1.UserInfoKey = dui1.UserInfoKey\n\t\tleft join edw_hka.dbo.DimLedgerDimension dld1 with (nolock) on\n\t\tf1.LedgerDimensionKey = dld1.LedgerDimensionKey\n\t\tleft join dbo.DimInventoryJournalDetails dijd1 with (nolock) on\n\t\tf1.InventoryJournalDetailsKey =dijd1.InventoryJournalDetailsKey;\n\n",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": false,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_sql_server",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_src_table_name": {
+								"value": "@pipeline().parameters.p_src_table_nm",
+								"type": "Expression"
+							},
+							"p_src_schema_name": {
+								"value": "@pipeline().parameters.p_src_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_serverName": {
+								"value": "@pipeline().globalParameters.edw_sql_serverName",
+								"type": "Expression"
+							},
+							"p_ls_dbName": {
+								"value": "@pipeline().globalParameters.edw_sql_dbName",
+								"type": "Expression"
+							},
+							"p_ls_sqlUsername": {
+								"value": "@pipeline().globalParameters.sql_userName",
+								"type": "Expression"
+							},
+							"p_ls_sqlPassword": {
+								"value": "@pipeline().globalParameters.sql_password",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_parq_edw",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_root_system": {
+								"value": "@pipeline().globalParameters.rootDir",
+								"type": "Expression"
+							},
+							"p_directory": {
+								"value": "@pipeline().parameters.p_temp_directory",
+								"type": "Expression"
+							},
+							"p_file_name": {
+								"value": "@concat(toUpper(pipeline().parameters.p_curate_table_name),'_HIST_',substring(string(utcNow()),0,4),'_',substring(string(utcNow()),5,2),'_',substring(string(utcNow()),8,2),'.snappy.parquet')",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "ADLS to Snowflake RAW with HK columns",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "Copy from sqlserver to ADLS",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_load_edw_history",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"adlsSource": {
+								"p_root_system": {
+									"value": "@pipeline().globalParameters.rootDir",
+									"type": "Expression"
+								},
+								"p_directory": {
+									"value": "@pipeline().parameters.p_temp_directory",
+									"type": "Expression"
+								},
+								"p_file_name": {
+									"value": "@concat(toUpper(pipeline().parameters.p_curate_table_name),'_HIST_',substring(string(utcNow()),0,4),'_',substring(string(utcNow()),5,2),'_',substring(string(utcNow()),8,2),'.snappy.parquet')",
+									"type": "Expression"
+								}
+							},
+							"snowflakeRawTarget": {
+								"p_tgt_table_name": {
+									"value": "@pipeline().parameters.p_src_table_nm",
+									"type": "Expression"
+								},
+								"p_tgt_schema_name": {
+									"value": "@pipeline().parameters.p_tgt_schema_nm",
+									"type": "Expression"
+								},
+								"p_ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_rawDb",
+									"type": "Expression"
+								},
+								"p_ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"integrationRuntime": {
+						"referenceName": "IR-Snowflake-NALA",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "RAW to CURATE SP",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "ADLS to Snowflake RAW with HK columns",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_curateDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "TRUNCATE TABLE GLOBAL.FACT_INVENTORY_JOURNAL;\n\nINSERT INTO GLOBAL.FACT_INVENTORY_JOURNAL (\nFACT_INVENTORY_JOURNAL_KEY,\nSOURCE_NAME,\nLEGAL_ENTITY,\nJOURNAL_ID,\nLINE_NUMBER,\nDIM_SOURCE_SYSTEM_KEY,\nDIM_SOURCE_SYSTEM_SNKEY,\nDIM_DEFAULT_DIMENSION_KEY,\nDIM_DEFAULT_DIMENSION_SNKEY,\n-- DIM_INVENTORY_JOURNAL_DETAILS_KEY,\n-- DIM_INVENTORY_JOURNAL_DETAILS_SNKEY,\nDIM_INVENTORY_JOURNAL_KEY,\nDIM_INVENTORY_JOURNAL_SNKEY,\nDIM_INVENTORY_KEY,\nDIM_INVENTORY_SNKEY,\nDIM_ITEM_KEY,\nDIM_ITEM_SNKEY,\nDIM_LEDGER_DIMENSION_KEY,\nDIM_LEDGER_DIMENSION_SNKEY,\nDIM_LEGAL_ENTITY_KEY,\nDIM_LEGAL_ENTITY_SNKEY,\nDIM_RECIEVING_INVENTORY_KEY,\nDIM_RECIEVING_INVENTORY_SNKEY,\nDIM_USER_INFO_KEY,\nDIM_USER_INFO_SNKEY,\nPOSTED_DATE_DIM_DATE_KEY,\nPOSTED_DATE_DIM_DATE_SNKEY,\nTRANSACTION_DATE_DIM_DATE_KEY,\nTRANSACTION_DATE_DIM_DATE_SNKEY,\nPOSTED_DATE,\nTRANSACTION_DATE,\nDEFAULT_DIMENSION,\nINVENTORY_JOURNAL_ID,\nINVENTORY_DIMENSION_ID,\nITEM_ID,\nLEDGER_DIMENSION,\nRECIEVING_INVENTORY_DIMENSION_ID,\nPOSTED_USER_ID,\nVOUCHER,\nQUANTITY,\nCOUNTED_QUANTITY,\nON_HAND_QUANTITY,\nCOST_AMOUNT,\nCOST_PRICE,\nPRICE_UNIT,\nJOURNAL_TYPE,\nIS_INVENTORY_JOURNAL_POSTED,\nIS_INVENTORY_JOURNAL_BLOCKED,\nDROP_SHIPMENT,\nHK_HASH_KEY,\nHK_SOURCE_NAME,\nHK_SOFT_DELETE_FLAG,\nHK_SOURCE_CREATED_TIMESTAMP,\nHK_SOURCE_LAST_UPDATED_TIMESTAMP,\nHK_CREATED_JOB_RUN_ID,\nHK_LAST_UPDATED_JOB_RUN_ID,\nHK_CREATED_TIMESTAMP,\nHK_LAST_UPDATED_TIMESTAMP,\nHK_WAREHOUSE_ID)\n\nSELECT hash(a.SOURCE_NAME, '~',a.LEGAL_ENTITY, '~',a.JOURNAL_ID, '~', to_char(a.LINE_NUMBER)) AS FACT_INVENTORY_JOURNAL_KEY\n    ,a.SOURCE_NAME\n    ,a.LEGAL_ENTITY\n    ,a.JOURNAL_ID\n    ,a.LINE_NUMBER\n    ,case when a.source_name = '' then -2\n\t\t\telse nvl(dss1.dim_source_system_key, -1)\n\t\t\tend::number as DIM_SOURCE_SYSTEM_KEY\n    ,a.DIM_SOURCE_SYSTEM_SNKEY    \n\t\t, case when a.dim_default_dimension_snkey = -2 then -2\n\t\t\t\telse nvl(ddim1.dim_default_dimension_key, -1)\n\t\t\tend::number as DIM_DEFAULT_DIMENSION_KEY\n    ,a.DIM_DEFAULT_DIMENSION_SNKEY \n   -- ,a.DIM_INVENTORY_JOURNAL_DETAILS_SNKEY AS DIM_INVENTORY_JOURNAL_DETAILS_KEY\n   -- ,a.DIM_INVENTORY_JOURNAL_DETAILS_SNKEY\n          \t, case when a.DIM_INVENTORY_JOURNAL_SNKEY = -2 then -2\n\t\t\t\telse nvl(dij1.DIM_INVENTORY_JOURNAL_KEY, -1)\n\t\t\tend::number as DIM_INVENTORY_JOURNAL_KEY\n,a.DIM_INVENTORY_JOURNAL_SNKEY\n    , case when a.dim_inventory_snkey = -2 then -2\n\t\t\t\telse nvl(dinv1.dim_inventory_key, -1)\n\t\t\tend::number as DIM_INVENTORY_KEY\n    ,a.DIM_INVENTORY_SNKEY \n  \t, case when a.dim_item_snkey = -2 then -2\n\t\t\t\telse nvl(dit1.dim_item_key, -1)\n\t\t\tend::number as DIM_ITEM_KEY\n,a.DIM_ITEM_SNKEY\n  \t, case when a.DIM_LEDGER_DIMENSION_SNKEY = -2 then -2\n\t\t\t\telse nvl(dld1.DIM_LEDGER_DIMENSION_KEY, -1)\n\t\t\tend::number as DIM_LEDGER_DIMENSION_KEY\n,a.DIM_LEDGER_DIMENSION_SNKEY\n\t\t, case when a.dim_legal_entity_snkey = -2 then -2\n\t\t\t\telse nvl(dle1.dim_legal_entity_key, -1)\n\t\t\tend::number as DIM_LEGAL_ENTITY_KEY\n,a.DIM_LEGAL_ENTITY_SNKEY\n     , case when a.DIM_RECIEVING_INVENTORY_SNKEY = -2 then -2\n\t\t\t\telse nvl(dinv2.dim_inventory_key, -1)\n\t\t\tend::number as DIM_RECIEVING_INVENTORY_KEY\n,a.DIM_RECIEVING_INVENTORY_SNKEY\n     , case when a.DIM_USER_INFO_SNKEY = -2 then -2\n\t\t\t\telse nvl(dui1.DIM_USER_INFO_KEY, -1)\n\t\t\tend::number as DIM_USER_INFO_KEY\n,a.DIM_USER_INFO_SNKEY\n, nvl(dd1.dim_date_key, -1)::number as POSTED_DATE_DIM_DATE_KEY\n,a.POSTED_DATE_DIM_DATE_SNKEY\n, nvl(dd2.dim_date_key, -1)::number as TRANSACTION_DATE_DIM_DATE_KEY\n,a.TRANSACTION_DATE_DIM_DATE_SNKEY\n,a.POSTED_DATE\n,a.TRANSACTION_DATE\n,a.DEFAULT_DIMENSION\n,a.INVENTORY_JOURNAL_ID\n,a.INVENTORY_DIMENSION_ID\n,a.ITEM_ID\n,a.LEDGER_DIMENSION\n,a.RECIEVING_INVENTORY_DIMENSION_ID\n,a.POSTED_USER_ID\n,a.VOUCHER\n,a.QUANTITY\n,a.COUNTED_QUANTITY\n,a.ON_HAND_QUANTITY\n,a.COST_AMOUNT\n,a.COST_PRICE\n,a.PRICE_UNIT\n,a.JOURNAL_TYPE\n,a.IS_INVENTORY_JOURNAL_POSTED\n,a.IS_INVENTORY_JOURNAL_BLOCKED\n,a.DROP_SHIPMENT\n,hash(a.source_name, '~', a.legal_entity, '~', a.journal_id, '~', to_char(a.line_number), '~', to_char(a.posted_date, 'yyyymmddhh24missff3'), '~', to_char(a.transaction_date, 'yyyymmddhh24missff3'), '~', a.default_dimension, '~', a.INVENTORY_JOURNAL_ID, '~', a.inventory_dimension_id, '~', a.item_id, '~', a.ledger_dimension, '~', a.recieving_inventory_dimension_id, '~', a.posted_user_id, '~', a.voucher, '~', to_char(a.quantity), '~', to_char(a.counted_quantity), '~', to_char(a.on_hand_quantity), '~', to_char(a.cost_amount), '~', to_char(a.cost_price), '~', to_char(a.price_unit), '~', a.journal_type, '~', a.is_inventory_journal_posted, '~', a.is_inventory_journal_blocked, '~', a.drop_shipment) as HK_HASH_KEY\n\t\t, a.hk_source_name as HK_SOURCE_NAME\n\t\t, false::boolean as HK_SOFT_DELETE_FLAG\n\t\t, a.hk_source_created_timestamp as HK_SOURCE_CREATED_TIMESTAMP, a.hk_source_last_updated_timestamp as HK_SOURCE_LAST_UPDATED_TIMESTAMP, a.hk_created_job_run_id as HK_CREATED_JOB_RUN_ID, a.hk_last_updated_job_run_id as HK_LAST_UPDATED_JOB_RUN_ID\n\t\t, current_timestamp::timestamp_tz as HK_CREATED_TIMESTAMP\n\t\t, current_timestamp::timestamp_tz as HK_LAST_UPDATED_TIMESTAMP\n\t\t, uuid_string()::varchar as HK_WAREHOUSE_ID\n \nFROM\n(SELECT     'AXNALA'::varchar as SOURCE_NAME\n            , nvl(LEGALENTITY, '') AS LEGAL_ENTITY \n            , nvl(JOURNALID,'') AS JOURNAL_ID\n            , NVL(LINENUMBER,0) AS LINE_NUMBER\n            , case when nvl(SOURCE_NAME, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME)\n\t\t\t\tend::number as DIM_SOURCE_SYSTEM_SNKEY\n\t\t\t, case when nvl(DEFAULTDIMENSION, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', DEFAULTDIMENSION)\n\t\t\t\tend::number as DIM_DEFAULT_DIMENSION_SNKEY\n           -- ,hash(JOURNALTYPE, '~', ISINVENTORYJOURNALPOSTED, '~', ISINVENTORYJOURNALBLOCKED, '~', DROPSHIPMENT) AS DIM_INVENTORY_JOURNAL_DETAILS_SNKEY\n            , case when nvl(LEGALENTITY, '') = '' or nvl(JOURNALNAMEID, '') = '' then -2\n              else hash(SOURCE_NAME, '~',LEGALENTITY, '~',JOURNALNAMEID)\n                end::number as DIM_INVENTORY_JOURNAL_SNKEY \n            ,case when nvl(LEGALENTITY, '') = '' or nvl(INVENTDIMID, '') = '' then -2\n             else hash(SOURCE_NAME, '~', LEGALENTITY, '~', INVENTDIMID) \n                end::number as DIM_INVENTORY_SNKEY \n            ,case when nvl(LEGALENTITY, '') = '' or nvl(ITEMID, '') = '' then -2\n                else hash('', '~', LEGALENTITY, '~', ITEMID)\n                end::number as DIM_ITEM_SNKEY\n            ,case when nvl(LEDGERDIMENSION, '') = '' then -2\n                else hash(SOURCE_NAME, '~',LEDGERDIMENSION)\n                end::number as DIM_LEDGER_DIMENSION_SNKEY\n            ,case when nvl(LEGALENTITY, '') = '' then -2\n                else hash(SOURCE_NAME, '~', LEGALENTITY)\n                end::number as DIM_LEGAL_ENTITY_SNKEY\n            ,case when nvl(LEGALENTITY, '') = '' or nvl(TOINVENTDIMID, '') = '' then -2\n                else hash(SOURCE_NAME, '~', LEGALENTITY, '~',TOINVENTDIMID)\n                end::number as DIM_RECIEVING_INVENTORY_SNKEY\n            ,case when nvl(POSTEDUSERID, '') = '' then -2\n                else hash(SOURCE_NAME, '~',POSTEDUSERID)\n                end::number as DIM_USER_INFO_SNKEY\n            ,case when POSTEDDATE = '1950-01-01' then -2\n                else hash('', '~', to_char(POSTEDDATE, 'yyyymmdd'))\n             end::number as POSTED_DATE_DIM_DATE_SNKEY\n           ,case when TRANSACTIONDATE = '1950-01-01' then -2\n                else hash('', '~', to_char(TRANSACTIONDATE, 'yyyymmdd'))\n                end::number as TRANSACTION_DATE_DIM_DATE_SNKEY\n           ,NVL(POSTEDDATE, '1950-01-01') AS POSTED_DATE\n            ,NVL(TRANSACTIONDATE, '1950-01-01') AS TRANSACTION_DATE\n           , NVL(DEFAULTDIMENSION,'') AS DEFAULT_DIMENSION\n        , NVL(JOURNALNAMEID,'') AS INVENTORY_JOURNAL_ID\n        , NVL(INVENTDIMID,'') AS INVENTORY_DIMENSION_ID\n        , NVL(ITEMID,'') AS ITEM_ID\n        , NVL(LEDGERDIMENSION,'') AS LEDGER_DIMENSION\n        ,nvl(TOINVENTDIMID,'') AS RECIEVING_INVENTORY_DIMENSION_ID\n,nvl(POSTEDUSERID,'')AS POSTED_USER_ID\n,nvl(VOUCHER,'') AS VOUCHER\n,nvl(QUANTITY,0) AS QUANTITY\n,nvl(COUNTEDQUANTITY,0) AS COUNTED_QUANTITY\n,nvl(ONHANDQUANTITY,0) AS ON_HAND_QUANTITY\n,nvl(COSTAMOUNT,0) AS COST_AMOUNT\n,nvl(COSTPRICE,0) AS COST_PRICE\n,nvl(PRICEUNIT,0) AS PRICE_UNIT\n,nvl(JOURNALTYPE,'') AS JOURNAL_TYPE\n,nvl(ISINVENTORYJOURNALPOSTED,'') AS IS_INVENTORY_JOURNAL_POSTED\n,nvl(ISINVENTORYJOURNALBLOCKED,'') AS IS_INVENTORY_JOURNAL_BLOCKED\n,nvl(DROPSHIPMENT,'') AS DROP_SHIPMENT\n            , nvl(b.dw_sourcecode, '')::varchar as HK_SOURCE_NAME\n\t\t\t, '1950-01-01 00:00:00'::timestamp_tz as HK_SOURCE_CREATED_TIMESTAMP\n\t\t\t, nvl(b.dw_timestamp, '1950-01-01 00:00:00')::timestamp_tz as HK_SOURCE_LAST_UPDATED_TIMESTAMP\n\t\t\t, '-1'::varchar as HK_CREATED_JOB_RUN_ID\n\t\t\t, nvl(b.dw_batch, '-1')::varchar as HK_LAST_UPDATED_JOB_RUN_ID\nFROM\n(SELECT\nHK_SOURCE_NAME,\nHK_JOB_RUN_ID,\nHK_CREATED_TIMESTAMP,\nHK_WAREHOUSE_ID,\n--DW_ID,\n--DEFAULTDIMENSIONKEY,\n--INVENTORYJOURNALDETAILSKEY,\n--INVENTORYJOURNALKEY,\n--INVENTORYKEY,\n--ITEMKEY,\n--LEDGERDIMENSIONKEY,\n--LEGALENTITYKEY,\n--RECEIVINGINVENTORYKEY,\n--USERINFOKEY,\nPOSTEDDATE,\nTRANSACTIONDATE,\nLEGALENTITY,\nJOURNALID,\nLINENUMBER,\nVOUCHER,\nQUANTITY,\nCOUNTEDQUANTITY,\nONHANDQUANTITY,\nCOSTAMOUNT,\nCOSTPRICE,\nPRICEUNIT,\nINCREMENTALTIMESTAMP,\nDEFAULTDIMENSION,\nJOURNALNAMEID,\nINVENTDIMID,\nITEMID,\nLEDGERDIMENSION,\nTOINVENTDIMID,\nPOSTEDUSERID,\nJOURNALTYPE,\nISINVENTORYJOURNALPOSTED,\nISINVENTORYJOURNALBLOCKED,\nDROPSHIPMENT,\nDW_BATCH,\nDW_SOURCECODE,\nDW_TIMESTAMP,\nFROM @{pipeline().globalParameters.environment}_RAW.EDW_DWH.FACTINVENTORYJOURNAL) b\n\t\t\tinner join (select min(date_value) as MIN_DATE_VALUE\n\t\t\t\t\t\t\t, max(date_value) as MAX_DATE_VALUE\n\t\t\t\t\t\tfrom global.DIM_DATE\n\t\t\t\t\t\twhere date_value not in ('1950-01-01', '1951-12-31', '9000-01-01', '9951-12-31')) dd1 on\n\t\t\t\t1=1\n\t\t) a\n\tleft join global.DIM_SOURCE_SYSTEM dss1 on\n\t\ta.dim_source_system_snkey = dss1.dim_source_system_snkey\n    left join global.DIM_DEFAULT_DIMENSION ddim1 on\n\t\ta.dim_default_dimension_snkey = ddim1.dim_default_dimension_snkey\n\tleft join global.DIM_INVENTORY dinv1 on\n\t\ta.dim_inventory_snkey = dinv1.dim_inventory_snkey\n    left join global.DIM_INVENTORY dinv2 on\n\t\ta.DIM_RECIEVING_INVENTORY_SNKEY = dinv2.dim_inventory_snkey\n\tleft join global.DIM_ITEM dit1 on\n\t\ta.dim_item_snkey = dit1.dim_item_snkey\n    left join global.DIM_INVENTORY_JOURNAL dij1 on\n        a.DIM_INVENTORY_JOURNAL_SNKEY = dij1.dim_inventory_journal_snkey\n    left join global.dim_ledger_dimension dld1 on\n        a.DIM_LEDGER_DIMENSION_SNKEY = dld1.dim_ledger_dimension_snkey\n\tleft join global.DIM_LEGAL_ENTITY dle1 on\n\t\ta.dim_legal_entity_snkey = dle1.dim_legal_entity_snkey\n    left join global.dim_user_info dui1 on\n        a.dim_user_info_snkey = dui1.dim_user_info_snkey\n\tleft join global.DIM_DATE dd1 on\n\t\ta.POSTED_DATE_DIM_DATE_SNKEY = dd1.dim_date_snkey\n\tleft join global.DIM_DATE dd2 on\n\t\ta.TRANSACTION_DATE_DIM_DATE_SNKEY = dd2.dim_date_snkey\n;",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "FACTINVENTORYJOURNAL"
+			},
+			"p_temp_directory": {
+				"type": "string",
+				"defaultValue": "temp_files"
+			},
+			"p_tgt_schema_nm": {
+				"type": "string",
+				"defaultValue": "EDW_DWH"
+			},
+			"p_curate_table_name": {
+				"type": "string",
+				"defaultValue": "FACT_INVENTORY_JOURNAL"
+			}
+		},
+		"folder": {
+			"name": "history_fact"
+		},
+		"annotations": []
+	}
+}

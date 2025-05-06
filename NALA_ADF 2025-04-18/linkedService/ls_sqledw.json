@@ -1,0 +1,24 @@
+{
+	"name": "ls_sqledw",
+	"properties": {
+		"annotations": [],
+		"type": "SqlServer",
+		"typeProperties": {
+			"connectionString": "Integrated Security=True;Data Source=tri-bisqldw-uat;Initial Catalog=EDW_DWH",
+			"userName": "twi\\SCVSFETLDEV",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "ls_key_vault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "axsqlpassword"
+			}
+		},
+		"connectVia": {
+			"referenceName": "Selfhosted-IR-NALA-dtu",
+			"type": "IntegrationRuntimeReference"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/linkedservices"
+}

@@ -1,0 +1,149 @@
+trigger: none
+parameters:
+  - name: environment
+    displayName: "Environment"
+    type: string
+    default: "tst"
+    values:
+      - tst
+      - uat
+      - prod
+variables:
+  dataFactory: "mdw-df-nala-${{ parameters.environment }}"
+
+  tstResourceGroup: "rg-IT-NALA-MDW-tst"
+  uatResourceGroup: "rg-IT-NALA-MDW-uat"
+  prodResourceGroup: "rg-IT-NALA-MDW"
+  resourceGroup: ${{ variables[format('{0}ResourceGroup', parameters.environment)] }}
+  azureSubscription: "NALA-MDW-Azure-Connection"
+
+
+stages:
+  - stage: Deploy
+    jobs:
+      - job: Deploy
+        displayName: "Deploy Pipelines to ${{ parameters.environment }}"
+        pool:
+          name: "Azure Pipelines"
+        steps:
+          - task: AzurePowerShell@5
+            displayName: "Azure PowerShell script: Install Azure Datafactory Tools"
+            inputs:
+              azureSubscription: $(azureSubscription)
+              ScriptType: InlineScript
+              Inline: |
+                Install-Module -Name azure.datafactory.tools -Scope CurrentUser -Force
+                Install-Module -Name "azure.datafactory.tools" -Force
+                Import-Module -Name "azure.datafactory.tools" -Force
+
+              azurePowerShellVersion: LatestVersion
+              workingDirectory: "$(System.DefaultWorkingDirectory)"
+              pwsh: true
+          - task: AzurePowerShell@5
+            displayName: "Prepare Pipeline JSON"
+            inputs:
+              azureSubscription: $(azureSubscription)
+              ScriptType: InlineScript
+              Inline: |
+                function Get-D365DbNameValue {
+                    param (
+                        [string]$Env
+                    )
+
+                    # Define the path to your CSV file
+                    $csvFilePath = "deployment/config-$Env.csv"
+                    # Import the CSV file
+                    $data = Import-Csv -Path $CsvFilePath
+
+                    # Build the path based on the environment
+                    $d365DbNamePath = '$.properties.globalParameters.d365_dbName.value'
+
+                    # Find the value corresponding to d365_dbName for the specified environment
+                    $d365DbNameValue = $data | Where-Object { $_.path -eq $d365DbNamePath } | Select-Object -ExpandProperty value
+
+                    # Return the result
+                    if ($d365DbNameValue) {
+                        return $d365DbNameValue
+                    } else {
+                        return "d365_dbName value not found."
+                    }
+                }
+
+                $devD365DbName = Get-D365DbNameValue("dev")
+                $envD365DbName = Get-D365DbNameValue("${{ parameters.environment }}")
+
+                $pipelines = Get-ChildItem -Path "pipeline" -Filter "*.json" | Sort-Object Name | ForEach-Object {
+                  [PSCustomObject]@{ Name = $_.Name; Content = Get-Content -Path $_.FullName | ConvertFrom-Json }
+                }
+                foreach ($pipeline in $pipelines) {
+                    $pipelineJsonFile = $pipeline.Name
+                    $pipelineName = $pipeline.Content.name
+                    $jsonFile = "pipeline/$pipelineJsonFile"
+
+                    # Read the content of the JSON file
+                    $jsonContent = Get-Content -Path "$jsonFile" -Raw
+
+                    # Count occurrences of the devD365DbName
+                    $occurrences = [regex]::Matches($jsonContent, [regex]::Escape($devD365DbName)).Count
+
+                    # Output the number of occurrences
+                    Write-Host "Occurrences of '$devD365DbName' in $pipelineName : $occurrences"
+
+                    # Replace devD365DbName with envD365DbName if occurrences are greater than 0
+                    if ($occurrences -gt 0) {
+                        $jsonContent = $jsonContent -replace [regex]::Escape($devD365DbName), $envD365DbName
+                        
+                        # Convert the string back to JSON object
+                        $updatedJsonContent = $jsonContent | ConvertFrom-Json
+
+                        # Write the updated JSON content back to the file
+                        $updatedJsonContent | ConvertTo-Json -Depth 100 | Set-Content -Path $jsonFile -Force
+
+                        Write-Host "'$devD365DbName' has been replaced with '$envD365DbName'. The updated content is written back to the $jsonFile."
+                    }
+                    else {
+                        Write-Host "No occurrences of '$devD365DbName' found."
+                    }
+                }
+              FailOnStandardError: true
+              azurePowerShellVersion: LatestVersion
+
+          - task: AzurePowerShell@5
+            displayName: "Publish Datafactory"
+            inputs:
+              azureSubscription: $(azureSubscription)
+              ScriptType: InlineScript
+              Inline: |
+                Install-Module -Name azure.datafactory.tools -Scope CurrentUser -Force
+                Install-Module -Name "azure.datafactory.tools" -Force
+                Import-Module -Name "azure.datafactory.tools" -Force
+
+                $opt = New-AdfPublishOption
+                $opt.IncrementalDeployment = $true
+                $opt.StopStartTriggers = $false
+                $opt.DeleteNotInSource = $false
+                $opt.DoNotDeleteExcludedObjects = $true
+                
+                $opt.Excludes.Add("templates*.*", "")
+                $opt.Excludes.Add("integrationruntime.*", "")
+                $opt.Excludes.Add("managedVirtualNetwork*.*", "")
+                $opt.Excludes.Add("credential.*", "")
+                $opt.Excludes.Add("*managedPrivateEndpoint*.*", "")
+                $opt.Excludes.Add("linkedService.*", "")
+
+                $opt.Excludes.Add("factory.*", "")          
+                #$opt.Includes.Add("dataset.*", "")
+                $opt.Excludes.Add("dataset.*", "")
+                $opt.Excludes.Add("dataflow.*", "")
+                
+                #$opt.Excludes.Add("pipeline.*", "")
+                $opt.Includes.Add("pipeline.*", "")
+
+
+                $opt.Excludes.Add("trigger.*","")
+                #$opt.Includes.Add("trigger.specific_trigger_name_here","")
+
+                Publish-AdfV2FromJson -Stage "${{ parameters.environment }}" -RootFolder "$(System.DefaultWorkingDirectory)" -ResourceGroupName "$(resourceGroup)" -DataFactoryName "$(dataFactory)" -Location "eastus2" -Option $opt
+
+              FailOnStandardError: true
+              azurePowerShellVersion: LatestVersion

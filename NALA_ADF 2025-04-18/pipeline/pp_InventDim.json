@@ -1,0 +1,592 @@
+{
+	"name": "pp_InventDim",
+	"properties": {
+		"description": "Raw tables needed for fact_sales_orders",
+		"activities": [
+			{
+				"name": "LoadStageTable",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "TruncateStageTable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"additionalColumns": [
+							{
+								"name": "HK_SOURCE_NAME",
+								"value": {
+									"value": "@pipeline().parameters.p_src_schema_nm",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "HK_JOB_RUN_ID",
+								"value": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "HK_LAST_UPDATED_TIMESTAMP",
+								"value": {
+									"value": "@pipeline().TriggerTime",
+									"type": "Expression"
+								}
+							}
+						],
+						"sqlReaderQuery": {
+							"value": "select [INVENTDIMID]\n      ,[INVENTBATCHID]\n      ,[WMSLOCATIONID]\n      ,[WMSPALLETID]\n      ,[INVENTSERIALID]\n      ,[INVENTLOCATIONID]\n      ,[CONFIGID]\n      ,[INVENTSIZEID]\n      ,[INVENTCOLORID]\n      ,[INVENTSITEID]\n      ,[INVENTSTYLEID]\n      ,[DATAAREAID]\n      ,[RECVERSION]\n      ,[RECID]\n      ,[INVENTGTDID_RU]\n      ,[INVENTPROFILEID_RU]\n      ,[INVENTOWNERID_RU]\n      ,[SHA1HASH]\n      ,[MODIFIEDDATETIME]\n      ,[PARTITION]\n      ,[CREATEDDATETIME]\n      ,[MODIFIEDBY]\n      ,[LICENSEPLATEID]\n      ,[INVENTSTATUSID]\n      ,[PDMPRODUCTVERSIONID]\n  FROM [dbo].[INVENTDIM]\n  where MODIFIEDDATETIME >= '@{variables('v_prv_max_upd_timestamp')}'",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "SnowflakeV2Sink",
+						"importSettings": {
+							"type": "SnowflakeImportCopyCommand"
+						}
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ls_blob_storage",
+							"type": "LinkedServiceReference"
+						},
+						"path": {
+							"value": "@pipeline().globalParameters.rootDir",
+							"type": "Expression"
+						}
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "HK_SOURCE_NAME",
+									"type": "String"
+								},
+								"sink": {
+									"name": "HK_SOURCE_NAME",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "HK_JOB_RUN_ID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "HK_JOB_RUN_ID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "HK_LAST_UPDATED_TIMESTAMP",
+									"type": "String"
+								},
+								"sink": {
+									"name": "HK_LAST_UPDATED_TIMESTAMP",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "INVENTDIMID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVENTDIMID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INVENTBATCHID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVENTBATCHID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "WMSLOCATIONID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "WMSLOCATIONID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "WMSPALLETID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "WMSPALLETID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INVENTSERIALID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVENTSERIALID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INVENTLOCATIONID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVENTLOCATIONID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CONFIGID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CONFIGID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INVENTSIZEID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVENTSIZEID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INVENTCOLORID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVENTCOLORID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INVENTSITEID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVENTSITEID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INVENTSTYLEID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVENTSTYLEID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DATAAREAID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DATAAREAID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RECVERSION",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "RECVERSION",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "RECID",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "RECID",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "INVENTGTDID_RU",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVENTGTDID_RU",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INVENTPROFILEID_RU",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVENTPROFILEID_RU",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INVENTOWNERID_RU",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVENTOWNERID_RU",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SHA1HASH",
+									"type": "Byte[]"
+								},
+								"sink": {
+									"name": "SHA1HASH",
+									"type": "Byte[]"
+								}
+							},
+							{
+								"source": {
+									"name": "MODIFIEDDATETIME",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "MODIFIEDDATETIME",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "PARTITION",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "PARTITION",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "CREATEDDATETIME",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "CREATEDDATETIME",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "MODIFIEDBY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "MODIFIEDBY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "LICENSEPLATEID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "LICENSEPLATEID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INVENTSTATUSID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVENTSTATUSID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PDMPRODUCTVERSIONID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PDMPRODUCTVERSIONID",
+									"type": "String"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_sql_server",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_src_table_name": "@pipeline().parameters.p_src_table_nm",
+							"p_src_schema_name": "@pipeline().parameters.p_src_schema_nm",
+							"p_ls_serverName": "@pipeline().globalParameters.nala_sql_serverName",
+							"p_ls_dbName": "@pipeline().globalParameters.nala_sql_dbName",
+							"p_ls_sqlUsername": "@pipeline().globalParameters.sql_userName",
+							"p_ls_sqlPassword": "@pipeline().globalParameters.sql_password"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_tgt_table_name": "@pipeline().parameters.p_tgt_raw_table_nm",
+							"p_tgt_schema_name": "@pipeline().parameters.p_tgt_raw_schema_nm",
+							"p_ls_DbName": "@pipeline().globalParameters.snow_rawDb",
+							"p_ls_Env": "@pipeline().globalParameters.environment"
+						}
+					}
+				]
+			},
+			{
+				"name": "TruncateStageTable",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "set_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_rawDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('TRUNCATE TABLE ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_rawDb,'.',pipeline().parameters.p_tgt_raw_schema_nm,'.',pipeline().parameters.p_tgt_raw_table_nm)",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "lkp_raw_last_modified_date",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SnowflakeSource",
+						"query": {
+							"value": "@concat('select max(to_varchar(modifieddatetime::timestamp, ''','yyyy-mm-dd hh24:mi:ss',''')) as max_date from ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_rawDb,'.',pipeline().parameters.p_tgt_raw_schema_nm, '.', pipeline().parameters.p_src_table_nm)",
+							"type": "Expression"
+						},
+						"exportSettings": {
+							"type": "SnowflakeExportCopyCommand"
+						}
+					},
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_tgt_table_name": {
+								"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+								"type": "Expression"
+							},
+							"p_tgt_schema_name": {
+								"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_DbName": {
+								"value": "@pipeline().globalParameters.snow_rawDb",
+								"type": "Expression"
+							},
+							"p_ls_Env": {
+								"value": "@pipeline().globalParameters.environment",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "set_last_modified_date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkp_raw_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_prv_max_upd_timestamp",
+					"value": {
+						"value": "@coalesce(activity('lkp_raw_last_modified_date').output.firstRow.max_date, '1950-01-01 00:00:00')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "axnala_stage_sp_call",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "LoadStageTable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_auditDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('CALL ',pipeline().globalParameters.environment,'_RAW.',\npipeline().parameters.p_tgt_raw_schema_nm,'.SP_INVENTDIM_INCR','(''',pipeline().globalParameters.environment,''')')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"p_src_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA_STAGE"
+			},
+			"p_tgt_raw_table_nm": {
+				"type": "string",
+				"defaultValue": "INVENTDIM_INCR"
+			},
+			"p_tgt_raw_schema_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA_STAGE"
+			},
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "INVENTDIM"
+			},
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_temp_directory": {
+				"type": "string",
+				"defaultValue": "temp_files"
+			}
+		},
+		"variables": {
+			"v_prv_max_upd_timestamp": {
+				"type": "String"
+			},
+			"v_prv_max_upd_timestamp2": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "AXNALA_Staging"
+		},
+		"annotations": []
+	}
+}

@@ -1,0 +1,2967 @@
+{
+	"name": "pp_ax_vendinvoicetrans_to_fact_purchase_invoices",
+	"properties": {
+		"activities": [
+			{
+				"name": "switch_nala",
+				"type": "Switch",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.p_src_code",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "1",
+							"activities": [
+								{
+									"name": "vendinvoicetrans_nala_to_raw",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId,-1)",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": {
+												"value": "select\n    vit1.RECID as RECID,\n    vit1.INVENTDIMID as INVENTDIMID,\n    vit1.ITEMID as ITEMID,\n    vit1.CURRENCYCODE as CURRENCYCODE,\n    vit1.DEFAULTDIMENSION as DEFAULTDIMENSION,\n    vit1.NUMBERSEQUENCEGROUP as NUMBERSEQUENCEGROUP,\n    vit1.PURCHID as PURCHID,\n    vit1.INVOICEID as INVOICEID,\n    vit1.INVOICEDATE as INVOICEDATE,\n    vit1.TRANSACTIONCODE as TRANSACTIONCODE,\n    vit1.DELIVERYPOSTALADDRESS as DELIVERYPOSTALADDRESS,\n    vit1.PROCUREMENTCATEGORY as PROCUREMENTCATEGORY,\n    vit1.TAXITEMGROUP as TAXITEMGROUP,\n    vit1.PURCHUNIT as PURCHUNIT,\n    vit1.INVENTDATE as INVENTDATE,\n    vit1.INVENTTRANSID as INVENTTRANSID,\n    vit1.DATAAREAID as DATAAREAID,\n    vit1.ORIGPURCHID as ORIGPURCHID,\n    vit1.LINENUM as LINENUM,\n    vit1.PURCHASELINELINENUMBER as PURCHASELINELINENUMBER,\n    vit1.QTY as QTY,\n    vit1.INVENTQTY as INVENTQTY,\n    vit1.PRICEUNIT as PRICEUNIT,\n    vit1.PURCHPRICE as PURCHPRICE,\n    vit1.LINEAMOUNTMST as LINEAMOUNTMST,\n    vit1.LINEAMOUNT as LINEAMOUNT,\n    vit1.TAXAMOUNT as TAXAMOUNT,\n    vit1.MODIFIEDDATETIME as MODIFIEDDATETIME,\n    id1.CONFIGID as INVENTDIM1_CONFIGID,\n    id1.INVENTSITEID as INVENTDIM1_INVENTSITEID,\n    id1.MODIFIEDDATETIME as INVENTDIM1_MODIFIEDDATETIME,\n    tet1.ENUMVALUELABEL as TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_PRICETYPE,\n    tet2.ENUMVALUELABEL as TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_ASSET_TRANSACTION_TYPE,\n    tet3.ENUMVALUELABEL as TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_DELIVERY_TYPE,\n    tet4.ENUMVALUELABEL as TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_DOCUMENT_STATUS,\n    tet5.ENUMVALUELABEL as TIMEXTENDERENUMTABLE5_ENUMVALUELABEL_PURCH_LINE_STATUS,\n    tet6.ENUMVALUELABEL as TIMEXTENDERENUMTABLE6_ENUMVALUELABEL_PURCH_HEADER_STATUS,\n    tet7.ENUMVALUELABEL as TIMEXTENDERENUMTABLE7_ENUMVALUELABEL_PURCHASE_TYPE,\n    null as INVENTITEMPRICE1_STANDARDCOST,\n    cast(null as DATE) as INVENTITEMPRICE1_ACTIVATIONDATE,\n    cast(null as DATETIME) as INVENTITEMPRICE1_CREATEDDATETIME,\n    cast(null as DATETIME) as INVENTITEMPRICE1_MODIFIEDDATETIME,\n    null as INVENTITEMPRICE2_STANDARDCOST,\n    cast(null as DATE) as INVENTITEMPRICE2_ACTIVATIONDATE,\n    cast(null as DATETIME) as INVENTITEMPRICE2_CREATEDDATETIME,\n    cast(null as DATETIME) as INVENTITEMPRICE2_MODIFIEDDATETIME,\n    null as INVENTITEMPRICE3_STANDARDCOST,\n    cast(null as DATE) as INVENTITEMPRICE3_ACTIVATIONDATE,\n    cast(null as DATETIME) as INVENTITEMPRICE3_CREATEDDATETIME,\n    cast(null as DATETIME) as INVENTITEMPRICE3_MODIFIEDDATETIME,\n    null as INVENTITEMPRICE4_STANDARDCOST,\n    cast(null as DATE) as INVENTITEMPRICE4_ACTIVATIONDATE,\n    cast(null as DATETIME) as INVENTITEMPRICE4_CREATEDDATETIME,\n    cast(null as DATETIME) as INVENTITEMPRICE4_MODIFIEDDATETIME,\n    cij1.DLVMODE as VENDINVOICEJOUR_DLVMODE,\n    cij1.INVOICEACCOUNT as VENDINVOICEJOUR_INVOICEACCOUNT,\n    cij1.ORDERACCOUNT as VENDINVOICEJOUR_ORDERACCOUNT,\n    cij1.MODIFIEDDATETIME as VENDINVOICEJOUR_MODIFIEDDATETIME,\n    pt1.RETURNREASONCODEID as PURCHTABLE_RETURNREASONCODEID,\n    pt1.WORKERPURCHPLACER as PURCHTABLE_WORKERPURCHPLACER,\n    pt1.REQUESTER as PURCHTABLE_REQUESTER,\n    pt1.DOCUMENTSTATUS as PURCHTABLE_DOCUMENTSTATUS,\n    pt1.PURCHSTATUS as PURCHTABLE_PURCHSTATUS,\n    pt1.MODIFIEDDATETIME as PURCHTABLE_MODIFIEDDATETIME,\n    itm1.UNITID as INVENTTABLEMODULE_UNITID,\n    itm1.MODIFIEDDATETIME as INVENTTABLEMODULE_MODIFIEDDATETIME,\n    pl1.ASSETTRANSTYPEPURCH as PURCHLINE_ASSETTRANSTYPEPURCH,\n    pl1.DELIVERYTYPE as PURCHLINE_DELIVERYTYPE,\n    pl1.STOCKEDPRODUCT as PURCHLINE_STOCKEDPRODUCT,\n    pl1.PURCHSTATUS as PURCHLINE_PURCHSTATUS,\n    pl1.PURCHASETYPE as PURCHLINE_PURCHASETYPE,\n    pl1.MODIFIEDDATETIME as PURCHLINE_MODIFIEDDATETIME,\n    (\n        SELECT\n            MAX(LastUpdateDate)\n        FROM\n            (\n                VALUES\n                    (vit1.MODIFIEDDATETIME),\n                    (isnull (id1.MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (cij1.MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (pt1.MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (itm1.MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (pl1.MODIFIEDDATETIME, '1950-01-01'))\n            ) AS UpdateDate (LastUpdateDate)\n    ) AS LATEST_MODIFIEDDATETIME\nfrom\n    dbo.VENDINVOICETRANS vit1\n    left join dbo.INVENTDIM id1 on vit1.DATAAREAID = id1.DATAAREAID\n    and vit1.INVENTDIMID = id1.INVENTDIMID\n    left join dbo.PURCHLINE pl1 on vit1.DATAAREAID = pl1.DATAAREAID\n    and vit1.INVENTTRANSID = pl1.INVENTTRANSID\n    left join dbo.PURCHTABLE pt1 on vit1.DATAAREAID = pt1.DATAAREAID\n    and vit1.ORIGPURCHID = pt1.PURCHID\n    left join (\n        select\n            ENUMNAME,\n            ENUMVALUE,\n            max(ENUMVALUELABEL) as ENUMVALUELABEL\n        from\n            dbo.TIMEXTENDERENUMTABLE\n        where\n            ENUMNAME = 'CostingVersionPriceType'\n        group by\n            ENUMNAME,\n            ENUMVALUE\n    ) tet1 on 0 = tet1.ENUMVALUE\n    left join (\n        select\n            ENUMNAME,\n            ENUMVALUE,\n            max(ENUMVALUELABEL) as ENUMVALUELABEL\n        from\n            dbo.TIMEXTENDERENUMTABLE\n        where\n            ENUMNAME = 'AssetTransTypePurch'\n        group by\n            ENUMNAME,\n            ENUMVALUE\n    ) tet2 on pl1.ASSETTRANSTYPEPURCH = tet2.ENUMVALUE\n    left join (\n        select\n            ENUMNAME,\n            ENUMVALUE,\n            max(ENUMVALUELABEL) as ENUMVALUELABEL\n        from\n            dbo.TIMEXTENDERENUMTABLE\n        where\n            ENUMNAME = 'TradeLineDlvType'\n        group by\n            ENUMNAME,\n            ENUMVALUE\n    ) tet3 on pl1.DELIVERYTYPE = tet3.ENUMVALUE\n    left join (\n        select\n            ENUMNAME,\n            ENUMVALUE,\n            max(ENUMVALUELABEL) as ENUMVALUELABEL\n        from\n            dbo.TIMEXTENDERENUMTABLE\n        where\n            ENUMNAME = 'DocumentStatus'\n        group by\n            ENUMNAME,\n            ENUMVALUE\n    ) tet4 on pt1.DOCUMENTSTATUS = tet4.ENUMVALUE\n    left join (\n        select\n            ENUMNAME,\n            ENUMVALUE,\n            max(ENUMVALUELABEL) as ENUMVALUELABEL\n        from\n            dbo.TIMEXTENDERENUMTABLE\n        where\n            ENUMNAME = 'PurchStatus'\n        group by\n            ENUMNAME,\n            ENUMVALUE\n    ) tet5 on pl1.PURCHSTATUS = tet5.ENUMVALUE\n    left join (\n        select\n            ENUMNAME,\n            ENUMVALUE,\n            max(ENUMVALUELABEL) as ENUMVALUELABEL\n        from\n            dbo.TIMEXTENDERENUMTABLE\n        where\n            ENUMNAME = 'PurchStatus'\n        group by\n            ENUMNAME,\n            ENUMVALUE\n    ) tet6 on pt1.PURCHSTATUS = tet6.ENUMVALUE\n    left join (\n        select\n            ENUMNAME,\n            ENUMVALUE,\n            max(ENUMVALUELABEL) as ENUMVALUELABEL\n        from\n            dbo.TIMEXTENDERENUMTABLE\n        where\n            ENUMNAME = 'PurchaseType'\n        group by\n            ENUMNAME,\n            ENUMVALUE\n    ) tet7 on pl1.PURCHASETYPE = tet7.ENUMVALUE\n    left join (\n        select\n            DATAAREAID,\n            NUMBERSEQUENCEGROUP,\n            PURCHID,\n            INVOICEDATE,\n            INVOICEID,\n            DLVMODE,\n            INVOICEACCOUNT,\n            ORDERACCOUNT,\n            MODIFIEDDATETIME\n        from\n            dbo.VENDINVOICEJOUR vij10\n            inner join (\n                select\n                    RECID,\n                    row_number() over (\n                        partition by\n                            DATAAREAID,\n                            NUMBERSEQUENCEGROUP,\n                            PURCHID,\n                            INVOICEDATE,\n                            INVOICEID\n                        order by\n                            MODIFIEDDATETIME desc\n                    ) as ROW_NUM\n                from\n                    dbo.VENDINVOICEJOUR\n            ) vij11 on vij11.ROW_NUM = 1\n            and vij10.RECID = vij11.RECID\n    ) cij1 on vit1.DATAAREAID = cij1.DATAAREAID\n    and vit1.NUMBERSEQUENCEGROUP = cij1.NUMBERSEQUENCEGROUP\n    and vit1.PURCHID = cij1.PURCHID\n    and vit1.INVOICEDATE = cij1.INVOICEDATE\n    and vit1.INVOICEID = cij1.INVOICEID\n    left join dbo.INVENTTABLEMODULE itm1 on itm1.MODULETYPE = 0\n    and vit1.DATAAREAID = itm1.DATAAREAID\n    and vit1.ITEMID = itm1.ITEMID;",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "SnowflakeSink",
+											"preCopyScript": {
+												"value": "@concat('TRUNCATE TABLE ',pipeline().parameters.p_tgt_raw_schema_nm,'.',pipeline().parameters.p_tgt_raw_table_nm)",
+												"type": "Expression"
+											},
+											"importSettings": {
+												"type": "SnowflakeImportCopyCommand"
+											}
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ls_blob_storage",
+												"type": "LinkedServiceReference"
+											},
+											"path": {
+												"value": "@pipeline().globalParameters.rootDir",
+												"type": "Expression"
+											},
+											"enableCompression": true
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "RECID",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "RECID",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIMID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTDIMID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ITEMID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ITEMID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "CURRENCYCODE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "CURRENCYCODE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "NUMBERSEQUENCEGROUP",
+														"type": "String"
+													},
+													"sink": {
+														"name": "NUMBERSEQUENCEGROUP",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "PURCHID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVOICEID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVOICEID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVOICEDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVOICEDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "TRANSACTIONCODE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TRANSACTIONCODE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DELIVERYPOSTALADDRESS",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "DELIVERYPOSTALADDRESS",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PROCUREMENTCATEGORY",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "PROCUREMENTCATEGORY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "TAXITEMGROUP",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TAXITEMGROUP",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHUNIT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "PURCHUNIT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTTRANSID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTTRANSID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DATAAREAID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "DATAAREAID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ORIGPURCHID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ORIGPURCHID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LINENUM",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "LINENUM",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHASELINELINENUMBER",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "PURCHASELINELINENUMBER",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "QTY",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "QTY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTQTY",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "INVENTQTY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PRICEUNIT",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "PRICEUNIT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHPRICE",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "PURCHPRICE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "LINEAMOUNTMST",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "LINEAMOUNTMST",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "LINEAMOUNT",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "LINEAMOUNT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "TAXAMOUNT",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "TAXAMOUNT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM1_CONFIGID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTDIM1_CONFIGID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM1_INVENTSITEID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTDIM1_INVENTSITEID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM1_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTDIM1_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_PRICETYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_PRICETYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_ASSET_TRANSACTION_TYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_ASSET_TRANSACTION_TYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_DELIVERY_TYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_DELIVERY_TYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_DOCUMENT_STATUS",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_DOCUMENT_STATUS",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE5_ENUMVALUELABEL_PURCH_LINE_STATUS",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE5_ENUMVALUELABEL_PURCH_LINE_STATUS",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE6_ENUMVALUELABEL_PURCH_HEADER_STATUS",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE6_ENUMVALUELABEL_PURCH_HEADER_STATUS",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE7_ENUMVALUELABEL_PURCHASE_TYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE7_ENUMVALUELABEL_PURCHASE_TYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE1_STANDARDCOST",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE1_STANDARDCOST",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE1_ACTIVATIONDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE1_ACTIVATIONDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE1_CREATEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE1_CREATEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE1_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE1_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE2_STANDARDCOST",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE2_STANDARDCOST",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE2_ACTIVATIONDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE2_ACTIVATIONDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE2_CREATEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE2_CREATEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE2_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE2_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE3_STANDARDCOST",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE3_STANDARDCOST",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE3_ACTIVATIONDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE3_ACTIVATIONDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE3_CREATEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE3_CREATEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE3_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE3_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE4_STANDARDCOST",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE4_STANDARDCOST",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE4_ACTIVATIONDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE4_ACTIVATIONDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE4_CREATEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE4_CREATEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE4_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE4_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "VENDINVOICEJOUR_DLVMODE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "VENDINVOICEJOUR_DLVMODE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "VENDINVOICEJOUR_INVOICEACCOUNT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "VENDINVOICEJOUR_INVOICEACCOUNT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "VENDINVOICEJOUR_ORDERACCOUNT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "VENDINVOICEJOUR_ORDERACCOUNT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "VENDINVOICEJOUR_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "VENDINVOICEJOUR_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHTABLE_RETURNREASONCODEID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "PURCHTABLE_RETURNREASONCODEID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHTABLE_WORKERPURCHPLACER",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "PURCHTABLE_WORKERPURCHPLACER",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHTABLE_REQUESTER",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "PURCHTABLE_REQUESTER",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHTABLE_DOCUMENTSTATUS",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "PURCHTABLE_DOCUMENTSTATUS",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHTABLE_PURCHSTATUS",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "PURCHTABLE_PURCHSTATUS",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHTABLE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "PURCHTABLE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTTABLEMODULE_UNITID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTTABLEMODULE_UNITID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTTABLEMODULE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTTABLEMODULE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHLINE_ASSETTRANSTYPEPURCH",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "PURCHLINE_ASSETTRANSTYPEPURCH",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHLINE_DELIVERYTYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "PURCHLINE_DELIVERYTYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHLINE_STOCKEDPRODUCT",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "PURCHLINE_STOCKEDPRODUCT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHLINE_PURCHSTATUS",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "PURCHLINE_PURCHSTATUS",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHLINE_PURCHASETYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "PURCHLINE_PURCHASETYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHLINE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "PURCHLINE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												}
+											]
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_sql_server",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_src_table_name": {
+													"value": "@pipeline().parameters.p_src_table_nm",
+													"type": "Expression"
+												},
+												"p_src_schema_name": {
+													"value": "@pipeline().parameters.p_src_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_serverName": {
+													"value": "@pipeline().globalParameters.nala_sql_serverName",
+													"type": "Expression"
+												},
+												"p_ls_dbName": {
+													"value": "@pipeline().globalParameters.nala_sql_dbName",
+													"type": "Expression"
+												},
+												"p_ls_sqlUsername": {
+													"value": "@pipeline().globalParameters.sql_userName",
+													"type": "Expression"
+												},
+												"p_ls_sqlPassword": {
+													"value": "@pipeline().globalParameters.sql_password",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_snowflake",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_tgt_table_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+													"type": "Expression"
+												},
+												"p_tgt_schema_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_DbName": {
+													"value": "@pipeline().globalParameters.snow_rawDb",
+													"type": "Expression"
+												},
+												"p_ls_Env": {
+													"value": "@pipeline().globalParameters.environment",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "nala_raw_load_failure_notification_1",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "vendinvoicetrans_nala_to_raw",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId,-1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('vendinvoicetrans_nala_to_raw').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('vendinvoicetrans_nala_to_raw').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('vendinvoicetrans_nala_to_raw').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('vendinvoicetrans_nala_to_raw').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											},
+											"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+											"taskStepNumber": {
+												"value": "@pipeline().parameters.p_src_code",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_nala_load_to_raw_fail_1",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "nala_raw_load_failure_notification_1",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('vendinvoicetrans_nala_to_raw').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								},
+								{
+									"name": "vendinvoicetrans_standardcost_nala_to_raw",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId,-1)",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": {
+												"value": "select\n    vit1.STANDARDCOST_SOURCE as STANDARDCOST_SOURCE,\n    vit1.RECID as RECID,\n    vit1.DATAAREAID as DATAAREAID,\n    vit1.ITEMID as ITEMID,\n    vit1.CONFIGID as INVENTDIM_CONFIGID,\n    vit1.INVENTSITEID as INVENTDIM_INVENTSITEID,\n    vit1.MODIFIEDDATETIME as INVENTITEMPRICE_MODIFIEDDATETIME,\n    vit1.ACTIVATIONDATE as INVENTITEMPRICE_ACTIVATIONDATE,\n    vit1.CREATEDDATETIME as INVENTITEMPRICE_CREATEDDATETIME,\n    vit1.STANDARDCOST as INVENTITEMPRICE_STANDARDCOST,\n    CURRENT_TIMESTAMP as LATEST_MODIFIEDDATETIME\nfrom\n    (\n        select\n            iip1.STANDARDCOST_SOURCE,\n            iip1.RECID,\n            iip1.DATAAREAID,\n            iip1.ITEMID,\n            iip1.CONFIGID,\n            iip1.INVENTSITEID,\n            iip1.MODIFIEDDATETIME,\n            iip1.ACTIVATIONDATE,\n            iip1.CREATEDDATETIME,\n            iip1.STANDARDCOST\n        from\n            (\n                select\n                    'iip1' as STANDARDCOST_SOURCE,\n                    vit11.RECID,\n                    vit11.DATAAREAID,\n                    vit11.ITEMID,\n                    id11.CONFIGID,\n                    id11.INVENTSITEID,\n                    iip11.MODIFIEDDATETIME,\n                    iip11.ACTIVATIONDATE,\n                    iip11.CREATEDDATETIME,\n                    (\n                        (\n                            iip11.PRICE / isnull (nullif(iip11.PRICEUNIT, 0), 1)\n                        ) + (\n                            iip11.MARKUP / isnull (nullif(iip11.PRICEQTY, 0), 1)\n                        )\n                    ) as STANDARDCOST,\n                    row_number() over (\n                        partition by\n                            vit11.RECID,\n                            vit11.DATAAREAID,\n                            vit11.ITEMID,\n                            id11.CONFIGID,\n                            id11.INVENTSITEID\n                        order by\n                            iip11.ACTIVATIONDATE desc,\n                            iip11.MODIFIEDDATETIME desc\n                    ) as ROW_NUM\n                from\n                    dbo.VENDINVOICETRANS vit11\n                    inner join dbo.INVENTDIM id11 on vit11.DATAAREAID = id11.DATAAREAID\n                    and vit11.INVENTDIMID = id11.INVENTDIMID\n                    inner join (\n                        select\n                            iip111.DATAAREAID,\n                            iip111.ITEMID,\n                            id111.CONFIGID,\n                            id111.INVENTSITEID,\n                            iip111.MODIFIEDDATETIME,\n                            iip111.ACTIVATIONDATE,\n                            iip111.CREATEDDATETIME,\n                            iip111.PRICE,\n                            iip111.PRICEUNIT,\n                            iip111.MARKUP,\n                            iip111.PRICEQTY\n                        from\n                            dbo.INVENTITEMPRICE iip111\n                            inner join dbo.INVENTDIM id111 on iip111.DATAAREAID = id111.DATAAREAID\n                            and iip111.INVENTDIMID = id111.INVENTDIMID\n                        where\n                            iip111.PRICETYPE = 0\n                    ) iip11 on vit11.DATAAREAID = iip11.DATAAREAID\n                    and vit11.ITEMID = iip11.ITEMID\n                    and id11.CONFIGID = iip11.CONFIGID\n                    and id11.INVENTSITEID = iip11.INVENTSITEID\n                    and vit11.INVOICEDATE >= iip11.ACTIVATIONDATE\n            ) iip1\n        where\n            iip1.ROW_NUM = 1\n        union all\n        select\n            iip2.STANDARDCOST_SOURCE,\n            iip2.RECID,\n            iip2.DATAAREAID,\n            iip2.ITEMID,\n            null as CONFIGID,\n            iip2.INVENTSITEID,\n            iip2.MODIFIEDDATETIME,\n            iip2.ACTIVATIONDATE,\n            iip2.CREATEDDATETIME,\n            iip2.STANDARDCOST\n        from\n            (\n                select\n                    'iip2' as STANDARDCOST_SOURCE,\n                    cit21.RECID,\n                    cit21.DATAAREAID,\n                    cit21.ITEMID,\n                    id21.INVENTSITEID,\n                    iip21.MODIFIEDDATETIME,\n                    iip21.ACTIVATIONDATE,\n                    iip21.CREATEDDATETIME,\n                    (\n                        (\n                            iip21.PRICE / isnull (nullif(iip21.PRICEUNIT, 0), 1)\n                        ) + (\n                            iip21.MARKUP / isnull (nullif(iip21.PRICEQTY, 0), 1)\n                        )\n                    ) as STANDARDCOST,\n                    row_number() over (\n                        partition by\n                            cit21.RECID,\n                            cit21.DATAAREAID,\n                            cit21.ITEMID,\n                            id21.INVENTSITEID\n                        order by\n                            iip21.ACTIVATIONDATE desc,\n                            iip21.MODIFIEDDATETIME desc\n                    ) as ROW_NUM\n                from\n                    dbo.VENDINVOICETRANS cit21\n                    inner join dbo.INVENTDIM id21 on cit21.DATAAREAID = id21.DATAAREAID\n                    and cit21.INVENTDIMID = id21.INVENTDIMID\n                    inner join (\n                        select\n                            iip211.DATAAREAID,\n                            iip211.ITEMID,\n                            id211.INVENTSITEID,\n                            iip211.MODIFIEDDATETIME,\n                            iip211.ACTIVATIONDATE,\n                            iip211.CREATEDDATETIME,\n                            iip211.PRICE,\n                            iip211.PRICEUNIT,\n                            iip211.MARKUP,\n                            iip211.PRICEQTY\n                        from\n                            dbo.INVENTITEMPRICE iip211\n                            inner join dbo.INVENTDIM id211 on iip211.DATAAREAID = id211.DATAAREAID\n                            and iip211.INVENTDIMID = id211.INVENTDIMID\n                        where\n                            iip211.PRICETYPE = 0\n                    ) iip21 on cit21.DATAAREAID = iip21.DATAAREAID\n                    and cit21.ITEMID = iip21.ITEMID\n                    and id21.INVENTSITEID = iip21.INVENTSITEID\n                    and cit21.INVOICEDATE >= iip21.ACTIVATIONDATE\n            ) iip2\n        where\n            iip2.ROW_NUM = 1\n        union all\n        select\n            iip3.STANDARDCOST_SOURCE,\n            iip3.RECID,\n            iip3.DATAAREAID,\n            iip3.ITEMID,\n            iip3.CONFIGID,\n            null as INVENTSITEID,\n            iip3.MODIFIEDDATETIME,\n            iip3.ACTIVATIONDATE,\n            iip3.CREATEDDATETIME,\n            iip3.STANDARDCOST\n        from\n            (\n                select\n                    'iip3' as STANDARDCOST_SOURCE,\n                    cit31.RECID,\n                    cit31.DATAAREAID,\n                    cit31.ITEMID,\n                    id31.CONFIGID,\n                    iip31.MODIFIEDDATETIME,\n                    iip31.ACTIVATIONDATE,\n                    iip31.CREATEDDATETIME,\n                    (\n                        (\n                            iip31.PRICE / isnull (nullif(iip31.PRICEUNIT, 0), 1)\n                        ) + (\n                            iip31.MARKUP / isnull (nullif(iip31.PRICEQTY, 0), 1)\n                        )\n                    ) as STANDARDCOST,\n                    row_number() over (\n                        partition by\n                            cit31.RECID,\n                            cit31.DATAAREAID,\n                            cit31.ITEMID,\n                            id31.CONFIGID\n                        order by\n                            iip31.ACTIVATIONDATE desc,\n                            iip31.MODIFIEDDATETIME desc\n                    ) as ROW_NUM\n                from\n                    dbo.VENDINVOICETRANS cit31\n                    inner join dbo.INVENTDIM id31 on cit31.DATAAREAID = id31.DATAAREAID\n                    and cit31.INVENTDIMID = id31.INVENTDIMID\n                    inner join (\n                        select\n                            iip311.DATAAREAID,\n                            iip311.ITEMID,\n                            id311.CONFIGID,\n                            iip311.MODIFIEDDATETIME,\n                            iip311.ACTIVATIONDATE,\n                            iip311.CREATEDDATETIME,\n                            iip311.PRICE,\n                            iip311.PRICEUNIT,\n                            iip311.MARKUP,\n                            iip311.PRICEQTY\n                        from\n                            dbo.INVENTITEMPRICE iip311\n                            inner join dbo.INVENTDIM id311 on iip311.DATAAREAID = id311.DATAAREAID\n                            and iip311.INVENTDIMID = id311.INVENTDIMID\n                        where\n                            iip311.PRICETYPE = 0\n                    ) iip31 on cit31.DATAAREAID = iip31.DATAAREAID\n                    and cit31.ITEMID = iip31.ITEMID\n                    and id31.CONFIGID = iip31.CONFIGID\n                    and cit31.INVOICEDATE >= iip31.ACTIVATIONDATE\n            ) iip3\n        where\n            iip3.ROW_NUM = 1\n        union all\n        select\n            iip4.STANDARDCOST_SOURCE,\n            iip4.RECID,\n            iip4.DATAAREAID,\n            iip4.ITEMID,\n            null as CONFIGID,\n            null as INVENTSITEID,\n            iip4.MODIFIEDDATETIME,\n            iip4.ACTIVATIONDATE,\n            iip4.CREATEDDATETIME,\n            iip4.STANDARDCOST\n        from\n            (\n                select\n                    'iip4' as STANDARDCOST_SOURCE,\n                    cit41.RECID,\n                    cit41.DATAAREAID,\n                    cit41.ITEMID,\n                    iip41.MODIFIEDDATETIME,\n                    iip41.ACTIVATIONDATE,\n                    iip41.CREATEDDATETIME,\n                    (\n                        (\n                            iip41.PRICE / isnull (nullif(iip41.PRICEUNIT, 0), 1)\n                        ) + (\n                            iip41.MARKUP / isnull (nullif(iip41.PRICEQTY, 0), 1)\n                        )\n                    ) as STANDARDCOST,\n                    row_number() over (\n                        partition by\n                            cit41.RECID,\n                            cit41.DATAAREAID,\n                            cit41.ITEMID\n                        order by\n                            iip41.ACTIVATIONDATE desc,\n                            iip41.MODIFIEDDATETIME desc\n                    ) as ROW_NUM\n                from\n                    dbo.VENDINVOICETRANS cit41\n                    inner join dbo.INVENTDIM id41 on cit41.DATAAREAID = id41.DATAAREAID\n                    and cit41.INVENTDIMID = id41.INVENTDIMID\n                    inner join (\n                        select\n                            iip411.DATAAREAID,\n                            iip411.ITEMID,\n                            iip411.MODIFIEDDATETIME,\n                            iip411.ACTIVATIONDATE,\n                            iip411.CREATEDDATETIME,\n                            iip411.PRICE,\n                            iip411.PRICEUNIT,\n                            iip411.MARKUP,\n                            iip411.PRICEQTY\n                        from\n                            dbo.INVENTITEMPRICE iip411\n                            inner join dbo.INVENTDIM id411 on iip411.DATAAREAID = id411.DATAAREAID\n                            and iip411.INVENTDIMID = id411.INVENTDIMID\n                        where\n                            iip411.PRICETYPE = 0\n                    ) iip41 on cit41.DATAAREAID = iip41.DATAAREAID\n                    and cit41.ITEMID = iip41.ITEMID\n                    and cit41.INVOICEDATE >= iip41.ACTIVATIONDATE\n            ) iip4\n        where\n            iip4.ROW_NUM = 1\n    ) vit1",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "SnowflakeSink",
+											"preCopyScript": {
+												"value": "@concat('TRUNCATE TABLE ',pipeline().parameters.p_tgt_raw_schema_nm,'.',pipeline().parameters.p_tgt_raw_table_nm_2)",
+												"type": "Expression"
+											},
+											"importSettings": {
+												"type": "SnowflakeImportCopyCommand"
+											}
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ls_blob_storage",
+												"type": "LinkedServiceReference"
+											},
+											"path": {
+												"value": "@pipeline().globalParameters.rootDir",
+												"type": "Expression"
+											},
+											"enableCompression": true
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "STANDARDCOST_SOURCE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "STANDARDCOST_SOURCE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "RECID",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "RECID",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "DATAAREAID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "DATAAREAID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ITEMID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ITEMID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM_CONFIGID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTDIM_CONFIGID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM_INVENTSITEID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTDIM_INVENTSITEID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE_ACTIVATIONDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE_ACTIVATIONDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE_CREATEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE_CREATEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE_STANDARDCOST",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE_STANDARDCOST",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												}
+											]
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_sql_server",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_src_table_name": {
+													"value": "@pipeline().parameters.p_src_table_nm",
+													"type": "Expression"
+												},
+												"p_src_schema_name": {
+													"value": "@pipeline().parameters.p_src_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_serverName": {
+													"value": "@pipeline().globalParameters.nala_sql_serverName",
+													"type": "Expression"
+												},
+												"p_ls_dbName": {
+													"value": "@pipeline().globalParameters.nala_sql_dbName",
+													"type": "Expression"
+												},
+												"p_ls_sqlUsername": {
+													"value": "@pipeline().globalParameters.sql_userName",
+													"type": "Expression"
+												},
+												"p_ls_sqlPassword": {
+													"value": "@pipeline().globalParameters.sql_password",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_snowflake",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_tgt_table_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_table_nm_2",
+													"type": "Expression"
+												},
+												"p_tgt_schema_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_DbName": {
+													"value": "@pipeline().globalParameters.snow_rawDb",
+													"type": "Expression"
+												},
+												"p_ls_Env": {
+													"value": "@pipeline().globalParameters.environment",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "nala_raw_load_failure_notification_2",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "vendinvoicetrans_standardcost_nala_to_raw",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId,-1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('vendinvoicetrans_standardcost_nala_to_raw').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('vendinvoicetrans_standardcost_nala_to_raw').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('vendinvoicetrans_standardcost_nala_to_raw').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('vendinvoicetrans_standardcost_nala_to_raw').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											},
+											"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+											"taskStepNumber": {
+												"value": "@pipeline().parameters.p_src_code",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_nala_load_to_raw_fail_2",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "nala_raw_load_failure_notification_2",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('vendinvoicetrans_standardcost_nala_to_raw').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						},
+						{
+							"value": "3",
+							"activities": [
+								{
+									"name": "vendinvoicetrans_d365_to_raw",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "WarehouseSource",
+											"additionalColumns": [
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId,-1)",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": "select\r\n    vit1.recid AS RECID,\r\n    vit1.inventdimid AS INVENTDIMID,\r\n    vit1.itemid AS ITEMID,\r\n    vit1.currencycode AS CURRENCYCODE,\r\n    vit1.defaultdimension AS DEFAULTDIMENSION,\r\n    vit1.numbersequencegroup AS NUMBERSEQUENCEGROUP,\r\n    vit1.purchid AS PURCHID,\r\n    vit1.invoiceid AS INVOICEID,\r\n    vit1.invoicedate AS INVOICEDATE,\r\n    vit1.transactioncode AS TRANSACTIONCODE,\r\n    vit1.deliverypostaladdress AS DELIVERYPOSTALADDRESS,\r\n    vit1.procurementcategory AS PROCUREMENTCATEGORY,\r\n    vit1.taxitemgroup AS TAXITEMGROUP,\r\n    vit1.purchunit AS PURCHUNIT,\r\n    vit1.inventdate AS INVENTDATE,\r\n    vit1.inventtransid AS INVENTTRANSID,\r\n    vit1.dataareaid AS DATAAREAID,\r\n    vit1.origpurchid AS ORIGPURCHID,\r\n    vit1.linenum AS LINENUM,\r\n    vit1.purchaselinelinenumber AS PURCHASELINELINENUMBER,\r\n    vit1.qty AS QTY,\r\n    vit1.inventqty AS INVENTQTY,\r\n    vit1.priceunit AS PRICEUNIT,\r\n    vit1.purchprice AS PURCHPRICE,\r\n    vit1.lineamountmst AS LINEAMOUNTMST,\r\n    vit1.lineamount AS LINEAMOUNT,\r\n    vit1.taxamount AS TAXAMOUNT,\r\n    vit1.modifieddatetime AS MODIFIEDDATETIME,\r\n    id1.configid AS INVENTDIM1_CONFIGID,\r\n    id1.inventsiteid AS INVENTDIM1_INVENTSITEID,\r\n    id1.modifieddatetime AS INVENTDIM1_MODIFIEDDATETIME,\r\n    tet1.enumvaluelabel AS TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_PRICETYPE,\r\n    tet2.enumvaluelabel AS TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_ASSET_TRANSACTION_TYPE,\r\n    tet3.enumvaluelabel AS TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_DELIVERY_TYPE,\r\n    tet4.enumvaluelabel AS TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_DOCUMENT_STATUS,\r\n    tet5.enumvaluelabel AS TIMEXTENDERENUMTABLE5_ENUMVALUELABEL_PURCH_LINE_STATUS,\r\n    tet6.enumvaluelabel AS TIMEXTENDERENUMTABLE6_ENUMVALUELABEL_PURCH_HEADER_STATUS,\r\n    tet7.enumvaluelabel AS TIMEXTENDERENUMTABLE7_ENUMVALUELABEL_PURCHASE_TYPE,\r\n    null AS INVENTITEMPRICE1_STANDARDCOST,\r\n    cast(null as date) AS INVENTITEMPRICE1_ACTIVATIONDATE,\r\n    cast(null as datetime) AS INVENTITEMPRICE1_CREATEDDATETIME,\r\n    cast(null as datetime) AS INVENTITEMPRICE1_MODIFIEDDATETIME,\r\n    null AS INVENTITEMPRICE2_STANDARDCOST,\r\n    cast(null as date) AS INVENTITEMPRICE2_ACTIVATIONDATE,\r\n    cast(null as datetime) AS INVENTITEMPRICE2_CREATEDDATETIME,\r\n    cast(null AS DATETIME) AS INVENTITEMPRICE2_MODIFIEDDATETIME,\r\n    null AS INVENTITEMPRICE3_STANDARDCOST,\r\n    cast(null as date) AS INVENTITEMPRICE3_ACTIVATIONDATE,\r\n    cast(null as datetime) AS INVENTITEMPRICE3_CREATEDDATETIME,\r\n    cast(null as datetime) AS INVENTITEMPRICE3_MODIFIEDDATETIME,\r\n    null AS INVENTITEMPRICE4_STANDARDCOST,\r\n    cast(null as date) AS INVENTITEMPRICE4_ACTIVATIONDATE,\r\n    cast(null as datetime) AS INVENTITEMPRICE4_CREATEDDATETIME,\r\n    cast(null as datetime) AS INVENTITEMPRICE4_MODIFIEDDATETIME,\r\n    cij1.dlvmode AS VENDINVOICEJOUR_DLVMODE,\r\n    cij1.invoiceaccount AS VENDINVOICEJOUR_INVOICEACCOUNT,\r\n    cij1.orderaccount AS VENDINVOICEJOUR_ORDERACCOUNT,\r\n    cij1.modifieddatetime AS VENDINVOICEJOUR_MODIFIEDDATETIME,\r\n    pt1.returnreasoncodeid AS PURCHTABLE_RETURNREASONCODEID,\r\n    pt1.workerpurchplacer AS PURCHTABLE_WORKERPURCHPLACER,\r\n    pt1.requester AS PURCHTABLE_REQUESTER,\r\n    pt1.documentstatus AS PURCHTABLE_DOCUMENTSTATUS,\r\n    pt1.purchstatus AS PURCHTABLE_PURCHSTATUS,\r\n    pt1.modifieddatetime AS PURCHTABLE_MODIFIEDDATETIME,\r\n    itm1.unitid AS INVENTTABLEMODULE_UNITID,\r\n    itm1.modifieddatetime AS INVENTTABLEMODULE_MODIFIEDDATETIME,\r\n    pl1.assettranstypepurch AS PURCHLINE_ASSETTRANSTYPEPURCH,\r\n    pl1.deliverytype AS PURCHLINE_DELIVERYTYPE,\r\n    pl1.stockedproduct AS PURCHLINE_STOCKEDPRODUCT,\r\n    pl1.purchstatus AS PURCHLINE_PURCHSTATUS,\r\n    pl1.purchasetype AS PURCHLINE_PURCHASETYPE,\r\n    pl1.modifieddatetime AS PURCHLINE_MODIFIEDDATETIME,\r\n    (\r\n        select\r\n            max(lastupdatedate)\r\n        from\r\n            (\r\n                values\r\n                    (vit1.modifieddatetime),\r\n                    (isnull (id1.modifieddatetime, '1950-01-01')),\r\n                    (isnull (cij1.modifieddatetime, '1950-01-01')),\r\n                    (isnull (pt1.modifieddatetime, '1950-01-01')),\r\n                    (isnull (itm1.modifieddatetime, '1950-01-01')),\r\n                    (isnull (pl1.modifieddatetime, '1950-01-01'))\r\n            ) as updatedate (lastupdatedate)\r\n    ) AS LATEST_MODIFIEDDATETIME\r\nfrom\r\n    dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.vendinvoicetrans vit1\r\n    left join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.inventdim id1 on vit1.dataareaid = id1.dataareaid\r\n\t\tAND vit1.inventdimid = id1.inventdimid\r\n    left join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.purchline pl1 on vit1.dataareaid = pl1.dataareaid\r\n\t\tAND vit1.inventtransid = pl1.inventtransid\r\n    left join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.purchtable pt1 on vit1.dataareaid = pt1.dataareaid\r\n\t\tAND vit1.origpurchid = pt1.purchid\r\n    left join (\r\n        select\r\n            enumname,\r\n            enumvalue,\r\n            max(enumvaluelabel) as enumvaluelabel\r\n        from\r\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.timextenderenumtable\r\n        where\r\n            enumname = 'costingversionpricetype'\r\n        group by\r\n            enumname,\r\n            enumvalue\r\n    ) tet1 on 0 = tet1.enumvalue\r\n    left join (\r\n        select\r\n            enumname,\r\n            enumvalue,\r\n            max(enumvaluelabel) as enumvaluelabel\r\n        from\r\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.timextenderenumtable\r\n        where\r\n            enumname = 'assettranstypepurch'\r\n        group by\r\n            enumname,\r\n            enumvalue\r\n    ) tet2 on pl1.assettranstypepurch = tet2.enumvalue\r\n    left join (\r\n        select\r\n            enumname,\r\n            enumvalue,\r\n            max(enumvaluelabel) as enumvaluelabel\r\n        from\r\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.timextenderenumtable\r\n        where\r\n            enumname = 'tradelinedlvtype'\r\n        group by\r\n            enumname,\r\n            enumvalue\r\n    ) tet3 on pl1.deliverytype = tet3.enumvalue\r\n    left join (\r\n        select\r\n            enumname,\r\n            enumvalue,\r\n            max(enumvaluelabel) as enumvaluelabel\r\n        from\r\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.timextenderenumtable\r\n        where\r\n            enumname = 'documentstatus'\r\n        group by\r\n            enumname,\r\n            enumvalue\r\n    ) tet4 on pt1.documentstatus = tet4.enumvalue\r\n    left join (\r\n        select\r\n            enumname,\r\n            enumvalue,\r\n            max(enumvaluelabel) as enumvaluelabel\r\n        from\r\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.timextenderenumtable\r\n        where\r\n            enumname = 'purchstatus'\r\n        group by\r\n            enumname,\r\n            enumvalue\r\n    ) tet5 on pl1.purchstatus = tet5.enumvalue\r\n    left join (\r\n        select\r\n            enumname,\r\n            enumvalue,\r\n            max(enumvaluelabel) as enumvaluelabel\r\n        from\r\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.timextenderenumtable\r\n        where\r\n            enumname = 'purchstatus'\r\n        group by\r\n            enumname,\r\n            enumvalue\r\n    ) tet6 on pt1.purchstatus = tet6.enumvalue\r\n    left join (\r\n        select\r\n            enumname,\r\n            enumvalue,\r\n            max(enumvaluelabel) as enumvaluelabel\r\n        from\r\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.timextenderenumtable\r\n        where\r\n            enumname = 'purchasetype'\r\n        group by\r\n            enumname,\r\n            enumvalue\r\n    ) tet7 on pl1.purchasetype = tet7.enumvalue\r\n    left join (\r\n        select\r\n            dataareaid,\r\n            numbersequencegroup,\r\n            purchid,\r\n            invoicedate,\r\n            invoiceid,\r\n            dlvmode,\r\n            invoiceaccount,\r\n            orderaccount,\r\n            modifieddatetime\r\n        from\r\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.vendinvoicejour vij10\r\n            inner join (\r\n                select\r\n                    recid,\r\n                    row_number() over (\r\n                        partition by\r\n                            dataareaid,\r\n                            numbersequencegroup,\r\n                            purchid,\r\n                            invoicedate,\r\n                            invoiceid\r\n                        order by\r\n                            modifieddatetime desc\r\n                    ) as row_num\r\n                from\r\n                    dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.vendinvoicejour\r\n            ) vij11 on vij11.row_num = 1\r\n            and vij10.recid = vij11.recid\r\n    ) cij1 on vit1.dataareaid = cij1.dataareaid\r\n\t\tAND vit1.numbersequencegroup = cij1.numbersequencegroup\r\n\t\tAND vit1.purchid = cij1.purchid\r\n\t\tAND vit1.invoicedate = cij1.invoicedate\r\n\t\tAND vit1.invoiceid = cij1.invoiceid\r\n    left join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.inventtablemodule itm1 on itm1.moduletype = 0\r\n\t\tAND vit1.dataareaid = itm1.dataareaid\r\n\t\tAND vit1.itemid = itm1.itemid\r\n\t;",
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "SnowflakeSink",
+											"preCopyScript": {
+												"value": "@concat('TRUNCATE TABLE ',pipeline().parameters.p_tgt_raw_schema_nm,'.',pipeline().parameters.p_tgt_raw_table_nm)",
+												"type": "Expression"
+											},
+											"importSettings": {
+												"type": "SnowflakeImportCopyCommand"
+											}
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ls_blob_storage",
+												"type": "LinkedServiceReference"
+											},
+											"path": {
+												"value": "@pipeline().globalParameters.rootDir",
+												"type": "Expression"
+											},
+											"enableCompression": true
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "RECID",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "RECID",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIMID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTDIMID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ITEMID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ITEMID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "CURRENCYCODE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "CURRENCYCODE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "NUMBERSEQUENCEGROUP",
+														"type": "String"
+													},
+													"sink": {
+														"name": "NUMBERSEQUENCEGROUP",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "PURCHID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVOICEID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVOICEID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVOICEDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVOICEDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "TRANSACTIONCODE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TRANSACTIONCODE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DELIVERYPOSTALADDRESS",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "DELIVERYPOSTALADDRESS",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PROCUREMENTCATEGORY",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "PROCUREMENTCATEGORY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "TAXITEMGROUP",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TAXITEMGROUP",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHUNIT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "PURCHUNIT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTTRANSID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTTRANSID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DATAAREAID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "DATAAREAID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ORIGPURCHID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ORIGPURCHID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LINENUM",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "LINENUM",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHASELINELINENUMBER",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "PURCHASELINELINENUMBER",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "QTY",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "QTY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTQTY",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "INVENTQTY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PRICEUNIT",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "PRICEUNIT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHPRICE",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "PURCHPRICE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "LINEAMOUNTMST",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "LINEAMOUNTMST",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "LINEAMOUNT",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "LINEAMOUNT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "TAXAMOUNT",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "TAXAMOUNT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM1_CONFIGID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTDIM1_CONFIGID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM1_INVENTSITEID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTDIM1_INVENTSITEID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM1_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTDIM1_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_PRICETYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_PRICETYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_ASSET_TRANSACTION_TYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_ASSET_TRANSACTION_TYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_DELIVERY_TYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_DELIVERY_TYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_DOCUMENT_STATUS",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_DOCUMENT_STATUS",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE5_ENUMVALUELABEL_PURCH_LINE_STATUS",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE5_ENUMVALUELABEL_PURCH_LINE_STATUS",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE6_ENUMVALUELABEL_PURCH_HEADER_STATUS",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE6_ENUMVALUELABEL_PURCH_HEADER_STATUS",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE7_ENUMVALUELABEL_PURCHASE_TYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE7_ENUMVALUELABEL_PURCHASE_TYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE1_STANDARDCOST",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE1_STANDARDCOST",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE1_ACTIVATIONDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE1_ACTIVATIONDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE1_CREATEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE1_CREATEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE1_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE1_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE2_STANDARDCOST",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE2_STANDARDCOST",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE2_ACTIVATIONDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE2_ACTIVATIONDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE2_CREATEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE2_CREATEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE2_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE2_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE3_STANDARDCOST",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE3_STANDARDCOST",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE3_ACTIVATIONDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE3_ACTIVATIONDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE3_CREATEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE3_CREATEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE3_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE3_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE4_STANDARDCOST",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE4_STANDARDCOST",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE4_ACTIVATIONDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE4_ACTIVATIONDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE4_CREATEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE4_CREATEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE4_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE4_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "VENDINVOICEJOUR_DLVMODE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "VENDINVOICEJOUR_DLVMODE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "VENDINVOICEJOUR_INVOICEACCOUNT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "VENDINVOICEJOUR_INVOICEACCOUNT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "VENDINVOICEJOUR_ORDERACCOUNT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "VENDINVOICEJOUR_ORDERACCOUNT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "VENDINVOICEJOUR_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "VENDINVOICEJOUR_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHTABLE_RETURNREASONCODEID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "PURCHTABLE_RETURNREASONCODEID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHTABLE_WORKERPURCHPLACER",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "PURCHTABLE_WORKERPURCHPLACER",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHTABLE_REQUESTER",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "PURCHTABLE_REQUESTER",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHTABLE_DOCUMENTSTATUS",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "PURCHTABLE_DOCUMENTSTATUS",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHTABLE_PURCHSTATUS",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "PURCHTABLE_PURCHSTATUS",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHTABLE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "PURCHTABLE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTTABLEMODULE_UNITID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTTABLEMODULE_UNITID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTTABLEMODULE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTTABLEMODULE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHLINE_ASSETTRANSTYPEPURCH",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "PURCHLINE_ASSETTRANSTYPEPURCH",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHLINE_DELIVERYTYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "PURCHLINE_DELIVERYTYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHLINE_STOCKEDPRODUCT",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "PURCHLINE_STOCKEDPRODUCT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHLINE_PURCHSTATUS",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "PURCHLINE_PURCHSTATUS",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHLINE_PURCHASETYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "PURCHLINE_PURCHASETYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PURCHLINE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "PURCHLINE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_fabric_wh",
+											"type": "DatasetReference"
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_snowflake",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_tgt_table_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+													"type": "Expression"
+												},
+												"p_tgt_schema_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_DbName": {
+													"value": "@pipeline().globalParameters.snow_rawDb",
+													"type": "Expression"
+												},
+												"p_ls_Env": {
+													"value": "@pipeline().globalParameters.environment",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "d365_raw_load_failure_notification_1",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "vendinvoicetrans_d365_to_raw",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId,-1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('vendinvoicetrans_d365_to_raw').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('vendinvoicetrans_d365_to_raw').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('vendinvoicetrans_d365_to_raw').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('vendinvoicetrans_d365_to_raw').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											},
+											"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+											"taskStepNumber": {
+												"value": "@pipeline().parameters.p_src_code",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_d365_load_to_raw_fail_1",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "d365_raw_load_failure_notification_1",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('vendinvoicetrans_d365_to_raw').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								},
+								{
+									"name": "vendinvoicetrans_standardcost_d365_to_raw",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "WarehouseSource",
+											"additionalColumns": [
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId,-1)",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": "select\r\n    vit1.standardcost_source as STANDARDCOST_SOURCE,\r\n    vit1.recid as RECID,\r\n    vit1.dataareaid as DATAAREAID,\r\n    vit1.itemid as ITEMID,\r\n    vit1.configid as INVENTDIM_CONFIGID,\r\n    vit1.inventsiteid as INVENTDIM_INVENTSITEID,\r\n    vit1.modifieddatetime as INVENTITEMPRICE_MODIFIEDDATETIME,\r\n    vit1.activationdate as INVENTITEMPRICE_ACTIVATIONDATE,\r\n    vit1.createddatetime as INVENTITEMPRICE_CREATEDDATETIME,\r\n    vit1.standardcost as INVENTITEMPRICE_STANDARDCOST,\r\n    current_timestamp as LATEST_MODIFIEDDATETIME\r\nfrom\r\n    (\r\n        select\r\n            iip1.standardcost_source,\r\n            iip1.recid,\r\n            iip1.dataareaid,\r\n            iip1.itemid,\r\n            iip1.configid,\r\n            iip1.inventsiteid,\r\n            iip1.modifieddatetime,\r\n            iip1.activationdate,\r\n            iip1.createddatetime,\r\n            iip1.standardcost\r\n        from\r\n            (\r\n                select\r\n                    'iip1' as standardcost_source,\r\n                    vit11.recid,\r\n                    vit11.dataareaid,\r\n                    vit11.itemid,\r\n                    id11.configid,\r\n                    id11.inventsiteid,\r\n                    iip11.modifieddatetime,\r\n                    iip11.activationdate,\r\n                    iip11.createddatetime,\r\n                    (\r\n                        (\r\n                            iip11.price / isnull (nullif(iip11.priceunit, 0), 1)\r\n                        ) + (\r\n                            iip11.markup / isnull (nullif(iip11.priceqty, 0), 1)\r\n                        )\r\n                    ) as standardcost,\r\n                    row_number() over (\r\n                        partition by\r\n                            vit11.recid,\r\n                            vit11.dataareaid,\r\n                            vit11.itemid,\r\n                            id11.configid,\r\n                            id11.inventsiteid\r\n                        order by\r\n                            iip11.activationdate desc,\r\n                            iip11.modifieddatetime desc\r\n                    ) as row_num\r\n                from\r\n                    dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.vendinvoicetrans vit11\r\n                    inner join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.inventdim id11 on vit11.dataareaid = id11.dataareaid\r\n\t\t\t\t\t\tand vit11.inventdimid = id11.inventdimid\r\n                    inner join (\r\n                        select\r\n                            iip111.dataareaid,\r\n                            iip111.itemid,\r\n                            id111.configid,\r\n                            id111.inventsiteid,\r\n                            iip111.modifieddatetime,\r\n                            iip111.activationdate,\r\n                            iip111.createddatetime,\r\n                            iip111.price,\r\n                            iip111.priceunit,\r\n                            iip111.markup,\r\n                            iip111.priceqty\r\n                        from\r\n                            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.inventitemprice iip111\r\n                            inner join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.inventdim id111 on iip111.dataareaid = id111.dataareaid\r\n\t\t\t\t\t\t\t\tand iip111.inventdimid = id111.inventdimid\r\n                        where\r\n                            iip111.pricetype = 0\r\n                    ) iip11 on vit11.dataareaid = iip11.dataareaid\r\n                    and vit11.itemid = iip11.itemid\r\n                    and id11.configid = iip11.configid\r\n                    and id11.inventsiteid = iip11.inventsiteid\r\n                    and vit11.invoicedate >= iip11.activationdate\r\n            ) iip1\r\n        where\r\n            iip1.row_num = 1\r\n        union all\r\n        select\r\n            iip2.standardcost_source,\r\n            iip2.recid,\r\n            iip2.dataareaid,\r\n            iip2.itemid,\r\n            null as configid,\r\n            iip2.inventsiteid,\r\n            iip2.modifieddatetime,\r\n            iip2.activationdate,\r\n            iip2.createddatetime,\r\n            iip2.standardcost\r\n        from\r\n            (\r\n                select\r\n                    'iip2' as standardcost_source,\r\n                    cit21.recid,\r\n                    cit21.dataareaid,\r\n                    cit21.itemid,\r\n                    id21.inventsiteid,\r\n                    iip21.modifieddatetime,\r\n                    iip21.activationdate,\r\n                    iip21.createddatetime,\r\n                    (\r\n                        (\r\n                            iip21.price / isnull (nullif(iip21.priceunit, 0), 1)\r\n                        ) + (\r\n                            iip21.markup / isnull (nullif(iip21.priceqty, 0), 1)\r\n                        )\r\n                    ) as standardcost,\r\n                    row_number() over (\r\n                        partition by\r\n                            cit21.recid,\r\n                            cit21.dataareaid,\r\n                            cit21.itemid,\r\n                            id21.inventsiteid\r\n                        order by\r\n                            iip21.activationdate desc,\r\n                            iip21.modifieddatetime desc\r\n                    ) as row_num\r\n                from\r\n                    dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.vendinvoicetrans cit21\r\n                    inner join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.inventdim id21 on cit21.dataareaid = id21.dataareaid\r\n\t\t\t\t\t\tand cit21.inventdimid = id21.inventdimid\r\n                    inner join (\r\n                        select\r\n                            iip211.dataareaid,\r\n                            iip211.itemid,\r\n                            id211.inventsiteid,\r\n                            iip211.modifieddatetime,\r\n                            iip211.activationdate,\r\n                            iip211.createddatetime,\r\n                            iip211.price,\r\n                            iip211.priceunit,\r\n                            iip211.markup,\r\n                            iip211.priceqty\r\n                        from\r\n                            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.inventitemprice iip211\r\n                            inner join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.inventdim id211 on iip211.dataareaid = id211.dataareaid\r\n\t\t\t\t\t\t\t\tand iip211.inventdimid = id211.inventdimid\r\n                        where\r\n                            iip211.pricetype = 0\r\n                    ) iip21 on cit21.dataareaid = iip21.dataareaid\r\n                    and cit21.itemid = iip21.itemid\r\n                    and id21.inventsiteid = iip21.inventsiteid\r\n                    and cit21.invoicedate >= iip21.activationdate\r\n            ) iip2\r\n        where\r\n            iip2.row_num = 1\r\n        union all\r\n        select\r\n            iip3.standardcost_source,\r\n            iip3.recid,\r\n            iip3.dataareaid,\r\n            iip3.itemid,\r\n            iip3.configid,\r\n            null as inventsiteid,\r\n            iip3.modifieddatetime,\r\n            iip3.activationdate,\r\n            iip3.createddatetime,\r\n            iip3.standardcost\r\n        from\r\n            (\r\n                select\r\n                    'iip3' as standardcost_source,\r\n                    cit31.recid,\r\n                    cit31.dataareaid,\r\n                    cit31.itemid,\r\n                    id31.configid,\r\n                    iip31.modifieddatetime,\r\n                    iip31.activationdate,\r\n                    iip31.createddatetime,\r\n                    (\r\n                        (\r\n                            iip31.price / isnull (nullif(iip31.priceunit, 0), 1)\r\n                        ) + (\r\n                            iip31.markup / isnull (nullif(iip31.priceqty, 0), 1)\r\n                        )\r\n                    ) as standardcost,\r\n                    row_number() over (\r\n                        partition by\r\n                            cit31.recid,\r\n                            cit31.dataareaid,\r\n                            cit31.itemid,\r\n                            id31.configid\r\n                        order by\r\n                            iip31.activationdate desc,\r\n                            iip31.modifieddatetime desc\r\n                    ) as row_num\r\n                from\r\n                    dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.vendinvoicetrans cit31\r\n                    inner join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.inventdim id31 on cit31.dataareaid = id31.dataareaid\r\n\t\t\t\t\t\tand cit31.inventdimid = id31.inventdimid\r\n                    inner join (\r\n                        select\r\n                            iip311.dataareaid,\r\n                            iip311.itemid,\r\n                            id311.configid,\r\n                            iip311.modifieddatetime,\r\n                            iip311.activationdate,\r\n                            iip311.createddatetime,\r\n                            iip311.price,\r\n                            iip311.priceunit,\r\n                            iip311.markup,\r\n                            iip311.priceqty\r\n                        from\r\n                            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.inventitemprice iip311\r\n                            inner join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.inventdim id311 on iip311.dataareaid = id311.dataareaid\r\n\t\t\t\t\t\t\t\tand iip311.inventdimid = id311.inventdimid\r\n                        where\r\n                            iip311.pricetype = 0\r\n                    ) iip31 on cit31.dataareaid = iip31.dataareaid\r\n                    and cit31.itemid = iip31.itemid\r\n                    and id31.configid = iip31.configid\r\n                    and cit31.invoicedate >= iip31.activationdate\r\n            ) iip3\r\n        where\r\n            iip3.row_num = 1\r\n        union all\r\n        select\r\n            iip4.standardcost_source,\r\n            iip4.recid,\r\n            iip4.dataareaid,\r\n            iip4.itemid,\r\n            null as configid,\r\n            null as inventsiteid,\r\n            iip4.modifieddatetime,\r\n            iip4.activationdate,\r\n            iip4.createddatetime,\r\n            iip4.standardcost\r\n        from\r\n            (\r\n                select\r\n                    'iip4' as standardcost_source,\r\n                    cit41.recid,\r\n                    cit41.dataareaid,\r\n                    cit41.itemid,\r\n                    iip41.modifieddatetime,\r\n                    iip41.activationdate,\r\n                    iip41.createddatetime,\r\n                    (\r\n                        (\r\n                            iip41.price / isnull (nullif(iip41.priceunit, 0), 1)\r\n                        ) + (\r\n                            iip41.markup / isnull (nullif(iip41.priceqty, 0), 1)\r\n                        )\r\n                    ) as standardcost,\r\n                    row_number() over (\r\n                        partition by\r\n                            cit41.recid,\r\n                            cit41.dataareaid,\r\n                            cit41.itemid\r\n                        order by\r\n                            iip41.activationdate desc,\r\n                            iip41.modifieddatetime desc\r\n                    ) as row_num\r\n                from\r\n                    dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.vendinvoicetrans cit41\r\n                    inner join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.inventdim id41 on cit41.dataareaid = id41.dataareaid\r\n\t\t\t\t\t\tand cit41.inventdimid = id41.inventdimid\r\n                    inner join (\r\n                        select\r\n                            iip411.dataareaid,\r\n                            iip411.itemid,\r\n                            iip411.modifieddatetime,\r\n                            iip411.activationdate,\r\n                            iip411.createddatetime,\r\n                            iip411.price,\r\n                            iip411.priceunit,\r\n                            iip411.markup,\r\n                            iip411.priceqty\r\n                        from\r\n                            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.inventitemprice iip411\r\n                            inner join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.inventdim id411 on iip411.dataareaid = id411.dataareaid\r\n\t\t\t\t\t\t\t\tand iip411.inventdimid = id411.inventdimid\r\n                        where\r\n                            iip411.pricetype = 0\r\n                    ) iip41 on cit41.dataareaid = iip41.dataareaid\r\n                    and cit41.itemid = iip41.itemid\r\n                    and cit41.invoicedate >= iip41.activationdate\r\n            ) iip4\r\n        where\r\n            iip4.row_num = 1\r\n    ) vit1",
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "SnowflakeSink",
+											"preCopyScript": {
+												"value": "@concat('TRUNCATE TABLE ',pipeline().parameters.p_tgt_raw_schema_nm,'.',pipeline().parameters.p_tgt_raw_table_nm_2)",
+												"type": "Expression"
+											},
+											"importSettings": {
+												"type": "SnowflakeImportCopyCommand"
+											}
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ls_blob_storage",
+												"type": "LinkedServiceReference"
+											},
+											"path": {
+												"value": "@pipeline().globalParameters.rootDir",
+												"type": "Expression"
+											},
+											"enableCompression": true
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "STANDARDCOST_SOURCE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "STANDARDCOST_SOURCE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "RECID",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "RECID",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "DATAAREAID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "DATAAREAID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ITEMID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ITEMID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM_CONFIGID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTDIM_CONFIGID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM_INVENTSITEID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTDIM_INVENTSITEID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE_ACTIVATIONDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE_ACTIVATIONDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE_CREATEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE_CREATEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTITEMPRICE_STANDARDCOST",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "INVENTITEMPRICE_STANDARDCOST",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_fabric_wh",
+											"type": "DatasetReference"
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_snowflake",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_tgt_table_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_table_nm_2",
+													"type": "Expression"
+												},
+												"p_tgt_schema_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_DbName": {
+													"value": "@pipeline().globalParameters.snow_rawDb",
+													"type": "Expression"
+												},
+												"p_ls_Env": {
+													"value": "@pipeline().globalParameters.environment",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "d365_raw_load_failure_notification_2",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "vendinvoicetrans_standardcost_d365_to_raw",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId,-1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('vendinvoicetrans_standardcost_d365_to_raw').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('vendinvoicetrans_standardcost_d365_to_raw').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('vendinvoicetrans_standardcost_d365_to_raw').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('vendinvoicetrans_standardcost_d365_to_raw').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											},
+											"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+											"taskStepNumber": {
+												"value": "@pipeline().parameters.p_src_code",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_d365_load_to_raw_fail_2",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "d365_raw_load_failure_notification_2",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('vendinvoicetrans_standardcost_d365_to_raw').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						}
+					],
+					"defaultActivities": [
+						{
+							"name": "default_wait",
+							"type": "Wait",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": 10
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "raw_to_curate_sp_call",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "switch_nala",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_auditDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('CALL ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_auditDb,'.CONTROL.SP_TASK_INITIALIZE(','''',pipeline().RunId,'''',',','''',pipeline().globalParameters.environment,'''',',','''',pipeline().parameters.p_tgt_curate_table_nm,'''',',',pipeline().parameters.p_src_code,')')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "stored_procedure_failure_notification",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_adf_pipeline_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"subscription": {
+							"value": "@pipeline().globalParameters.subscriptionId",
+							"type": "Expression"
+						},
+						"resourceGroup": {
+							"value": "@pipeline().globalParameters.resourceGroup",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@coalesce(pipeline().RunId,-1)",
+							"type": "Expression"
+						},
+						"name": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"triggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"status": {
+							"value": "@activity('raw_to_curate_sp_call').Status",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@activity('raw_to_curate_sp_call').Error['message']",
+							"type": "Expression"
+						},
+						"executionEndTime": {
+							"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+							"type": "Expression"
+						},
+						"runDuration": {
+							"value": "@activity('raw_to_curate_sp_call').Duration",
+							"type": "Expression"
+						},
+						"teamWebhookUrl": {
+							"value": "@pipeline().globalParameters.teamsWebhookUrl",
+							"type": "Expression"
+						},
+						"notificationTime": {
+							"value": "@utcNow()",
+							"type": "Expression"
+						},
+						"taskName": {
+							"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+							"type": "Expression"
+						},
+						"taskStepNumber": {
+							"value": "@pipeline().parameters.p_src_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pipeline_execution_notification",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(equals(activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE'],'TRUE'),bool('TRUE'), bool('FALSE'))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "pp_stored_procedure_failure_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@toUpper('failed')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": {
+										"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+										"type": "Expression"
+									},
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "curate_load_failure",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "pp_stored_procedure_failure_notification",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": {
+									"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+									"type": "Expression"
+								},
+								"errorCode": "500"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "stored_procedure_success_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@activity('raw_to_curate_sp_call').Status",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat(pipeline().parameters.p_tgt_curate_table_nm, ' is successfully loaded')",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": {
+										"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+										"type": "Expression"
+									},
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"p_src_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA"
+			},
+			"p_tgt_raw_table_nm": {
+				"type": "string",
+				"defaultValue": "VENDINVOICETRANS"
+			},
+			"p_tgt_raw_schema_nm": {
+				"type": "string",
+				"defaultValue": "AX_NALA"
+			},
+			"p_tgt_curate_table_nm": {
+				"type": "string",
+				"defaultValue": "FACT_PURCHASE_INVOICES"
+			},
+			"p_tgt_curate_schema_nm": {
+				"type": "string",
+				"defaultValue": "GLOBAL"
+			},
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "VENDINVOICETRANS"
+			},
+			"p_src_code": {
+				"type": "string",
+				"defaultValue": "1"
+			},
+			"p_tgt_raw_table_nm_2": {
+				"type": "string",
+				"defaultValue": "VENDINVOICETRANS_STANDARDCOST"
+			}
+		},
+		"annotations": []
+	}
+}

@@ -1,0 +1,66 @@
+{
+	"name": "pp_facts_operations",
+	"properties": {
+		"activities": [
+			{
+				"name": "sp_fact_production_journal",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_PRODUCTION_JOURNAL"
+					}
+				}
+			},
+			{
+				"name": "trigger_pbi_refresh_operations",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "sp_fact_production_journal",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_partition_or_full",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_table_nm": "'FACT_PRODUCTION_JOURNAL'",
+						"p_tgt_audit_table_nm": "PBI_SNOWFLAKE_BRIDGE",
+						"p_tgt_audit_schema_nm": "CONTROL",
+						"p_webhook_url": "https://tempursealyinc.webhook.office.com/webhookb2/7aa89678-96e1-4bbf-a53a-a4ed05939336@7c6c07f6-1ef4-4368-8d5d-4686d15efd79/IncomingWebhook/140271dc998c4d27a423766fdc4da3a7/4c6968dc-2ec8-4f99-b936-1206cdf30aeb/V2lNcpG2AdfMwjOpgofm3KfaqvkrDAeluaSXRj5koRGxc1",
+						"p_dataset_nm": "Operations Gold Dataset",
+						"p_web_body_fullrefresh": {
+							"value": "@createArray('{\n  \"type\": \"full\",\n  \"commitMode\": \"transactional\",\n  \"applyRefreshPolicy\": \"true\"\n}')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "pbi_dataset_refresh_pipelines"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-10-21T13:36:39Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

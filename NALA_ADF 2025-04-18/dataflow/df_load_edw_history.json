@@ -1,0 +1,67 @@
+{
+	"name": "df_load_edw_history",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_parq_edw",
+						"type": "DatasetReference"
+					},
+					"name": "adlsSource"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference"
+					},
+					"name": "snowflakeRawTarget"
+				}
+			],
+			"transformations": [
+				{
+					"name": "nullHandling"
+				},
+				{
+					"name": "convertColumnNamesToUpperCase"
+				}
+			],
+			"scriptLines": [
+				"source(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     inferDriftedColumnTypes: true,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> adlsSource",
+				"convertColumnNamesToUpperCase derive(HK_SOURCE_NAME = 'EDW_DWH',",
+				"          HK_JOB_RUN_ID = '-1',",
+				"          HK_CREATED_TIMESTAMP = currentUTC(),",
+				"          HK_WAREHOUSE_ID = uuid(),",
+				"          each(match(type=='string'), $$ = coalesce(trim($$),'')),",
+				"          each(match(type=='integer'||type=='short'||type=='long'||type=='float'||type=='double'), $$ = coalesce($$,0)),",
+				"          each(match(type=='date'), $$ = coalesce($$,toDate('1950-01-01','yyyy-MM-dd'))),",
+				"          each(match(type=='timestamp'), $$ = coalesce(toTimestamp(toString($$),'yyyy-MM-dd HH:mm:ss'),toTimestamp('1950-01-01 00:00:00','yyyy-MM-dd HH:mm:ss'))),",
+				"          each(match(startsWith(type,'decimal')), $$ = coalesce($$,toDecimal(0)))) ~> nullHandling",
+				"adlsSource select(mapColumn(",
+				"          each(match(true()),",
+				"               upper($$) = $$)",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> convertColumnNamesToUpperCase",
+				"nullHandling sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     truncate:true,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     stageInsert: true) ~> snowflakeRawTarget"
+			]
+		}
+	}
+}

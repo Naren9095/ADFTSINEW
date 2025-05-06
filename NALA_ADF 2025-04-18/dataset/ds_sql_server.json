@@ -1,0 +1,64 @@
+{
+	"name": "ds_sql_server",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_sql",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"ls_serverName": {
+					"value": "@dataset().p_ls_serverName",
+					"type": "Expression"
+				},
+				"ls_dbName": {
+					"value": "@dataset().p_ls_dbName",
+					"type": "Expression"
+				},
+				"ls_sqlUsername": {
+					"value": "@dataset().p_ls_sqlUsername",
+					"type": "Expression"
+				},
+				"ls_sqlPassword": {
+					"value": "@dataset().p_ls_sqlPassword",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"p_src_table_name": {
+				"type": "string"
+			},
+			"p_src_schema_name": {
+				"type": "string"
+			},
+			"p_ls_serverName": {
+				"type": "string"
+			},
+			"p_ls_dbName": {
+				"type": "string"
+			},
+			"p_ls_sqlUsername": {
+				"type": "string"
+			},
+			"p_ls_sqlPassword": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Reusable_Datasets"
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().p_src_schema_name",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().p_src_table_name",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

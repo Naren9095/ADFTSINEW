@@ -1,0 +1,81 @@
+{
+	"name": "df_load_dim_corporate_allocation_mapping",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_excel",
+						"type": "DatasetReference"
+					},
+					"name": "srcCorporateAllocationMapping"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference"
+					},
+					"name": "corpAllocationMapping"
+				}
+			],
+			"transformations": [
+				{
+					"name": "constructColumns"
+				},
+				{
+					"name": "pullLatestRecords"
+				},
+				{
+					"name": "calculateMaxModifiedDatetime"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     df_prev_max_timestamp as string,",
+				"     df_last_mod_tmstmp_corpallocationmapping as string,",
+				"     df_pipeline_job_id as string",
+				"}",
+				"source(output(",
+				"          {AX Company } as short,",
+				"          {AX Main Account } as integer,",
+				"          {IBR Line} as string,",
+				"          {TAM Code} as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> srcCorporateAllocationMapping",
+				"srcCorporateAllocationMapping derive(MODIFIEDDATETIME = toTimestamp($df_last_mod_tmstmp_corpallocationmapping, 'yyyy-MM-dd\\'T\\'HH:mm'),",
+				"          RAW_MODIFIEDDATETIME = toTimestamp($df_prev_max_timestamp),",
+				"          AX_COMPANY = {AX Company },",
+				"          AX_MAIN_ACCOUNT = {AX Main Account },",
+				"          IBR_LINE = {IBR Line},",
+				"          TAM_CODE = {TAM Code},",
+				"          HK_SOURCE_NAME = toString(\"AXNALA\"),",
+				"          HK_JOB_RUN_ID = $df_pipeline_job_id) ~> constructColumns",
+				"calculateMaxModifiedDatetime filter(LATEST_MODIFIEDDATETIME > RAW_MODIFIEDDATETIME) ~> pullLatestRecords",
+				"constructColumns window(LATEST_MODIFIEDDATETIME = max(MODIFIEDDATETIME)) ~> calculateMaxModifiedDatetime",
+				"pullLatestRecords sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     stageInsert: true,",
+				"     mapColumn(",
+				"          MODIFIEDDATETIME,",
+				"          AX_COMPANY,",
+				"          AX_MAIN_ACCOUNT,",
+				"          IBR_LINE,",
+				"          TAM_CODE,",
+				"          HK_SOURCE_NAME,",
+				"          HK_JOB_RUN_ID,",
+				"          LATEST_MODIFIEDDATETIME",
+				"     )) ~> corpAllocationMapping"
+			]
+		}
+	}
+}

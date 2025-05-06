@@ -1,0 +1,320 @@
+{
+	"name": "pp_generic_dim_sql_edw_to_dim_snowflake_curate",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy from sql_edw to adls",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": {
+							"value": "@pipeline().parameters.p_src_query",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": false,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_sql_server",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_src_table_name": {
+								"value": "@pipeline().parameters.p_src_table_nm",
+								"type": "Expression"
+							},
+							"p_src_schema_name": {
+								"value": "@pipeline().parameters.p_src_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_serverName": {
+								"value": "@pipeline().globalParameters.edw_sql_serverName",
+								"type": "Expression"
+							},
+							"p_ls_dbName": {
+								"value": "@pipeline().globalParameters.edw_sql_dbName",
+								"type": "Expression"
+							},
+							"p_ls_sqlUsername": {
+								"value": "@pipeline().globalParameters.sql_userName",
+								"type": "Expression"
+							},
+							"p_ls_sqlPassword": {
+								"value": "@pipeline().globalParameters.sql_password",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_parq_edw",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_root_system": {
+								"value": "@pipeline().globalParameters.rootDir",
+								"type": "Expression"
+							},
+							"p_directory": {
+								"value": "@pipeline().parameters.p_temp_directory",
+								"type": "Expression"
+							},
+							"p_file_name": {
+								"value": "@concat(toUpper(pipeline().parameters.p_src_table_nm),'_HIST_',substring(string(utcNow()),0,4),'_',substring(string(utcNow()),5,2),'_',substring(string(utcNow()),8,2),'.snappy.parquet')",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "Copy from adls to snowflake raw_edw_dwh",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "Copy from sql_edw to adls",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_load_edw_history",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"adlsSource": {
+								"p_root_system": {
+									"value": "@pipeline().globalParameters.rootDir",
+									"type": "Expression"
+								},
+								"p_directory": {
+									"value": "@pipeline().parameters.p_temp_directory",
+									"type": "Expression"
+								},
+								"p_file_name": {
+									"value": "@concat(toUpper(pipeline().parameters.p_src_table_nm),'_HIST_',substring(string(utcNow()),0,4),'_',substring(string(utcNow()),5,2),'_',substring(string(utcNow()),8,2),'.snappy.parquet')",
+									"type": "Expression"
+								}
+							},
+							"snowflakeRawTarget": {
+								"p_tgt_table_name": {
+									"value": "@pipeline().parameters.p_src_table_nm",
+									"type": "Expression"
+								},
+								"p_tgt_schema_name": {
+									"value": "@pipeline().parameters.p_tgt_schema_nm",
+									"type": "Expression"
+								},
+								"p_ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_rawDb",
+									"type": "Expression"
+								},
+								"p_ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"integrationRuntime": {
+						"referenceName": "IR-Snowflake-NALA",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "SCD type check",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Copy from adls to snowflake raw_edw_dwh",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(pipeline().parameters.p_scd_type,1)",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "sp_scd_2",
+							"type": "Script",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "ls_snowflake",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"ls_DbName": {
+										"value": "@pipeline().globalParameters.snow_auditDb",
+										"type": "Expression"
+									},
+									"ls_Env": {
+										"value": "@pipeline().globalParameters.environment",
+										"type": "Expression"
+									}
+								}
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"type": "Query",
+										"text": {
+											"value": "@concat('truncate table ',pipeline().globalParameters.environment,'_CURATE.GLOBAL.',pipeline().parameters.p_curate_table_name,';')",
+											"type": "Expression"
+										}
+									},
+									{
+										"type": "Query",
+										"text": {
+											"value": "@concat('CALL ',pipeline().globalParameters.environment,'_CURATE.GLOBAL.SP_GENERIC_EDW_HISTORY_DIM_SCD2(','''',coalesce(pipeline().RunId,'-1'),'''',',', '''',pipeline().globalParameters.environment,'''',',','''',pipeline().parameters.p_src_table_nm,'''',',', '''',pipeline().parameters.p_curate_table_name,'''', ',',pipeline().parameters.p_key_columns,',','''',pipeline().parameters.p_raw_key,'''',');')",
+											"type": "Expression"
+										}
+									}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "sp_scd_1",
+							"type": "Script",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "ls_snowflake",
+								"type": "LinkedServiceReference",
+								"parameters": {
+									"ls_DbName": {
+										"value": "@pipeline().globalParameters.snow_auditDb",
+										"type": "Expression"
+									},
+									"ls_Env": {
+										"value": "@pipeline().globalParameters.environment",
+										"type": "Expression"
+									}
+								}
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"type": "Query",
+										"text": {
+											"value": "@concat('truncate table ',pipeline().globalParameters.environment,'_CURATE.GLOBAL.',pipeline().parameters.p_curate_table_name,';')",
+											"type": "Expression"
+										}
+									},
+									{
+										"type": "Query",
+										"text": {
+											"value": "@concat('CALL ',pipeline().globalParameters.environment,'_CURATE.GLOBAL.SP_GENERIC_EDW_HISTORY_DIM_SCD1(','''',coalesce(pipeline().RunId,'-1'),'''',',', '''',pipeline().globalParameters.environment,'''',',','''',pipeline().parameters.p_src_table_nm,'''',',', '''',pipeline().parameters.p_curate_table_name,'''', ',',pipeline().parameters.p_key_columns,');')",
+											"type": "Expression"
+										}
+									}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "DIMVENDOR"
+			},
+			"p_temp_directory": {
+				"type": "string",
+				"defaultValue": "temp_files"
+			},
+			"p_tgt_schema_nm": {
+				"type": "string",
+				"defaultValue": "EDW_DWH"
+			},
+			"p_key_columns": {
+				"type": "string",
+				"defaultValue": "'SOURCE_NAME,LEGAL_ENTITY,VENDOR_ACCOUNT_ID'"
+			},
+			"p_curate_table_name": {
+				"type": "string",
+				"defaultValue": "DIM_VENDOR"
+			},
+			"p_raw_key": {
+				"type": "string",
+				"defaultValue": "VENDORKEY"
+			},
+			"p_scd_type": {
+				"type": "int",
+				"defaultValue": 2
+			},
+			"p_src_query": {
+				"type": "string",
+				"defaultValue": "select * from dimvendor;"
+			}
+		},
+		"annotations": []
+	}
+}

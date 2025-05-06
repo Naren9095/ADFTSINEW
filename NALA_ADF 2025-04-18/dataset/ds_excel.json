@@ -1,0 +1,52 @@
+{
+	"name": "ds_excel",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_adls",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"p_src_directory": {
+				"type": "string"
+			},
+			"p_src_file_name": {
+				"type": "string"
+			},
+			"p_src_root_system": {
+				"type": "string"
+			},
+			"p_sheet_name": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "Reusable_Datasets"
+		},
+		"annotations": [],
+		"type": "Excel",
+		"typeProperties": {
+			"sheetName": {
+				"value": "@dataset().p_sheet_name",
+				"type": "Expression"
+			},
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().p_src_file_name",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@dataset().p_src_directory",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().p_src_root_system",
+					"type": "Expression"
+				}
+			},
+			"firstRowAsHeader": true
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

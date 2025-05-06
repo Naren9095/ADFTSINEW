@@ -1,0 +1,235 @@
+{
+	"name": "pp_edw_hist_fact_vendor_transactions",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy from sqlserver to ADLS",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "SELECT --TOP (100) \n\t   f1.DW_ID\n      ,f1.CASHDISCOUNTKEY\n      ,f1.CURRENCYKEY\n      ,f1.DEFAULTDIMENSIONKEY\n      ,f1.LEGALENTITYKEY\n      ,f1.REMITTANCELOCATIONKEY\n      ,f1.VENDORINVOICEKEY\n      ,f1.VENDORINVOICEHISTORYKEY\n      ,f1.VENDORPAYMENTMODEKEY\n      ,f1.VENDORPAYMENTSPECIFICATIONKEY\n      ,f1.VENDORTRANSACTIONDETAILSKEY\n      ,f1.WORKERAPPROVERKEY\n      ,f1.ALIGNEDDUEDATE\n      ,f1.APPROVEDDATE\n      ,f1.CLOSEDDATE\n      ,f1.DOCUMENTDATE\n      ,f1.DUEDATE\n      ,f1.LASTSETTLEMENTDATE\n      ,f1.TRANSACTIONDATE\n      ,f1.RECORDID  \n      ,f1.DOCUMENTNUMBER\n      ,f1.INVOICEID\n      ,f1.LEGALENTITY\n      ,f1.LASTSETTLEMENTVOUCHER\n      ,f1.VOUCHER\n      ,f1.AMOUNTTRANSACTIONCURRENCY\n      ,f1.AMOUNTCOMPANYCURRENCY\n      ,f1.SETTLEDAMOUNTTRANSACTIONCURRENCY\n      ,f1.SETTLEDAMOUNTCOMPANYCURRENCY\n      ,f1.SETTLEDAMOUNTREPORTINGCURRENCY\n      ,f1.INCREMENTALTIMESTAMP\n      ,f1.CHECKDATE\n      ,f1.PAYMENTTERMS\n      ,f1.INVOICEDATE\n      ,f1.DAYSOVERDUE\n      ,f1.TRANSRECIDSETTLED\n      ,f1.DAYSTOPAY\n      ,f1.INVOICESTATUS\n      ,f1.INVOICEFULLSTATUS\n\t  ,case when f1.VendorInvoiceKey in (-1, -2) then f2.ACCOUNTNUM else dvi1.VendorAccountID end as ACCOUNTNUM\n\t  ,case when f1.WORKERAPPROVERKEY in (-1, -2) then  f2.APPROVER else dwr1.recordid end as APPROVER\n\t  , case when f1.CASHDISCOUNTKEY in (-1, -2) then f2.CASHDISCCODE else dcd1.CashDiscountID end as CASHDISCCODE\n\t  ,case when f1.CurrencyKey in (-1, -2) then f2.currencycode else dcurr1.currencycode end as currencycode\n\t  ,cast(case when f1.defaultdimensionkey in (-1, -2) then f2.defaultdimension else dd1.defaultdimension end as varchar) as defaultdimension\n\t  ,f2.PAYMMODE\n\t  ,f2.PAYMSPEC\n\t  ,f2.REMITTANCELOCATION\n\t  ,dvtd1.TransactionType\n\t  ,dvtd1.IsApproved\n\t  ,dvtd1.IsReversal\n\t  ,f1.DW_BATCH\n      ,f1.DW_SOURCECODE\n      ,f1.DW_TIMESTAMP\n  FROM EDW_DWH.DBO.FACTVENDORTRANSACTIONS f1 with (nolock)\n\tleft join edw_hka.dbo.FACTVENDORTRANSACTIONS f2 with (nolock) on\n\t\tf1.dw_id = f2.DW_Id\n\tleft join EDW_DWH.dbo.DimCurrency dcurr1 with (nolock) on\n\t\tf1.CurrencyKey =dcurr1.CurrencyKey\n\tleft join EDW_DWH.dbo.DIMVENDOR dvi1 with (nolock) on\n\t\tf1.vendorinvoicekey = dvi1.vendorkey\n\tleft join dbo.DIMWORKER dwr1 with (nolock) on\n\t\tf1.WORKERAPPROVERKEY = dwr1.workerkey\n\tleft join dbo.DimCashDiscount dcd1 with (nolock) on\n\t\tf1.CashDiscountKey = dcd1.CashDiscountKey\n    left join edw_hka.dbo.DIMDEFAULTDIMENSION dd1 with (nolock) on\n\t\tf1.defaultdimensionkey = dd1.defaultdimensionkey\n\tleft join EDW_DWH.dbo.DimVendorTransactionDetails dvtd1 with (nolock) on\n\t\tf1.VENDORTRANSACTIONDETAILSKEY = dvtd1.VENDORTRANSACTIONDETAILSKEY",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": false,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_sql_server",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_src_table_name": {
+								"value": "@pipeline().parameters.p_src_table_nm",
+								"type": "Expression"
+							},
+							"p_src_schema_name": {
+								"value": "@pipeline().parameters.p_src_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_serverName": {
+								"value": "@pipeline().globalParameters.edw_sql_serverName",
+								"type": "Expression"
+							},
+							"p_ls_dbName": {
+								"value": "@pipeline().globalParameters.edw_sql_dbName",
+								"type": "Expression"
+							},
+							"p_ls_sqlUsername": {
+								"value": "@pipeline().globalParameters.sql_userName",
+								"type": "Expression"
+							},
+							"p_ls_sqlPassword": {
+								"value": "@pipeline().globalParameters.sql_password",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_parq_edw",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_root_system": {
+								"value": "@pipeline().globalParameters.rootDir",
+								"type": "Expression"
+							},
+							"p_directory": {
+								"value": "@pipeline().parameters.p_temp_directory",
+								"type": "Expression"
+							},
+							"p_file_name": {
+								"value": "@concat(toUpper(pipeline().parameters.p_curate_table_name),'_HIST_',substring(string(utcNow()),0,4),'_',substring(string(utcNow()),5,2),'_',substring(string(utcNow()),8,2),'.snappy.parquet')",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "ADLS to Snowflake RAW with HK columns",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "Copy from sqlserver to ADLS",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_load_edw_history",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"adlsSource": {
+								"p_root_system": {
+									"value": "@pipeline().globalParameters.rootDir",
+									"type": "Expression"
+								},
+								"p_directory": {
+									"value": "@pipeline().parameters.p_temp_directory",
+									"type": "Expression"
+								},
+								"p_file_name": {
+									"value": "@concat(toUpper(pipeline().parameters.p_curate_table_name),'_HIST_',substring(string(utcNow()),0,4),'_',substring(string(utcNow()),5,2),'_',substring(string(utcNow()),8,2),'.snappy.parquet')",
+									"type": "Expression"
+								}
+							},
+							"snowflakeRawTarget": {
+								"p_tgt_table_name": {
+									"value": "@pipeline().parameters.p_src_table_nm",
+									"type": "Expression"
+								},
+								"p_tgt_schema_name": {
+									"value": "@pipeline().parameters.p_tgt_schema_nm",
+									"type": "Expression"
+								},
+								"p_ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_rawDb",
+									"type": "Expression"
+								},
+								"p_ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"integrationRuntime": {
+						"referenceName": "IR-Snowflake-NALA",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "RAW to CURATE SP",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "ADLS to Snowflake RAW with HK columns",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_curateDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "truncate table GLOBAL.FACT_VENDOR_TRANSACTIONS;\n\nINSERT INTO GLOBAL.FACT_VENDOR_TRANSACTIONS (\nFACT_VENDOR_TRANSACTIONS_KEY,\nSOURCE_NAME,\nRECORD_ID,\nDIM_SOURCE_SYSTEM_KEY,\nDIM_SOURCE_SYSTEM_SNKEY,\nDIM_CASH_DISCOUNT_KEY,\nDIM_CASH_DISCOUNT_SNKEY,\nDIM_CURRENCY_KEY,\nDIM_CURRENCY_SNKEY,\nDIM_DEFAULT_DIMENSION_KEY,\nDIM_DEFAULT_DIMENSION_SNKEY,\nDIM_LEGAL_ENTITY_KEY,\nDIM_LEGAL_ENTITY_SNKEY,\nDIM_LOCATION_KEY,\nDIM_LOCATION_SNKEY,\nDIM_VENDOR_INVOICE_KEY,\nDIM_VENDOR_INVOICE_SNKEY,\nDIM_VENDOR_PAYMENT_MODE_KEY,\nDIM_VENDOR_PAYMENT_MODE_SNKEY,\nDIM_VENDOR_PAYMENT_SPECIFICATION_KEY,\nDIM_VENDOR_PAYMENT_SPECIFICATION_SNKEY,\n--DIM_VENDOR_TRANSACTION_DETAILS_KEY,\n--DIM_VENDOR_TRANSACTION_DETAILS_SNKEY,\nDIM_WORKER_APPROVER_KEY,\nDIM_WORKER_APPROVER_SNKEY,\nALIGNED_DUE_DATE_DIM_DATE_KEY,\nALIGNED_DUE_DATE_DIM_DATE_SNKEY,\nAPPROVED_DATE_DIM_DATE_KEY,\nAPPROVED_DATE_DIM_DATE_SNKEY,\nCLOSED_DATE_DIM_DATE_KEY,\nCLOSED_DATE_DIM_DATE_SNKEY,\nDOCUMENT_DATE_DIM_DATE_KEY,\nDOCUMENT_DATE_DIM_DATE_SNKEY,\nDUE_DATE_DIM_DATE_KEY,\nDUE_DATE_DIM_DATE_SNKEY,\nLAST_SETTLEMENT_DATE_DIM_DATE_KEY,\nLAST_SETTLEMENT_DATE_DIM_DATE_SNKEY,\nTRANSACTION_DATE_DIM_DATE_KEY,\nTRANSACTION_DATE_DIM_DATE_SNKEY,\nCHECK_DATE_DIM_DATE_KEY,\nCHECK_DATE_DIM_DATE_SNKEY,\nINVOICE_DATE_DIM_DATE_KEY,\nINVOICE_DATE_DIM_DATE_SNKEY,\nALIGNED_DUE_DATE,\nAPPROVED_DATE,\nCLOSED_DATE,\nDOCUMENT_DATE,\nDUE_DATE,\nLAST_SETTLEMENT_DATE,\nTRANSACTION_DATE,\nDOCUMENT_NUMBER,\nINVOICE_ID,\nLEGAL_ENTITY,\nLAST_SETTLEMENT_VOUCHER,\nVOUCHER,\nAMOUNT_TRANSACTION_CURRENCY,\nAMOUNT_COMPANY_CURRENCY,\nSETTLED_AMOUNT_TRANSACTION_CURRENCY,\nSETTLED_AMOUNT_COMPANY_CURRENCY,\nSETTLED_AMOUNT_REPORTING_CURRENCY,\nACCOUNT_NUMBER,\nAPPROVER,\nCASH_DISCOUNT_CODE,\nCURRENCY_CODE,\nDEFAULT_DIMENSION,\nPAYMENT_MODE,\nPAYMENT_SPECIFICATION,\nREMITTANCE_LOCATION,\nCHECK_DATE,\nPAYMENT_TERMS,\nINVOICE_DATE,\nDAYS_OVERDUE,\nSETTLED_TRANSACTION_RECORD_ID,\nDAYS_TO_PAY,\nINVOICE_STATUS,\nINVOICE_FULL_STATUS,\nTRANSACTION_TYPE,\nIS_APPROVED,\nIS_REVERSAL,\nHK_HASH_KEY,\nHK_SOURCE_NAME,\nHK_SOFT_DELETE_FLAG,\nHK_SOURCE_CREATED_TIMESTAMP,\nHK_SOURCE_LAST_UPDATED_TIMESTAMP,\nHK_CREATED_JOB_RUN_ID,\nHK_LAST_UPDATED_JOB_RUN_ID,\nHK_CREATED_TIMESTAMP,\nHK_LAST_UPDATED_TIMESTAMP,\nHK_WAREHOUSE_ID)\nSELECT hash(a.SOURCE_NAME, '~',to_char(a.RECORD_ID)) ::number as FACT_VENDOR_TRANSACTIONS_KEY\n    ,a.SOURCE_NAME\n    ,a.RECORD_ID\n    ,a.dim_source_system_snkey as DIM_SOURCE_SYSTEM_KEY\n    ,a.DIM_SOURCE_SYSTEM_SNKEY\n    ,case when a.DIM_CASH_DISCOUNT_SNKEY = -2 then -2\n\t\t\t\telse nvl(dcd1.DIM_CASH_DISCOUNT_KEY, -1)\n\t\t\tend::number as DIM_CASH_DISCOUNT_KEY\n    ,a.DIM_CASH_DISCOUNT_SNKEY\n    ,case when a.dim_currency_snkey = -2 then -2\n\t\t\t\telse nvl(dcurr1.dim_currency_key, -1)\n\t\t\tend::number as DIM_CURRENCY_KEY\n    ,a.DIM_CURRENCY_SNKEY\n\t, case when a.dim_default_dimension_snkey = -2 then -2\n\t\t\t\telse nvl(ddim1.dim_default_dimension_key, -1)\n\t\t\tend::number as DIM_DEFAULT_DIMENSION_KEY\n    ,a.DIM_DEFAULT_DIMENSION_SNKEY\n    , case when a.dim_legal_entity_snkey = -2 then -2\n\t\t\t\telse nvl(dle1.dim_legal_entity_key, -1)\n\t\t\tend::number as DIM_LEGAL_ENTITY_KEY\n    ,a.DIM_LEGAL_ENTITY_SNKEY\n    , case when a.dim_location_snkey = -2 then -2\n\t\t\t\telse nvl(dl1.dim_location_key, -1)\n\t\t\tend::number as DIM_LOCATION_KEY\n    ,a.DIM_LOCATION_SNKEY\n    , case when a.dim_vendor_invoice_snkey = -2 then -2\n\t\t\t\telse nvl(dvi1.dim_vendor_key, -1)\n\t   end::number as DIM_VENDOR_INVOICE_KEY\n    ,a.DIM_VENDOR_INVOICE_SNKEY  \n    ,case when a.DIM_VENDOR_PAYMENT_MODE_SNKEY = -2 then -2\n\t\t\t\telse nvl(dvpm1.DIM_VENDOR_PAYMENT_MODE_KEY, -1)\n\t   end::number as DIM_VENDOR_PAYMENT_MODE_KEY\n    ,a.DIM_VENDOR_PAYMENT_MODE_SNKEY\n    ,case when a.DIM_VENDOR_PAYMENT_SPECIFICATION_SNKEY = -2 then -2\n\t\t\t\telse nvl(dvps1.DIM_VENDOR_PAYMENT_SPECIFICATION_KEY, -1)\n\t   end::number as DIM_VENDOR_PAYMENT_SPECIFICATION_KEY\n    ,a.DIM_VENDOR_PAYMENT_SPECIFICATION_SNKEY\n   -- ,a.DIM_VENDOR_TRANSACTION_DETAILS_SNKEY AS DIM_VENDOR_TRANSACTION_DETAILS_KEY --junk dim\n   -- ,a.DIM_VENDOR_TRANSACTION_DETAILS_SNKEY\n    , case when a.DIM_WORKER_APPROVER_SNKEY = -2 then -2\n\t\t\t\telse nvl(dwa1.DIM_WORKER_KEY, -1)\n\t\t\tend::number as DIM_WORKER_APPROVER_KEY\n    ,a.DIM_WORKER_APPROVER_SNKEY\n    ,nvl(dd1.dim_date_key, -1)::number as ALIGNED_DUE_DATE_DIM_DATE_KEY\n    ,a.ALIGNED_DUE_DATE_DIM_DATE_SNKEY\n    ,nvl(dd2.dim_date_key, -1)::number as APPROVED_DATE_DIM_DATE_KEY\n    ,a.APPROVED_DATE_DIM_DATE_SNKEY\n    ,nvl(dd3.dim_date_key, -1)::number as CLOSED_DATE_DIM_DATE_KEY\n    ,a.CLOSED_DATE_DIM_DATE_SNKEY\n    ,nvl(dd4.dim_date_key, -1)::number as DOCUMENT_DATE_DIM_DATE_KEY\n    ,a.DOCUMENT_DATE_DIM_DATE_SNKEY\n    ,nvl(dd5.dim_date_key, -1)::number as DUE_DATE_DIM_DATE_KEY\n    ,a.DUE_DATE_DIM_DATE_SNKEY\n    ,nvl(dd6.dim_date_key, -1)::number as LAST_SETTLEMENT_DATE_DIM_DATE_KEY\n    ,a.LAST_SETTLEMENT_DATE_DIM_DATE_SNKEY\n    ,nvl(dd7.dim_date_key, -1)::number as TRANSACTION_DATE_DIM_DATE_KEY\n    ,a.TRANSACTION_DATE_DIM_DATE_SNKEY\n    ,nvl(dd8.dim_date_key, -1)::number as CHECK_DATE_DIM_DATE_KEY\n    ,a.CHECK_DATE_DIM_DATE_SNKEY\n    ,nvl(dd9.dim_date_key, -1)::number as INVOICE_DATE_DIM_DATE_KEY\n    ,a.INVOICE_DATE_DIM_DATE_SNKEY\n,a.ALIGNED_DUE_DATE\n,a.APPROVED_DATE\n,a.CLOSED_DATE\n,a.DOCUMENT_DATE\n,a.DUE_DATE\n,a.LAST_SETTLEMENT_DATE\n,a.TRANSACTION_DATE\n,a.DOCUMENT_NUMBER\n,a.INVOICE_ID\n,a.LEGAL_ENTITY\n,a.LAST_SETTLEMENT_VOUCHER\n,a.VOUCHER\n,a.AMOUNT_TRANSACTION_CURRENCY\n,a.AMOUNT_COMPANY_CURRENCY\n,a.SETTLED_AMOUNT_TRANSACTION_CURRENCY\n,a.SETTLED_AMOUNT_COMPANY_CURRENCY\n,a.SETTLED_AMOUNT_REPORTING_CURRENCY\n,a.ACCOUNT_NUMBER\n,a.APPROVER\n,a.CASH_DISCOUNT_CODE\n,a.CURRENCY_CODE\n,a.DEFAULT_DIMENSION\n,a.PAYMENT_MODE\n,a.PAYMENT_SPECIFICATION\n,a.REMITTANCE_LOCATION\n,a.CHECK_DATE\n,a.PAYMENT_TERMS\n,a.INVOICE_DATE\n,a.DAYS_OVERDUE\n,a.SETTLED_TRANSACTION_RECORD_ID\n,a.DAYS_TO_PAY\n,a.INVOICE_STATUS\n,a.INVOICE_FULL_STATUS\n,a.TRANSACTION_TYPE\n,a.IS_APPROVED\n,a.IS_REVERSAL\n,hash(a.source_name, '~', to_char(a.record_id), '~',to_char(a.aligned_due_date, 'yyyymmdd'), '~', to_char(a.approved_date, 'yyyymmdd'), '~', to_char(a.closed_date, 'yyyymmdd'), '~', to_char(a.document_date, 'yyyymmdd'), '~', to_char(a.due_date, 'yyyymmdd'), '~', to_char(a.last_settlement_date, 'yyyymmdd'), '~', to_char(a.transaction_date, 'yyyymmdd'), '~', a.document_number, '~', a.invoice_id, '~', a.legal_entity, '~', a.last_settlement_voucher, '~', a.voucher, '~', to_char(a.amount_transaction_currency), '~', to_char(a.amount_company_currency), '~', to_char(a.settled_amount_transaction_currency), '~', to_char(a.settled_amount_company_currency), '~', to_char(a.settled_amount_reporting_currency), '~', a.account_number, '~', to_char(a.approver), '~', a.cash_discount_code, '~', a.currency_code, '~', a.default_dimension, '~', a.payment_mode, '~', a.payment_specification, '~', to_char(a.remittance_location), '~', to_char(a.check_date, 'yyyymmdd'), '~', a.payment_terms, '~', to_char(a.invoice_date, 'yyyymmdd'), '~', to_char(a.days_overdue), '~', to_char(a.settled_transaction_record_id), '~', to_char(a.days_to_pay), '~', a.invoice_status, '~', a.invoice_full_status, '~', a.transaction_type, '~', a.is_approved, '~', a.is_reversal) AS HK_HASH_KEY\n\t\t, a.hk_source_name as HK_SOURCE_NAME\n\t\t, false::boolean as HK_SOFT_DELETE_FLAG\n\t\t, a.hk_source_created_timestamp as HK_SOURCE_CREATED_TIMESTAMP \n        , a.hk_source_last_updated_timestamp as HK_SOURCE_LAST_UPDATED_TIMESTAMP\n        , a.hk_created_job_run_id as HK_CREATED_JOB_RUN_ID\n        , a.hk_last_updated_job_run_id as HK_LAST_UPDATED_JOB_RUN_ID\n\t\t, current_timestamp::timestamp_tz as HK_CREATED_TIMESTAMP\n\t\t, current_timestamp::timestamp_tz as HK_LAST_UPDATED_TIMESTAMP\n\t\t, uuid_string()::varchar as HK_WAREHOUSE_ID\nFROM\n( SELECT     'AXNALA'::varchar as SOURCE_NAME\n            , nvl(LEGALENTITY, '') AS LEGAL_ENTITY \n            , nvl(RECORDID,0) AS RECORD_ID\n            , case when nvl(SOURCE_NAME, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME)\n\t\t\t\tend::number as DIM_SOURCE_SYSTEM_SNKEY\n            , case when LEGAL_ENTITY = '' or nvl(CASHDISCCODE, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', LEGAL_ENTITY, '~', CASHDISCCODE)\n\t\t\t\tend::number as DIM_CASH_DISCOUNT_SNKEY\n\t\t\t, case when nvl(CURRENCYCODE, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', CURRENCYCODE)\n\t\t\t\tend::number as DIM_CURRENCY_SNKEY\n\t\t\t, case when nvl(DEFAULTDIMENSION, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', DEFAULTDIMENSION)\n\t\t\t\tend::number as DIM_DEFAULT_DIMENSION_SNKEY\n\t\t\t, case when nvl(LEGALENTITY, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', LEGALENTITY)\n\t\t\t\tend::number as DIM_LEGAL_ENTITY_SNKEY\n\t\t\t, case when nvl(REMITTANCELOCATION, 0) = 0 then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', to_char(REMITTANCELOCATION))\n\t\t\t\tend::number as DIM_LOCATION_SNKEY\n\t\t\t, case when LEGAL_ENTITY = '' or nvl(ACCOUNTNUM,'') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', LEGAL_ENTITY, '~', ACCOUNTNUM)\n\t\t\t\tend::number as DIM_VENDOR_INVOICE_SNKEY\n            , case when LEGAL_ENTITY = '' or nvl(PAYMMODE, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', LEGAL_ENTITY, '~', PAYMMODE)\n\t\t\t\tend::number as DIM_VENDOR_PAYMENT_MODE_SNKEY\n            , case when LEGAL_ENTITY = '' or  nvl(PAYMMODE, '') = '' OR nvl(PAYMSPEC, '') = '' then -2\n\t\t\t    else hash(SOURCE_NAME, '~', LEGAL_ENTITY, '~', PAYMMODE,'~', PAYMSPEC)\n\t\t\t\tend::number as DIM_VENDOR_PAYMENT_SPECIFICATION_SNKEY\n           /* , case when nvl(TRANSACTIONTYPE, '') = '' OR nvl(ISAPPROVED, '') = '' OR nvl(ISREVERSAL, '') = '' then -2\n\t\t\t    else hash(TRANSACTIONTYPE, '~', ISAPPROVED, '~', ISREVERSAL )\n\t\t\t    end::number as DIM_VENDOR_TRANSACTION_DETAILS_SNKEY*/\n\t\t\t, case when nvl(APPROVER, 0) = 0 then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', to_char(APPROVER))\n\t\t\t\tend::number as DIM_WORKER_APPROVER_SNKEY\n \t\t\t, case when nvl(ALIGNEDDUEDATE, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(ALIGNEDDUEDATE, 'yyyymmdd'))\n\t\t\t\tend::number as ALIGNED_DUE_DATE_DIM_DATE_SNKEY\n \t\t\t, case when nvl(APPROVEDDATE, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(APPROVEDDATE, 'yyyymmdd'))\n\t\t\t\tend::number as APPROVED_DATE_DIM_DATE_SNKEY\n\t\t\t, case when nvl(CLOSEDDATE, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(CLOSEDDATE, 'yyyymmdd'))\n\t\t\t\tend::number as CLOSED_DATE_DIM_DATE_SNKEY\n\t\t\t, case when nvl(DOCUMENTDATE, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(DOCUMENTDATE, 'yyyymmdd'))\n\t\t\t\tend::number as DOCUMENT_DATE_DIM_DATE_SNKEY\n\t\t\t, case when nvl(DUEDATE, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(DUEDATE, 'yyyymmdd'))\n\t\t\t\tend::number as DUE_DATE_DIM_DATE_SNKEY\n\t\t\t, case when nvl(LASTSETTLEMENTDATE, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(LASTSETTLEMENTDATE, 'yyyymmdd'))\n\t\t\t\tend::number as LAST_SETTLEMENT_DATE_DIM_DATE_SNKEY\n\t\t\t, case when nvl(TRANSACTIONDATE, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(TRANSACTIONDATE, 'yyyymmdd'))\n\t\t\t\tend::number as TRANSACTION_DATE_DIM_DATE_SNKEY\n            , case when nvl(CHECKDATE, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(CHECKDATE, 'yyyymmdd'))\n\t\t\t\tend::number as CHECK_DATE_DIM_DATE_SNKEY\n            , case when nvl(INVOICEDATE, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(INVOICEDATE, 'yyyymmdd'))\n\t\t\t\tend::number as INVOICE_DATE_DIM_DATE_SNKEY\n        \t ,  nvl(ALIGNEDDUEDATE, '1950-01-01') AS ALIGNED_DUE_DATE \t\n\t         ,  nvl(APPROVEDDATE, '1950-01-01')  AS APPROVED_DATE \t\t \n\t         ,  nvl(CLOSEDDATE, '1950-01-01') AS CLOSED_DATE \t\t\t\t \n\t         ,  nvl(DOCUMENTDATE, '1950-01-01') AS DOCUMENT_DATE  \n\t         ,  nvl(DUEDATE, '1950-01-01') AS DUE_DATE \t\t\t\t\n\t         ,  nvl(LASTSETTLEMENTDATE, '1950-01-01') AS LAST_SETTLEMENT_DATE \t\t\n\t         ,  nvl(TRANSACTIONDATE, '1950-01-01') AS TRANSACTION_DATE \t\t\n\t       , nvl(b.documentnumber, '')::varchar as DOCUMENT_NUMBER\n           , nvl(b.INVOICEID, '')::varchar as INVOICE_ID\n           , nvl(b.LASTSETTLEMENTVOUCHER, '')::varchar as LAST_SETTLEMENT_VOUCHER\n           , nvl(b.VOUCHER, '')::varchar as VOUCHER\n           , nvl(b.AMOUNTTRANSACTIONCURRENCY, 0)::number(25,16) as AMOUNT_TRANSACTION_CURRENCY\n           , nvl(b.AMOUNTCOMPANYCURRENCY, 0)::number(25,16) as AMOUNT_COMPANY_CURRENCY\t\t\t\n           , nvl(b.SETTLEDAMOUNTTRANSACTIONCURRENCY, 0)::number(25,16) as SETTLED_AMOUNT_TRANSACTION_CURRENCY\n           , nvl(b.SETTLEDAMOUNTCOMPANYCURRENCY, 0)::number(25,16) as SETTLED_AMOUNT_COMPANY_CURRENCY\n           , nvl(b.SETTLEDAMOUNTREPORTINGCURRENCY, 0)::number(25,16) as SETTLED_AMOUNT_REPORTING_CURRENCY\n           , nvl(b.ACCOUNTNUM, '')::varchar as ACCOUNT_NUMBER \n           , nvl(b.APPROVER, 0)::number as APPROVER\n           , nvl(b.CASHDISCCODE, '')::varchar as CASH_DISCOUNT_CODE\t\n           , nvl(b.CURRENCYCODE, '')::varchar as CURRENCY_CODE\t\t\t\t\n           , nvl(b.DEFAULTDIMENSION, '')::varchar as DEFAULT_DIMENSION\n           , nvl(b.PAYMMODE, '')::varchar as PAYMENT_MODE\n           , nvl(b.PAYMSPEC, '')::varchar as PAYMENT_SPECIFICATION\n           , nvl(b.REMITTANCELOCATION, 0)::number as REMITTANCE_LOCATION\n           , nvl(b.CHECKDATE, '1950-01-01')::date as CHECK_DATE\n           , nvl(b.PAYMENTTERMS, '')::varchar as PAYMENT_TERMS\n           , nvl(b.INVOICEDATE, '1950-01-01')::date as INVOICE_DATE \n           , nvl(b.DAYSOVERDUE, 0)::number as DAYS_OVERDUE\n           , nvl(b.TRANSRECIDSETTLED, 0)::number as SETTLED_TRANSACTION_RECORD_ID\n           , nvl(b.DAYSTOPAY, 0)::number as DAYS_TO_PAY\n           , nvl(b.INVOICESTATUS , '')::varchar as INVOICE_STATUS\n           , nvl(b.INVOICEFULLSTATUS, '')::varchar as INVOICE_FULL_STATUS\n           , nvl(b.TRANSACTIONTYPE, '')::varchar as TRANSACTION_TYPE\n           , nvl(b.ISAPPROVED, '')::varchar as IS_APPROVED\n           , nvl(b.ISREVERSAL, '')::varchar as IS_REVERSAL\n            , nvl(b.dw_sourcecode, '')::varchar as HK_SOURCE_NAME\n\t\t\t, '1950-01-01 00:00:00'::timestamp_tz as HK_SOURCE_CREATED_TIMESTAMP\n\t\t\t, nvl(b.dw_timestamp, '1950-01-01 00:00:00')::timestamp_tz as HK_SOURCE_LAST_UPDATED_TIMESTAMP\n\t\t\t, '-1'::varchar as HK_CREATED_JOB_RUN_ID\n\t\t\t, nvl(b.dw_batch, '-1')::varchar as HK_LAST_UPDATED_JOB_RUN_ID\n  FROM\t\n\t(SELECT\n\tHK_SOURCE_NAME \t\t\t,\n\tHK_JOB_RUN_ID \t\t\t,\n\tHK_CREATED_TIMESTAMP \t,\n\tHK_WAREHOUSE_ID \t\t,\n\tDW_ID \t\t\t\t\t,\n\tALIGNEDDUEDATE \t\t\t,\n\tAPPROVEDDATE \t\t\t,\n\tCLOSEDDATE \t\t\t\t,\n\tDOCUMENTDATE \t\t\t,\n\tDUEDATE \t\t\t\t,\n\tLASTSETTLEMENTDATE \t\t,\n\tTRANSACTIONDATE \t\t,\n\tRECORDID \t\t\t\t,\n\tDOCUMENTNUMBER \t\t\t,\n\tINVOICEID \t\t\t\t,\n\tLEGALENTITY \t\t\t,\n\tLASTSETTLEMENTVOUCHER \t,\n\tVOUCHER \t\t\t\t,\n\tAMOUNTTRANSACTIONCURRENCY \t,\n\tAMOUNTCOMPANYCURRENCY \t\t,\n\tSETTLEDAMOUNTTRANSACTIONCURRENCY \t,\n\tSETTLEDAMOUNTCOMPANYCURRENCY \t\t,\n\tSETTLEDAMOUNTREPORTINGCURRENCY \t\t,\n\tINCREMENTALTIMESTAMP \t\t\t\t,\n\tCHECKDATE ,\n\tPAYMENTTERMS ,\n\tINVOICEDATE ,\n\tDAYSOVERDUE ,\n\tTRANSRECIDSETTLED ,\n\tDAYSTOPAY,\n\tINVOICESTATUS ,\n\tINVOICEFULLSTATUS ,\n\tACCOUNTNUM ,\n\tAPPROVER ,\n\tCASHDISCCODE ,\n\tCURRENCYCODE ,\n\tDEFAULTDIMENSION ,\n\tPAYMMODE ,\n\tPAYMSPEC ,\n\tREMITTANCELOCATION ,\t\n\tTRANSACTIONTYPE ,\n\tISAPPROVED\t,\n\tISREVERSAL ,\n\tDW_BATCH ,\n\tDW_SOURCECODE ,\n\tDW_TIMESTAMP \n\tFROM @{pipeline().globalParameters.environment}_RAW.EDW_DWH.FACTVENDORTRANSACTIONS )b\n    \t\t\tinner join (select min(date_value) as MIN_DATE_VALUE\n\t\t\t\t\t\t\t, max(date_value) as MAX_DATE_VALUE\n\t\t\t\t\t\tfrom global.DIM_DATE\n\t\t\t\t\t\twhere date_value not in ('1950-01-01', '1951-12-31', '9000-01-01', '9951-12-31')) dd1 on 1=1 ) a\n\tleft join global.DIM_SOURCE_SYSTEM dss1 on\n\t\ta.dim_source_system_snkey = dss1.dim_source_system_snkey\n    left join global.DIM_CASH_DISCOUNT dcd1 on\n\t\ta.dim_cash_discount_snkey = dcd1.dim_cash_discount_snkey\n\tleft join global.DIM_CURRENCY dcurr1 on\n\t\ta.dim_currency_snkey = dcurr1.dim_currency_snkey    \n    left join global.DIM_DEFAULT_DIMENSION ddim1 on\n\t\ta.dim_default_dimension_snkey = ddim1.dim_default_dimension_snkey\n\tleft join global.DIM_LEGAL_ENTITY dle1 on\n\t\ta.dim_legal_entity_snkey = dle1.dim_legal_entity_snkey\n\tleft join global.DIM_LOCATION dl1 on\n\t\ta.dim_location_snkey = dl1.dim_location_snkey\n\tleft join global.DIM_VENDOR dvi1 on\n\t    a.dim_vendor_invoice_snkey = dvi1.dim_vendor_snkey and\n\t    a.INVOICE_DATE >= dvi1.hk_effective_start_timestamp and\n\t\ta.INVOICE_DATE < dvi1.hk_effective_end_timestamp\n    left join global.DIM_VENDOR_PAYMENT_MODE dvpm1 on\n\t\ta.DIM_VENDOR_PAYMENT_MODE_SNKEY = dvpm1.DIM_VENDOR_PAYMENT_MODE_SNKEY\n    left join global.DIM_VENDOR_PAYMENT_SPECIFICATION dvps1 on\n\t\ta.DIM_VENDOR_PAYMENT_SPECIFICATION_SNKEY = dvps1.DIM_VENDOR_PAYMENT_SPECIFICATION_SNKEY\n\tleft join global.DIM_WORKER dwa1 on\n\t\ta.dim_worker_approver_snkey = dwa1.dim_worker_snkey\n\tleft join global.DIM_DATE dd1 on\n\t\ta.aligned_due_date_dim_date_snkey = dd1.dim_date_snkey\n\tleft join global.DIM_DATE dd2 on\n\t\ta.approved_date_dim_date_snkey = dd2.dim_date_snkey\n\tleft join global.DIM_DATE dd3 on\n\t\ta.closed_date_dim_date_snkey = dd3.dim_date_snkey\n\tleft join global.DIM_DATE dd4 on\n\t\ta.document_date_dim_date_snkey = dd4.dim_date_snkey\n\tleft join global.DIM_DATE dd5 on\n\t\ta.due_date_dim_date_snkey = dd5.dim_date_snkey\n\tleft join global.DIM_DATE dd6 on\n\t\ta.last_settlement_date_dim_date_snkey = dd6.dim_date_snkey\n\tleft join global.DIM_DATE dd7 on\n\t\ta.transaction_date_dim_date_snkey = dd7.dim_date_snkey\n    left join global.DIM_DATE dd8 on\n\t\ta.check_date_dim_date_snkey = dd8.dim_date_snkey\n    left join global.DIM_DATE dd9 on\n\t\ta.invoice_date_dim_date_snkey = dd9.dim_date_snkey;",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "FACTVENDORTRANSACTIONS"
+			},
+			"p_temp_directory": {
+				"type": "string",
+				"defaultValue": "temp_files"
+			},
+			"p_tgt_schema_nm": {
+				"type": "string",
+				"defaultValue": "EDW_DWH"
+			},
+			"p_curate_table_name": {
+				"type": "string",
+				"defaultValue": "FACT_VENDOR_TRANSACTIONS"
+			}
+		},
+		"folder": {
+			"name": "history_fact"
+		},
+		"annotations": []
+	}
+}

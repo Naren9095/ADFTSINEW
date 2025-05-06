@@ -1,0 +1,62 @@
+{
+	"name": "df_load_fact_tax_transactions",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_parquet",
+						"type": "DatasetReference"
+					},
+					"name": "SrcTaxTrans"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference"
+					},
+					"name": "TaxTrans"
+				}
+			],
+			"transformations": [],
+			"scriptLines": [
+				"source(output(",
+				"          HK_SOURCE_NAME as string,",
+				"          HK_JOB_RUN_ID as string,",
+				"          RECID as long,",
+				"          CURRENCYCODE as string,",
+				"          TAXCODE as string,",
+				"          TAXGROUP as string,",
+				"          TRANSDATE as timestamp,",
+				"          INVENTTRANSID as string,",
+				"          INVOICEID as string,",
+				"          JOURNALNUM as string,",
+				"          DATAAREAID as string,",
+				"          VOUCHER as string,",
+				"          TAXAMOUNT as string,",
+				"          TAXAMOUNTCUR as string,",
+				"          TAXBASEAMOUNT as string,",
+				"          TAXBASEAMOUNTCUR as string,",
+				"          LATEST_MODIFIEDDATETIME as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> SrcTaxTrans",
+				"SrcTaxTrans sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     stageInsert: true) ~> TaxTrans"
+			]
+		}
+	}
+}

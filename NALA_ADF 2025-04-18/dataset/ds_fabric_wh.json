@@ -1,0 +1,18 @@
+{
+	"name": "ds_fabric_wh",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_fabricwh",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Reusable_Datasets"
+		},
+		"annotations": [],
+		"type": "WarehouseTable",
+		"schema": [],
+		"typeProperties": {
+			"table": ""
+		}
+	}
+}

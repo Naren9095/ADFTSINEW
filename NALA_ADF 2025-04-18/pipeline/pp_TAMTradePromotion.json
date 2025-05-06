@@ -1,0 +1,657 @@
+{
+	"name": "pp_TAMTradePromotion",
+	"properties": {
+		"description": "Raw tables needed for fact_sales_orders",
+		"activities": [
+			{
+				"name": "LoadStageTable",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "TruncateStageTable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"additionalColumns": [
+							{
+								"name": "HK_SOURCE_NAME",
+								"value": {
+									"value": "@pipeline().parameters.p_src_schema_nm",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "HK_JOB_RUN_ID",
+								"value": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "HK_LAST_UPDATED_TIMESTAMP",
+								"value": {
+									"value": "@pipeline().TriggerTime",
+									"type": "Expression"
+								}
+							}
+						],
+						"sqlReaderQuery": {
+							"value": "select [PROMOTIONID]\n      ,[PROMOTIONDESCRIPTION]\n      ,[PROMOTIONDETAILS]\n      ,[CUSTACCOUNT]\n      ,[CURRENCY]\n      ,[ORDERSSTARTDATE]\n      ,[ORDERSENDDATE]\n      ,[SHIPMENTENDDATE]\n      ,[REQUESTEDSHIPMENTENDDATE]\n      ,[PERFORMANCEENDDATE]\n      ,[PERFORMANCESTARTDATE]\n      ,[SHIPMENTSTARTDATE]\n      ,[REQUESTEDSHIPMENTSTARTDATE]\n      ,[TEMPLATE]\n      ,[PROMOTIONSTATUS]\n      ,[PROMOTIONPERIOD]\n      ,[MARKETINGOBJECTIVE]\n      ,[OVERRIDDENSHIPQTY]\n      ,[LIFTPERCENT]\n      ,[BASEUNITS]\n      ,[MERCHANDISECOST]\n      ,[QTYOVERRIDDEN]\n      ,[HIERARCHYNAME]\n      ,[ACTIVITY]\n      ,[VERIFYPERFORMANCE]\n      ,[UNITID]\n      ,[ENDOFPERIOD]\n      ,[HCMWORKERID]\n      ,[WFAPPROVALSTATUS]\n      ,[MODIFIEDDATETIME]\n      ,[DEL_MODIFIEDTIME]\n      ,[MODIFIEDBY]\n      ,[MODIFIEDTRANSACTIONID]\n      ,[CREATEDDATETIME]\n      ,[DEL_CREATEDTIME]\n      ,[CREATEDBY]\n      ,[CREATEDTRANSACTIONID]\n      ,[DATAAREAID]\n      ,[RECVERSION]\n      ,[PARTITION]\n      ,[RECID]\n      ,[TPXDEALID]\n      ,[TPXDEALTYPE]\n      ,[MCSTAMDEALSTATUS]\n  FROM [dbo].[TAMTRADEPROMOTION]",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "SnowflakeV2Sink",
+						"importSettings": {
+							"type": "SnowflakeImportCopyCommand"
+						}
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ls_blob_storage",
+							"type": "LinkedServiceReference"
+						},
+						"path": {
+							"value": "@pipeline().globalParameters.rootDir",
+							"type": "Expression"
+						}
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "HK_SOURCE_NAME",
+									"type": "String"
+								},
+								"sink": {
+									"name": "HK_SOURCE_NAME",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "HK_JOB_RUN_ID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "HK_JOB_RUN_ID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "HK_LAST_UPDATED_TIMESTAMP",
+									"type": "String"
+								},
+								"sink": {
+									"name": "HK_LAST_UPDATED_TIMESTAMP",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "PROMOTIONID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PROMOTIONID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PROMOTIONDESCRIPTION",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PROMOTIONDESCRIPTION",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PROMOTIONDETAILS",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PROMOTIONDETAILS",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CUSTACCOUNT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CUSTACCOUNT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CURRENCY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CURRENCY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ORDERSSTARTDATE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "ORDERSSTARTDATE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "ORDERSENDDATE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "ORDERSENDDATE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "SHIPMENTENDDATE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "SHIPMENTENDDATE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "REQUESTEDSHIPMENTENDDATE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "REQUESTEDSHIPMENTENDDATE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "PERFORMANCEENDDATE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "PERFORMANCEENDDATE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "PERFORMANCESTARTDATE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "PERFORMANCESTARTDATE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "SHIPMENTSTARTDATE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "SHIPMENTSTARTDATE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "REQUESTEDSHIPMENTSTARTDATE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "REQUESTEDSHIPMENTSTARTDATE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "TEMPLATE",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "TEMPLATE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "PROMOTIONSTATUS",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "PROMOTIONSTATUS",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "PROMOTIONPERIOD",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PROMOTIONPERIOD",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "MARKETINGOBJECTIVE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "MARKETINGOBJECTIVE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "OVERRIDDENSHIPQTY",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "OVERRIDDENSHIPQTY",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "LIFTPERCENT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "LIFTPERCENT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "BASEUNITS",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "BASEUNITS",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "MERCHANDISECOST",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "MERCHANDISECOST",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "QTYOVERRIDDEN",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "QTYOVERRIDDEN",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "HIERARCHYNAME",
+									"type": "String"
+								},
+								"sink": {
+									"name": "HIERARCHYNAME",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ACTIVITY",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "ACTIVITY",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "VERIFYPERFORMANCE",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "VERIFYPERFORMANCE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "UNITID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "UNITID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ENDOFPERIOD",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "ENDOFPERIOD",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "HCMWORKERID",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "HCMWORKERID",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "WFAPPROVALSTATUS",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "WFAPPROVALSTATUS",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "MODIFIEDDATETIME",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "MODIFIEDDATETIME",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "DEL_MODIFIEDTIME",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "DEL_MODIFIEDTIME",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "MODIFIEDBY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "MODIFIEDBY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "MODIFIEDTRANSACTIONID",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "MODIFIEDTRANSACTIONID",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "CREATEDDATETIME",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "CREATEDDATETIME",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "DEL_CREATEDTIME",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "DEL_CREATEDTIME",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "CREATEDBY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CREATEDBY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CREATEDTRANSACTIONID",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "CREATEDTRANSACTIONID",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "DATAAREAID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DATAAREAID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RECVERSION",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "RECVERSION",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "PARTITION",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "PARTITION",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "RECID",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "RECID",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "TPXDEALID",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "TPXDEALID",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "TPXDEALTYPE",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "TPXDEALTYPE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "MCSTAMDEALSTATUS",
+									"type": "String"
+								},
+								"sink": {
+									"name": "MCSTAMDEALSTATUS",
+									"type": "String"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_sql_server",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_src_table_name": "@pipeline().parameters.p_src_table_nm",
+							"p_src_schema_name": "@pipeline().parameters.p_src_schema_nm",
+							"p_ls_serverName": "@pipeline().globalParameters.nala_sql_serverName",
+							"p_ls_dbName": "@pipeline().globalParameters.nala_sql_dbName",
+							"p_ls_sqlUsername": "@pipeline().globalParameters.sql_userName",
+							"p_ls_sqlPassword": "@pipeline().globalParameters.sql_password"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_tgt_table_name": "@pipeline().parameters.p_tgt_raw_table_nm",
+							"p_tgt_schema_name": "@pipeline().parameters.p_tgt_raw_schema_nm",
+							"p_ls_DbName": "@pipeline().globalParameters.snow_rawDb",
+							"p_ls_Env": "@pipeline().globalParameters.environment"
+						}
+					}
+				]
+			},
+			{
+				"name": "TruncateStageTable",
+				"type": "Script",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_rawDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('TRUNCATE TABLE ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_rawDb,'.',pipeline().parameters.p_tgt_raw_schema_nm,'.',pipeline().parameters.p_tgt_raw_table_nm)",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"p_src_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA_STAGE"
+			},
+			"p_tgt_raw_table_nm": {
+				"type": "string",
+				"defaultValue": "TAMTRADEPROMOTION"
+			},
+			"p_tgt_raw_schema_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA_STAGE"
+			},
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "TAMTRADEPROMOTION"
+			},
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_temp_directory": {
+				"type": "string",
+				"defaultValue": "temp_files"
+			}
+		},
+		"variables": {
+			"v_prv_max_upd_timestamp": {
+				"type": "String"
+			},
+			"v_prv_max_upd_timestamp2": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "AXNALA_Staging"
+		},
+		"annotations": []
+	}
+}

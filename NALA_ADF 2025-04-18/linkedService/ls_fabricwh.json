@@ -1,0 +1,28 @@
+{
+	"name": "ls_fabricwh",
+	"properties": {
+		"annotations": [],
+		"type": "Warehouse",
+		"typeProperties": {
+			"endpoint": "6ydwy7hudzuehdk5i2dncxx5pe-5w3ifmnuop3uzbshitgni5bmlu.datawarehouse.fabric.microsoft.com  ",
+			"artifactId": "1f013d98-412c-4c20-a191-9fdeb1963560",
+			"workspaceId": "b182b6ed-73b4-4cf7-8647-44ccd4742c5d",
+			"tenant": "7c6c07f6-1ef4-4368-8d5d-4686d15efd79",
+			"servicePrincipalCredentialType": "ServicePrincipalKey",
+			"servicePrincipalId": "93e2cccd-796d-4534-8962-7755e0c60a44",
+			"servicePrincipalCredential": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "ls_key_vault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "fabric-d365spntoken"
+			}
+		},
+		"connectVia": {
+			"referenceName": "IR-Snowflake-NALA",
+			"type": "IntegrationRuntimeReference"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/linkedservices"
+}

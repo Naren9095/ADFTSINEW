@@ -1,0 +1,35 @@
+{
+	"name": "trg_ax_nala_cogs_itemcost_to_fact_cost_of_goods_sold",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "pp_ax_cogs_itemcost_to_fact_cost_of_goods_sold",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"p_tgt_raw_table_nm": "COGS",
+					"p_tgt_raw_schema_nm": "AX_NALA",
+					"p_src_directory": "business_files",
+					"p_src_file_nm": "COGS.xlsx",
+					"p_src_nm": "AXNALA",
+					"p_tgt_curate_table_nm": "FACT_COST_OF_GOODS_SOLD",
+					"p_tgt_curate_schema_nm": "GLOBAL",
+					"p_sheet_nm": "ItemCosts",
+					"p_src_code": "1"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2024-07-26T20:00:00",
+				"timeZone": "Eastern Standard Time"
+			}
+		}
+	}
+}

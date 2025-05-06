@@ -1,0 +1,24 @@
+{
+	"name": "trg_ax_account_payable_dependency",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "pp_facts_accounts_payable",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2024-09-27T04:00:00",
+				"timeZone": "Eastern Standard Time"
+			}
+		}
+	}
+}

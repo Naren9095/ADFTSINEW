@@ -1,0 +1,1883 @@
+{
+	"name": "pp_ax_wmsordertrans_to_fact_picking_line",
+	"properties": {
+		"activities": [
+			{
+				"name": "set_last_modified_date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkp_raw_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_prv_max_upd_timestamp",
+					"value": {
+						"value": "@coalesce(activity('lkp_raw_last_modified_date').output.firstRow.max_date, '1950-01-01 00:00:00')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "lkp_raw_last_modified_date",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SnowflakeSource",
+						"query": {
+							"value": "@concat('select max(to_varchar(LATEST_MODIFIEDDATETIME::timestamp, ''','yyyy-mm-dd hh24:mi:ss',''')) as max_date from ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_rawDb,'.',pipeline().parameters.p_tgt_raw_schema_nm, '.', pipeline().parameters.p_tgt_raw_table_nm)",
+							"type": "Expression"
+						},
+						"exportSettings": {
+							"type": "SnowflakeExportCopyCommand"
+						}
+					},
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_tgt_table_name": {
+								"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+								"type": "Expression"
+							},
+							"p_tgt_schema_name": {
+								"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_DbName": {
+								"value": "@pipeline().globalParameters.snow_rawDb",
+								"type": "Expression"
+							},
+							"p_ls_Env": {
+								"value": "@pipeline().globalParameters.environment",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "raw_to_curate_sp_call",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "switch_nala_d365",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_rawDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('CALL ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_auditDb,'.CONTROL.SP_TASK_INITIALIZE(','''',pipeline().RunId,'''',',','''',pipeline().globalParameters.environment,'''',',','''',pipeline().parameters.p_tgt_curate_table_nm,'''',',',pipeline().parameters.p_src_code,')')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "stored_procedure_failure_notification",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_adf_pipeline_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"subscription": {
+							"value": "@pipeline().globalParameters.subscriptionId",
+							"type": "Expression"
+						},
+						"resourceGroup": {
+							"value": "@pipeline().globalParameters.resourceGroup",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@coalesce(pipeline().RunId, -1)",
+							"type": "Expression"
+						},
+						"name": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"triggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"status": {
+							"value": "@activity('raw_to_curate_sp_call').Status",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@activity('raw_to_curate_sp_call').Error['message']",
+							"type": "Expression"
+						},
+						"executionEndTime": {
+							"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+							"type": "Expression"
+						},
+						"runDuration": {
+							"value": "@activity('raw_to_curate_sp_call').Duration",
+							"type": "Expression"
+						},
+						"teamWebhookUrl": {
+							"value": "@pipeline().globalParameters.teamsWebhookUrl",
+							"type": "Expression"
+						},
+						"notificationTime": {
+							"value": "@utcNow()",
+							"type": "Expression"
+						},
+						"taskName": {
+							"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+							"type": "Expression"
+						},
+						"taskStepNumber": {
+							"value": "@pipeline().parameters.p_src_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "switch_nala_d365",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "set_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.p_src_code",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "1",
+							"activities": [
+								{
+									"name": "sql_nala_to_raw",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": {
+												"value": "select\n\twot1.RECID,\n\twot1.CUSTOMER,\n\twot1.INVENTDIMID,\n\twot1.TOINVENTDIMID,\n\twot1.ITEMID,\n\twot1.DELIVERYPOSTALADDRESS,\n\twot1.INVENTTRANSREFID,\n\twot1.OPERATORWORKER,\n\twot1.EXPEDITIONSTATUS,\n\twot1.OPTIMIZEDPICKING,\n\twot1.PRERESERVED,\n\twot1.ISRESERVED,\n\twot1.RFS_PICKCOMPLETED,\n\twot1.CREATEDDATETIME,\n\twot1.DLVDATE,\n\twot1.EXPEDITIONTIME,\n\twot1.INVENTTRANSID,\n\twot1.DATAAREAID,\n\twot1.ORDERID,\n\twot1.ROUTEID,\n\twot1.QTY,\n\twot1.VOLUME,\n\twot1.MODIFIEDDATETIME,\n\two1.DLVMODE as WMSORDER_DLVMODE,\n\two1.DLVTERM as WMSORDER_DLVTERM,\n\two1.FREIGHTSLIPTYPE as WMSORDER_FREIGHTSLIPTYPE,\n\two1.STATUS as WMSORDER_STATUS,\n\two1.TYPE as WMSORDER_TYPE,\n\two1.FREIGHTZONE as WMSORDER_FREIGHTZONE,\n\two1.MODIFIEDDATETIME as WMSORDER_MODIFIEDDATETIME,\n\twpr1.PRINTMGMTSITEID as WMSPICKINGROUTE_PRINTMGMTSITEID,\n\twpr1.INVENTLOCATIONID as WMSPICKINGROUTE_INVENTLOCATIONID,\n\twpr1.PRIORITY as WMSPICKINGROUTE_PRIORITY,\n\twpr1.TRANSTYPE as WMSPICKINGROUTE_TRANSTYPE,\n\twpr1.SHIPMENTTYPE as WMSPICKINGROUTE_SHIPMENTTYPE,\n\twpr1.DLVDATE as WMSPICKINGROUTE_DLVDATE,\n\twpr1.MODIFIEDDATETIME as WMSPICKINGROUTE_MODIFIEDDATETIME,\n\ttet1.ENUMVALUELABEL as TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_EXPEDITIONSTATUS,\n\ttet2.ENUMVALUELABEL as TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_FREIGHTSLIPTYPE,\n\ttet3.ENUMVALUELABEL as TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_STATUS,\n\ttet4.ENUMVALUELABEL as TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_TYPE,\n\ttet5.ENUMVALUELABEL as TIMEXTENDERENUMTABLE5_ENUMVALUELABEL_TRANSTYPE,\n\ttet6.ENUMVALUELABEL as TIMEXTENDERENUMTABLE6_ENUMVALUELABEL_SHIPMENTTYPE,\n\tid1.TIMEZONE as INVENTDIM1_TIMEZONE,\n\tid1.INVENTDIM_MODIFIEDDATETIME as INVENTDIM1_INVENTDIM_MODIFIEDDATETIME,\n\tid1.INVENTSITE_MODIFIEDDATETIME as INVENTDIM1_INVENTSITE_MODIFIEDDATETIME,\n\tda1.TIMEZONE as DATAAREA1_TIMEZONE,\n\ttzi1.TIMEBIAS as TIMEZONEINFO1_TIMEBIAS,\n\t(\n\t\tSELECT\n\t\t\tMAX(LastUpdateDate)\n\t\tFROM\n\t\t\t(\n\t\t\t\tVALUES\n\t\t\t\t\t(wot1.MODIFIEDDATETIME),\n\t\t\t\t\t(isnull(wo1.MODIFIEDDATETIME, '1950-01-01')),\n\t\t\t\t\t(isnull(wpr1.MODIFIEDDATETIME, '1950-01-01')),\n\t\t\t\t\t(\n\t\t\t\t\t\tisnull(id1.INVENTDIM_MODIFIEDDATETIME, '1950-01-01')\n\t\t\t\t\t),\n\t\t\t\t\t(\n\t\t\t\t\t\tisnull(id1.INVENTSITE_MODIFIEDDATETIME, '1950-01-01')\n\t\t\t\t\t)\n\t\t\t) AS UpdateDate(LastUpdateDate)\n\t) AS LATEST_MODIFIEDDATETIME\nfrom\n\tdbo.WMSORDERTRANS wot1\n\tleft join dbo.WMSORDER wo1 on wot1.DATAAREAID = wo1.DATAAREAID\n\tand wot1.ORDERID = wo1.ORDERID\n\tleft join dbo.WMSPICKINGROUTE wpr1 on wot1.DATAAREAID = wpr1.DATAAREAID\n\tand wot1.ROUTEID = wpr1.PICKINGROUTEID\n\tleft join (\n\t\tselect\n\t\t\tENUMNAME,\n\t\t\tENUMVALUE,\n\t\t\tmax(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom\n\t\t\tdbo.TIMEXTENDERENUMTABLE\n\t\twhere\n\t\t\tENUMNAME = 'WMSExpeditionStatus'\n\t\tgroup by\n\t\t\tENUMNAME,\n\t\t\tENUMVALUE\n\t) tet1 on wot1.EXPEDITIONSTATUS = tet1.ENUMVALUE\n\tleft join (\n\t\tselect\n\t\t\tENUMNAME,\n\t\t\tENUMVALUE,\n\t\t\tmax(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom\n\t\t\tdbo.TIMEXTENDERENUMTABLE\n\t\twhere\n\t\t\tENUMNAME = 'FreightSlipType'\n\t\tgroup by\n\t\t\tENUMNAME,\n\t\t\tENUMVALUE\n\t) tet2 on wo1.FREIGHTSLIPTYPE = tet2.ENUMVALUE\n\tleft join (\n\t\tselect\n\t\t\tENUMNAME,\n\t\t\tENUMVALUE,\n\t\t\tmax(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom\n\t\t\tdbo.TIMEXTENDERENUMTABLE\n\t\twhere\n\t\t\tENUMNAME = 'WMSOrderStatus'\n\t\tgroup by\n\t\t\tENUMNAME,\n\t\t\tENUMVALUE\n\t) tet3 on wo1.STATUS = tet3.ENUMVALUE\n\tleft join (\n\t\tselect\n\t\t\tENUMNAME,\n\t\t\tENUMVALUE,\n\t\t\tmax(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom\n\t\t\tdbo.TIMEXTENDERENUMTABLE\n\t\twhere\n\t\t\tENUMNAME = 'WMSOrderType'\n\t\tgroup by\n\t\t\tENUMNAME,\n\t\t\tENUMVALUE\n\t) tet4 on wo1.TYPE = tet4.ENUMVALUE\n\tleft join (\n\t\tselect\n\t\t\tENUMNAME,\n\t\t\tENUMVALUE,\n\t\t\tmax(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom\n\t\t\tdbo.TIMEXTENDERENUMTABLE\n\t\twhere\n\t\t\tENUMNAME = 'InventTransType'\n\t\tgroup by\n\t\t\tENUMNAME,\n\t\t\tENUMVALUE\n\t) tet5 on wpr1.TRANSTYPE = tet5.ENUMVALUE\n\tleft join (\n\t\tselect\n\t\t\tENUMNAME,\n\t\t\tENUMVALUE,\n\t\t\tmax(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom\n\t\t\tdbo.TIMEXTENDERENUMTABLE\n\t\twhere\n\t\t\tENUMNAME = 'WMSShipmentType'\n\t\tgroup by\n\t\t\tENUMNAME,\n\t\t\tENUMVALUE\n\t) tet6 on wpr1.SHIPMENTTYPE = tet6.ENUMVALUE\n\tleft join (\n\t\tselect\n\t\t\tid20.DATAAREAID,\n\t\t\tid20.INVENTDIMID,\n\t\t\tmax(is20.TIMEZONE) over (partition by id20.DATAAREAID, id20.INVENTDIMID) as TIMEZONE,\n\t\t\tmax(id20.MODIFIEDDATETIME) over (partition by id20.DATAAREAID, id20.INVENTDIMID) as INVENTDIM_MODIFIEDDATETIME,\n\t\t\tmax(is20.MODIFIEDDATETIME) over (partition by id20.DATAAREAID, id20.INVENTDIMID) as INVENTSITE_MODIFIEDDATETIME\n\t\tfrom\n\t\t\tdbo.INVENTDIM id20\n\t\t\tleft join dbo.INVENTSITE is20 on id20.DATAAREAID = is20.DATAAREAID\n\t\t\tand id20.INVENTSITEID = is20.SITEID\n\t) id1 on wot1.DATAAREAID = id1.DATAAREAID\n\tand wot1.INVENTDIMID = id1.INVENTDIMID\n\tleft join dbo.DATAAREA da1 on wot1.DATAAREAID = da1.ID\n\tleft join dbo.TIMEZONEINFO tzi1 on wot1.CREATEDDATETIME >= tzi1.STARTDATE\n\tand wot1.CREATEDDATETIME < tzi1.ENDDATE\n\tand isnull(id1.TIMEZONE, da1.TIMEZONE) = tzi1.TIMEZONEID\n\twhere \n\t(\n\t\tSELECT\n\t\t\tMAX(LastUpdateDate)\n\t\tFROM\n\t\t\t(\n\t\t\t\tVALUES\n\t\t\t\t\t(wot1.MODIFIEDDATETIME),\n\t\t\t\t\t(isnull(wo1.MODIFIEDDATETIME, '1950-01-01')),\n\t\t\t\t\t(isnull(wpr1.MODIFIEDDATETIME, '1950-01-01')),\n\t\t\t\t\t(\n\t\t\t\t\t\tisnull(id1.INVENTDIM_MODIFIEDDATETIME, '1950-01-01')\n\t\t\t\t\t),\n\t\t\t\t\t(\n\t\t\t\t\t\tisnull(id1.INVENTSITE_MODIFIEDDATETIME, '1950-01-01')\n\t\t\t\t\t)\n\t\t\t) AS UpdateDate(LastUpdateDate)\n\t) > '@{variables('v_prv_max_upd_timestamp')}' ",
+												"type": "Expression"
+											},
+											"queryTimeout": "08:20:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "SnowflakeSink",
+											"importSettings": {
+												"type": "SnowflakeImportCopyCommand"
+											}
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ls_blob_storage",
+												"type": "LinkedServiceReference"
+											},
+											"path": {
+												"value": "@pipeline().globalParameters.rootDir",
+												"type": "Expression"
+											},
+											"enableCompression": true
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "RECID",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "RECID",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTOMER",
+														"type": "String"
+													},
+													"sink": {
+														"name": "CUSTOMER",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIMID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTDIMID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TOINVENTDIMID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TOINVENTDIMID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ITEMID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ITEMID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DELIVERYPOSTALADDRESS",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "DELIVERYPOSTALADDRESS",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTTRANSREFID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTTRANSREFID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "OPERATORWORKER",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "OPERATORWORKER",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "EXPEDITIONSTATUS",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "EXPEDITIONSTATUS",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "OPTIMIZEDPICKING",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "OPTIMIZEDPICKING",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PRERESERVED",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "PRERESERVED",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "ISRESERVED",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "ISRESERVED",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "RFS_PICKCOMPLETED",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "RFS_PICKCOMPLETED",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "CREATEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "CREATEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "DLVDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "DLVDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "EXPEDITIONTIME",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "EXPEDITIONTIME",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTTRANSID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTTRANSID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DATAAREAID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "DATAAREAID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ORDERID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ORDERID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ROUTEID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ROUTEID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "QTY",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "QTY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "VOLUME",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "VOLUME",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSORDER_DLVMODE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "WMSORDER_DLVMODE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSORDER_DLVTERM",
+														"type": "String"
+													},
+													"sink": {
+														"name": "WMSORDER_DLVTERM",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSORDER_FREIGHTSLIPTYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "WMSORDER_FREIGHTSLIPTYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSORDER_STATUS",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "WMSORDER_STATUS",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSORDER_TYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "WMSORDER_TYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSORDER_FREIGHTZONE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "WMSORDER_FREIGHTZONE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSORDER_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "WMSORDER_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSPICKINGROUTE_PRINTMGMTSITEID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "WMSPICKINGROUTE_PRINTMGMTSITEID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSPICKINGROUTE_INVENTLOCATIONID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "WMSPICKINGROUTE_INVENTLOCATIONID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSPICKINGROUTE_PRIORITY",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "WMSPICKINGROUTE_PRIORITY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSPICKINGROUTE_TRANSTYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "WMSPICKINGROUTE_TRANSTYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSPICKINGROUTE_SHIPMENTTYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "WMSPICKINGROUTE_SHIPMENTTYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSPICKINGROUTE_DLVDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "WMSPICKINGROUTE_DLVDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSPICKINGROUTE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "WMSPICKINGROUTE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_EXPEDITIONSTATUS",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_EXPEDITIONSTATUS",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_FREIGHTSLIPTYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_FREIGHTSLIPTYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_STATUS",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_STATUS",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_TYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_TYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE5_ENUMVALUELABEL_TRANSTYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE5_ENUMVALUELABEL_TRANSTYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE6_ENUMVALUELABEL_SHIPMENTTYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE6_ENUMVALUELABEL_SHIPMENTTYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM1_TIMEZONE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "INVENTDIM1_TIMEZONE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM1_INVENTDIM_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTDIM1_INVENTDIM_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM1_INVENTSITE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTDIM1_INVENTSITE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "DATAAREA1_TIMEZONE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "DATAAREA1_TIMEZONE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEZONEINFO1_TIMEBIAS",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "TIMEZONEINFO1_TIMEBIAS",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												}
+											]
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_sql_server",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_src_table_name": {
+													"value": "@pipeline().parameters.p_src_table_nm",
+													"type": "Expression"
+												},
+												"p_src_schema_name": {
+													"value": "@pipeline().parameters.p_src_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_serverName": {
+													"value": "@pipeline().globalParameters.nala_sql_serverName",
+													"type": "Expression"
+												},
+												"p_ls_dbName": {
+													"value": "@pipeline().globalParameters.nala_sql_dbName",
+													"type": "Expression"
+												},
+												"p_ls_sqlUsername": {
+													"value": "@pipeline().globalParameters.sql_userName",
+													"type": "Expression"
+												},
+												"p_ls_sqlPassword": {
+													"value": "@pipeline().globalParameters.sql_password",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_snowflake",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_tgt_table_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+													"type": "Expression"
+												},
+												"p_tgt_schema_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_DbName": {
+													"value": "@pipeline().globalParameters.snow_rawDb",
+													"type": "Expression"
+												},
+												"p_ls_Env": {
+													"value": "@pipeline().globalParameters.environment",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "nala_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "sql_nala_to_raw",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('sql_nala_to_raw').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('sql_nala_to_raw').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('sql_nala_to_raw').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('sql_nala_to_raw').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											},
+											"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+											"taskStepNumber": {
+												"value": "@pipeline().parameters.p_src_code",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_nala_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "nala_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('sql_nala_to_raw').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						},
+						{
+							"value": "3",
+							"activities": [
+								{
+									"name": "sql_d365_to_raw",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "WarehouseSource",
+											"additionalColumns": [
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": {
+												"value": "@Concat('select\n\twot1.recid as RECID,\n\twot1.customer as CUSTOMER,\n\twot1.inventdimid as INVENTDIMID,\n\twot1.toinventdimid as TOINVENTDIMID,\n\twot1.itemid as ITEMID,\n\twot1.deliverypostaladdress as DELIVERYPOSTALADDRESS,\n\twot1.inventtransrefid as INVENTTRANSREFID,\n\twot1.operatorworker as OPERATORWORKER,\n\twot1.expeditionstatus as EXPEDITIONSTATUS,\n\twot1.optimizedpicking as OPTIMIZEDPICKING,\n\twot1.prereserved as PRERESERVED,\n\twot1.isreserved as ISRESERVED,\n\t'''' as RFS_PICKCOMPLETED,\n\twot1.createddatetime as CREATEDDATETIME,\n\twot1.dlvdate as DLVDATE,\n\twot1.expeditiontime as EXPEDITIONTIME,\n\twot1.inventtransid as INVENTTRANSID,\n\twot1.dataareaid as DATAAREAID,\n\twot1.orderid as ORDERID,\n\twot1.routeid as ROUTEID,\n\twot1.qty as QTY,\n\twot1.volume as VOLUME,\n\twot1.modifieddatetime,\n\two1.dlvmode as WMSORDER_DLVMODE,\n\two1.dlvterm as WMSORDER_DLVTERM,\n\two1.freightsliptype as WMSORDER_FREIGHTSLIPTYPE,\n\two1.status as WMSORDER_STATUS,\n\two1.type as WMSORDER_TYPE,\n\two1.freightzone as WMSORDER_FREIGHTZONE,\n\two1.modifieddatetime as WMSORDER_MODIFIEDDATETIME,\n\twpr1.printmgmtsiteid as WMSPICKINGROUTE_PRINTMGMTSITEID,\n\twpr1.inventlocationid as WMSPICKINGROUTE_INVENTLOCATIONID,\n\twpr1.priority as WMSPICKINGROUTE_PRIORITY,\n\twpr1.transtype as WMSPICKINGROUTE_TRANSTYPE,\n\twpr1.shipmenttype as WMSPICKINGROUTE_SHIPMENTTYPE,\n\twpr1.dlvdate as WMSPICKINGROUTE_DLVDATE,\n\twpr1.modifieddatetime as WMSPICKINGROUTE_MODIFIEDDATETIME,\n\ttet1.ENUMVALUELABEL as TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_EXPEDITIONSTATUS,\n\ttet2.ENUMVALUELABEL as TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_FREIGHTSLIPTYPE,\n\ttet3.ENUMVALUELABEL as TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_STATUS,\n\ttet4.ENUMVALUELABEL as TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_TYPE,\n\ttet5.ENUMVALUELABEL as TIMEXTENDERENUMTABLE5_ENUMVALUELABEL_TRANSTYPE,\n\ttet6.ENUMVALUELABEL as TIMEXTENDERENUMTABLE6_ENUMVALUELABEL_SHIPMENTTYPE,\n\tid1.TIMEZONE as INVENTDIM1_TIMEZONE,\n\tid1.INVENTDIM_MODIFIEDDATETIME as INVENTDIM1_INVENTDIM_MODIFIEDDATETIME,\n\tid1.INVENTSITE_MODIFIEDDATETIME as INVENTDIM1_INVENTSITE_MODIFIEDDATETIME,\n\tda1.timezone as DATAAREA1_TIMEZONE,\n\ttzi1.timebias as TIMEZONEINFO1_TIMEBIAS,\n\t(\n\t\tSELECT\n\t\t\tMAX(LastUpdateDate)\n\t\tFROM\n\t\t\t(\n\t\t\t\tVALUES\n\t\t\t\t\t(wot1.modifieddatetime),\n\t\t\t\t\t(isnull(wo1.modifieddatetime, ''1950-01-01'')),\n\t\t\t\t\t(isnull(wpr1.modifieddatetime, ''1950-01-01'')),\n\t\t\t\t\t(\n\t\t\t\t\t\tisnull(id1.INVENTDIM_MODIFIEDDATETIME, ''1950-01-01'')\n\t\t\t\t\t),\n\t\t\t\t\t(\n\t\t\t\t\t\tisnull(id1.INVENTSITE_MODIFIEDDATETIME, ''1950-01-01'')\n\t\t\t\t\t)\n\t\t\t) AS UpdateDate(LastUpdateDate)\n\t) AS LATEST_MODIFIEDDATETIME\nfrom '\n,pipeline().globalParameters.d365_dbName,'.','wmsordertrans wot1\n\tleft join ',pipeline().globalParameters.d365_dbName,'.','wmsorder wo1 on wot1.dataareaid = wo1.dataareaid\n\tand wot1.orderid = wo1.orderid\n\tleft join ',pipeline().globalParameters.d365_dbName,'.','wmspickingroute wpr1 on wot1.dataareaid = wpr1.dataareaid\n\tand wot1.routeid = wpr1.pickingrouteid\n\tleft join (\n\t\tselect\n\t\t\tenumname,\n\t\t\tenumvalue,\n\t\t\tmax(enumvaluelabel) as ENUMVALUELABEL\n\t\tfrom\n\t\t\t',pipeline().globalParameters.d365_dbName,'.','timextenderenumtable\n\t\twhere\n\t\t\tenumname = ''WMSExpeditionStatus''\n\t\tgroup by\n\t\t\tenumname,\n\t\t\tenumvalue\n\t) tet1 on wot1.expeditionstatus = tet1.enumvalue\n\tleft join (\n\t\tselect\n\t\t\tenumname,\n\t\t\tenumvalue,\n\t\t\tmax(enumvaluelabel) as ENUMVALUELABEL\n\t\tfrom\n\t\t\t',pipeline().globalParameters.d365_dbName,'.','timextenderenumtable\n\t\twhere\n\t\t\tenumname = ''FreightSlipType''\n\t\tgroup by\n\t\t\tenumname,\n\t\t\tenumvalue\n\t) tet2 on wo1.freightsliptype = tet2.enumvalue\n\tleft join (\n\t\tselect\n\t\t\tenumname,\n\t\t\tenumvalue,\n\t\t\tmax(enumvaluelabel) as ENUMVALUELABEL\n\t\tfrom\n\t\t\t',pipeline().globalParameters.d365_dbName,'.','timextenderenumtable\n\t\twhere\n\t\t\tenumname = ''WMSOrderStatus''\n\t\tgroup by\n\t\t\tenumname,\n\t\t\tenumvalue\n\t) tet3 on wo1.status = tet3.enumvalue\n\tleft join (\n\t\tselect\n\t\t\tenumname,\n\t\t\tenumvalue,\n\t\t\tmax(enumvaluelabel) as ENUMVALUELABEL\n\t\tfrom\n\t\t\t',pipeline().globalParameters.d365_dbName,'.','timextenderenumtable\n\t\twhere\n\t\t\tenumname = ''WMSOrderType''\n\t\tgroup by\n\t\t\tenumname,\n\t\t\tenumvalue\n\t) tet4 on wo1.type = tet4.enumvalue\n\tleft join (\n\t\tselect\n\t\t\tenumname,\n\t\t\tenumvalue,\n\t\t\tmax(enumvaluelabel) as ENUMVALUELABEL\n\t\tfrom\n\t\t\t',pipeline().globalParameters.d365_dbName,'.','timextenderenumtable\n\t\twhere\n\t\t\tenumname = ''InventTransType''\n\t\tgroup by\n\t\t\tenumname,\n\t\t\tenumvalue\n\t) tet5 on wpr1.transtype = tet5.enumvalue\n\tleft join (\n\t\tselect\n\t\t\tenumname,\n\t\t\tenumvalue,\n\t\t\tmax(enumvaluelabel) as ENUMVALUELABEL\n\t\tfrom\n\t\t\t',pipeline().globalParameters.d365_dbName,'.','timextenderenumtable\n\t\twhere\n\t\t\tenumname = ''WMSShipmentType''\n\t\tgroup by\n\t\t\tenumname,\n\t\t\tenumvalue\n\t) tet6 on wpr1.shipmenttype = tet6.enumvalue\n\tleft join (\n\t\tselect\n\t\t\tid20.dataareaid,\n\t\t\tid20.inventdimid,\n\t\t\tmax(is20.timezone) over (partition by id20.dataareaid, id20.inventdimid) as TIMEZONE,\n\t\t\tmax(id20.modifieddatetime) over (partition by id20.dataareaid, id20.inventdimid) as INVENTDIM_MODIFIEDDATETIME,\n\t\t\tmax(is20.modifieddatetime) over (partition by id20.dataareaid, id20.inventdimid) as INVENTSITE_MODIFIEDDATETIME\n\t\tfrom\n\t\t\t',pipeline().globalParameters.d365_dbName,'.','inventdim id20\n\t\t\tleft join ',pipeline().globalParameters.d365_dbName,'.','inventsite is20 on id20.dataareaid = is20.dataareaid\n\t\t\tand id20.inventsiteid = is20.siteid\n\t) id1 on wot1.dataareaid = id1.dataareaid\n\tand wot1.inventdimid = id1.inventdimid\n\tleft join ',pipeline().globalParameters.d365_dbName,'.','dataarea da1 on wot1.dataareaid = da1.Id\n\tleft join ',pipeline().globalParameters.d365_dbName,'.','timezoneinfo tzi1 on wot1.createddatetime >= tzi1.startdate\n\tand wot1.createddatetime < tzi1.enddate\n\tand isnull(id1.TIMEZONE, da1.timezone) = tzi1.timezoneid\n\twhere \n\t(\n\t\tSELECT\n\t\t\tMAX(LastUpdateDate)\n\t\tFROM\n\t\t\t(\n\t\t\t\tVALUES\n\t\t\t\t\t(wot1.modifieddatetime),\n\t\t\t\t\t(isnull(wo1.modifieddatetime, ''1950-01-01'')),\n\t\t\t\t\t(isnull(wpr1.modifieddatetime, ''1950-01-01'')),\n\t\t\t\t\t(\n\t\t\t\t\t\tisnull(id1.INVENTDIM_MODIFIEDDATETIME, ''1950-01-01'')\n\t\t\t\t\t),\n\t\t\t\t\t(\n\t\t\t\t\t\tisnull(id1.INVENTSITE_MODIFIEDDATETIME, ''1950-01-01'')\n\t\t\t\t\t)\n\t\t\t) AS UpdateDate(LastUpdateDate)\n\t)  > ','''',variables('v_prv_max_upd_timestamp'),'''')\n\t\n",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "SnowflakeSink",
+											"importSettings": {
+												"type": "SnowflakeImportCopyCommand"
+											}
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ls_blob_storage",
+												"type": "LinkedServiceReference"
+											},
+											"path": {
+												"value": "@pipeline().globalParameters.rootDir",
+												"type": "Expression"
+											},
+											"enableCompression": true
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "RECID",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "RECID",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTOMER",
+														"type": "String"
+													},
+													"sink": {
+														"name": "CUSTOMER",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIMID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTDIMID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TOINVENTDIMID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TOINVENTDIMID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ITEMID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ITEMID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DELIVERYPOSTALADDRESS",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "DELIVERYPOSTALADDRESS",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTTRANSREFID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTTRANSREFID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "OPERATORWORKER",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "OPERATORWORKER",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "EXPEDITIONSTATUS",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "EXPEDITIONSTATUS",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "OPTIMIZEDPICKING",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "OPTIMIZEDPICKING",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PRERESERVED",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "PRERESERVED",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "ISRESERVED",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "ISRESERVED",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "RFS_PICKCOMPLETED",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "RFS_PICKCOMPLETED",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "CREATEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "CREATEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "DLVDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "DLVDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "EXPEDITIONTIME",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "EXPEDITIONTIME",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTTRANSID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTTRANSID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DATAAREAID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "DATAAREAID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ORDERID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ORDERID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ROUTEID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ROUTEID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "QTY",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "QTY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "VOLUME",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "VOLUME",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSORDER_DLVMODE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "WMSORDER_DLVMODE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSORDER_DLVTERM",
+														"type": "String"
+													},
+													"sink": {
+														"name": "WMSORDER_DLVTERM",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSORDER_FREIGHTSLIPTYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "WMSORDER_FREIGHTSLIPTYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSORDER_STATUS",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "WMSORDER_STATUS",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSORDER_TYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "WMSORDER_TYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSORDER_FREIGHTZONE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "WMSORDER_FREIGHTZONE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSORDER_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "WMSORDER_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSPICKINGROUTE_PRINTMGMTSITEID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "WMSPICKINGROUTE_PRINTMGMTSITEID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSPICKINGROUTE_INVENTLOCATIONID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "WMSPICKINGROUTE_INVENTLOCATIONID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSPICKINGROUTE_PRIORITY",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "WMSPICKINGROUTE_PRIORITY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSPICKINGROUTE_TRANSTYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "WMSPICKINGROUTE_TRANSTYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSPICKINGROUTE_SHIPMENTTYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "WMSPICKINGROUTE_SHIPMENTTYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSPICKINGROUTE_DLVDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "WMSPICKINGROUTE_DLVDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "WMSPICKINGROUTE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "WMSPICKINGROUTE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_EXPEDITIONSTATUS",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_EXPEDITIONSTATUS",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_FREIGHTSLIPTYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_FREIGHTSLIPTYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_STATUS",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_STATUS",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_TYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_TYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE5_ENUMVALUELABEL_TRANSTYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE5_ENUMVALUELABEL_TRANSTYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE6_ENUMVALUELABEL_SHIPMENTTYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE6_ENUMVALUELABEL_SHIPMENTTYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM1_TIMEZONE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "INVENTDIM1_TIMEZONE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM1_INVENTDIM_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTDIM1_INVENTDIM_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM1_INVENTSITE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTDIM1_INVENTSITE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "DATAAREA1_TIMEZONE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "DATAAREA1_TIMEZONE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEZONEINFO1_TIMEBIAS",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "TIMEZONEINFO1_TIMEBIAS",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_fabric_wh",
+											"type": "DatasetReference"
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_snowflake",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_tgt_table_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+													"type": "Expression"
+												},
+												"p_tgt_schema_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_DbName": {
+													"value": "@pipeline().globalParameters.snow_rawDb",
+													"type": "Expression"
+												},
+												"p_ls_Env": {
+													"value": "@pipeline().globalParameters.environment",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "d365_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "sql_d365_to_raw",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('sql_d365_to_raw').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('sql_d365_to_raw').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('sql_d365_to_raw').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('sql_d365_to_raw').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											},
+											"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+											"taskStepNumber": {
+												"value": "@pipeline().parameters.p_src_code",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_d365_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "d365_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('sql_d365_to_raw').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "pipeline_execution_notification",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(equals(activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE'],'TRUE'),bool('TRUE'), bool('FALSE'))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "pp_stored_procedure_failure_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@toUpper('failed')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": {
+										"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+										"type": "Expression"
+									},
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "curate_load_failure",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "pp_stored_procedure_failure_notification",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": {
+									"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+									"type": "Expression"
+								},
+								"errorCode": "500"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "stored_procedure_success_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@activity('raw_to_curate_sp_call').Status",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat(pipeline().parameters.p_tgt_curate_table_nm, ' is successfully loaded')",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": {
+										"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+										"type": "Expression"
+									},
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"p_src_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA"
+			},
+			"p_tgt_curate_table_nm": {
+				"type": "string",
+				"defaultValue": "FACT_PICKING_LINE"
+			},
+			"p_tgt_raw_table_nm": {
+				"type": "string",
+				"defaultValue": "WMSORDERTRANS"
+			},
+			"p_tgt_raw_schema_nm": {
+				"type": "string",
+				"defaultValue": "AX_NALA"
+			},
+			"p_tgt_curate_schema_nm": {
+				"type": "string",
+				"defaultValue": "GLOBAL"
+			},
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "WMSORDERTRANS"
+			},
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_src_code": {
+				"type": "string",
+				"defaultValue": "1"
+			}
+		},
+		"variables": {
+			"v_prv_max_upd_timestamp": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-06-03T10:51:02Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,34 @@
+{
+	"name": "trg_ax_nala_vendpaymmodespec_to_dim_vendor_payment_specification",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "pp_ax_vendpaymmodespec_to_dim_vendor_payment_specification",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"p_src_table_nm": "VENDPAYMMODESPEC",
+					"p_src_schema_nm": "dbo",
+					"p_tgt_raw_table_nm": "VENDPAYMMODESPEC",
+					"p_tgt_raw_schema_nm": "AX_NALA",
+					"p_tgt_curate_table_nm": "DIM_VENDOR_PAYMENT_SPECIFICATION",
+					"p_tgt_curate_schema_nm": "GLOBAL",
+					"p_src_nm": "AXNALA",
+					"p_src_code": "1"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2024-09-18T05:00:00",
+				"timeZone": "Eastern Standard Time"
+			}
+		}
+	}
+}

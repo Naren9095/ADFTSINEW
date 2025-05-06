@@ -1,0 +1,1190 @@
+{
+	"name": "pp_ax_shipcarriertable_to_dim_shipping_carrier",
+	"properties": {
+		"activities": [
+			{
+				"name": "raw_to_curate_sp_call",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "switch_nala_d365",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_rawDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('CALL ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_auditDb,'.CONTROL.SP_TASK_INITIALIZE(','''',pipeline().RunId,'''',',','''',pipeline().globalParameters.environment,'''',',','''',pipeline().parameters.p_tgt_curate_table_nm,'''',',',pipeline().parameters.p_src_code,')')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "stored_procedure_failure_notification",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_adf_pipeline_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"subscription": {
+							"value": "@pipeline().globalParameters.subscriptionId",
+							"type": "Expression"
+						},
+						"resourceGroup": {
+							"value": "@pipeline().globalParameters.resourceGroup",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@coalesce(pipeline().RunId, -1)",
+							"type": "Expression"
+						},
+						"name": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"triggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"status": {
+							"value": "@activity('raw_to_curate_sp_call').Status",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@activity('raw_to_curate_sp_call').Error['message']",
+							"type": "Expression"
+						},
+						"executionEndTime": {
+							"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+							"type": "Expression"
+						},
+						"runDuration": {
+							"value": "@activity('raw_to_curate_sp_call').Duration",
+							"type": "Expression"
+						},
+						"teamWebhookUrl": {
+							"value": "@pipeline().globalParameters.teamsWebhookUrl",
+							"type": "Expression"
+						},
+						"notificationTime": {
+							"value": "@utcNow()",
+							"type": "Expression"
+						},
+						"taskName": {
+							"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+							"type": "Expression"
+						},
+						"taskStepNumber": {
+							"value": "@pipeline().parameters.p_src_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "switch_nala_d365",
+				"type": "Switch",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.p_src_code",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "1",
+							"activities": [
+								{
+									"name": "sql_nala_to_raw",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "LAST_MODIFIED_DATE",
+													"value": {
+														"value": "@pipeline().TriggerTime",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": "select \r\nsct1.DATAAREAID as DATAAREAID,\r\nsct1.CARRIERID as CARRIERID,\r\nsct1.CARRIERNAME as CARRIERNAME,\r\nsct1.CARRIERSERVICEDESCRIPTION as CARRIERSERVICEDESCRIPTION,\r\nscc1.CARRIERNAME as SHIPCARRIERCOMPANY_CARRIERNAME,\r\nscc1.ANCILLARYCHARGE as SHIPCARRIERCOMPANY_ANCILLARYCHARGE,\r\nscc1.CORECHARGE as SHIPCARRIERCOMPANY_CORECHARGE,\r\nscc1.FUELSURCHAGE as SHIPCARRIERCOMPANY_FUELSURCHAGE,\r\nscc1.HANDLINGCHARGE as SHIPCARRIERCOMPANY_HANDLINGCHARGE,\r\nscca1.CARRIERNAME as SHIPCARRIERCOMPANYACCOUNTS_CARRIERNAME,\r\nscca1.ACCOUNTNUMBER as SHIPCARRIERCOMPANYACCOUNTS_ACCOUNTNUMBER,\r\nscca1.CURRENCYCODE as SHIPCARRIERCOMPANYACCOUNTS_CURRENCYCODE,\r\nc1.TXT as CURRENCY_TXT,\r\nmt1.TXT as MARKUPTABLE1_TXT,\r\nmt2.TXT as MARKUPTABLE2_TXT,\r\nmt3.TXT as MARKUPTABLE3_TXT,\r\nmt4.TXT as MARKUPTABLE4_TXT\r\nfrom\r\ndbo.SHIPCARRIERTABLE sct1\r\nleft join dbo.SHIPCARRIERCOMPANY scc1 on\r\n\tsct1.DATAAREAID = scc1.DATAAREAID and\r\n\tsct1.CARRIERNAME = scc1.CARRIERNAME\r\nleft join dbo.SHIPCARRIERCOMPANYACCOUNTS scca1 on\r\n\tscc1.DATAAREAID = scca1.DATAAREAID and\r\n\tscc1.CARRIERNAME = scca1.CARRIERNAME\r\nleft join dbo.CURRENCY c1 on\r\n\tscca1.CURRENCYCODE = c1.CURRENCYCODE\r\nleft join dbo.MARKUPTABLE mt1 on\r\n\tmt1.MODULETYPE = 1 and\r\n\tscc1.DATAAREAID = mt1.DATAAREAID and\r\n\tscc1.ANCILLARYCHARGE = mt1.MARKUPCODE\r\nleft join dbo.MARKUPTABLE mt2 on\r\n\tmt2.MODULETYPE = 1 and\r\n\tscc1.DATAAREAID = mt2.DATAAREAID and\r\n\tscc1.CORECHARGE = mt2.MARKUPCODE\r\nleft join dbo.MARKUPTABLE mt3 on\r\n\tmt3.MODULETYPE = 1 and\r\n\tscc1.DATAAREAID = mt3.DATAAREAID and\r\n\tscc1.FUELSURCHAGE = mt3.MARKUPCODE\r\nleft join dbo.MARKUPTABLE mt4 on\r\n\tmt4.MODULETYPE = 1 and\r\n\tscc1.DATAAREAID = mt4.DATAAREAID and\r\n\tscc1.HANDLINGCHARGE = mt4.MARKUPCODE",
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "SnowflakeSink",
+											"importSettings": {
+												"type": "SnowflakeImportCopyCommand"
+											}
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ls_blob_storage",
+												"type": "LinkedServiceReference"
+											},
+											"path": {
+												"value": "@pipeline().globalParameters.rootDir",
+												"type": "Expression"
+											},
+											"enableCompression": true
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DATAAREAID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "DATAAREAID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "CARRIERID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "CARRIERID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "CARRIERNAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "CARRIERNAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "CARRIERSERVICEDESCRIPTION",
+														"type": "String"
+													},
+													"sink": {
+														"name": "CARRIERSERVICEDESCRIPTION",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERCOMPANY_CARRIERNAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "SHIPCARRIERCOMPANY_CARRIERNAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERCOMPANY_ANCILLARYCHARGE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "SHIPCARRIERCOMPANY_ANCILLARYCHARGE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERCOMPANY_CORECHARGE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "SHIPCARRIERCOMPANY_CORECHARGE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERCOMPANY_FUELSURCHAGE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "SHIPCARRIERCOMPANY_FUELSURCHAGE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERCOMPANY_HANDLINGCHARGE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "SHIPCARRIERCOMPANY_HANDLINGCHARGE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERCOMPANYACCOUNTS_CARRIERNAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "SHIPCARRIERCOMPANYACCOUNTS_CARRIERNAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERCOMPANYACCOUNTS_ACCOUNTNUMBER",
+														"type": "String"
+													},
+													"sink": {
+														"name": "SHIPCARRIERCOMPANYACCOUNTS_ACCOUNTNUMBER",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERCOMPANYACCOUNTS_CURRENCYCODE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "SHIPCARRIERCOMPANYACCOUNTS_CURRENCYCODE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "CURRENCY_TXT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "CURRENCY_TXT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "MARKUPTABLE1_TXT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "MARKUPTABLE1_TXT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "MARKUPTABLE2_TXT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "MARKUPTABLE2_TXT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "MARKUPTABLE3_TXT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "MARKUPTABLE3_TXT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "MARKUPTABLE4_TXT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "MARKUPTABLE4_TXT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LAST_MODIFIED_DATE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												}
+											]
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_sql_server",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_src_table_name": {
+													"value": "@pipeline().parameters.p_src_table_nm",
+													"type": "Expression"
+												},
+												"p_src_schema_name": {
+													"value": "@pipeline().parameters.p_src_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_serverName": {
+													"value": "@pipeline().globalParameters.nala_sql_serverName",
+													"type": "Expression"
+												},
+												"p_ls_dbName": {
+													"value": "@pipeline().globalParameters.nala_sql_dbName",
+													"type": "Expression"
+												},
+												"p_ls_sqlUsername": {
+													"value": "@pipeline().globalParameters.sql_userName",
+													"type": "Expression"
+												},
+												"p_ls_sqlPassword": {
+													"value": "@pipeline().globalParameters.sql_password",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_snowflake",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_tgt_table_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+													"type": "Expression"
+												},
+												"p_tgt_schema_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_DbName": {
+													"value": "@pipeline().globalParameters.snow_rawDb",
+													"type": "Expression"
+												},
+												"p_ls_Env": {
+													"value": "@pipeline().globalParameters.environment",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "nala_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "sql_nala_to_raw",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('sql_nala_to_raw').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('sql_nala_to_raw').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('sql_nala_to_raw').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('sql_nala_to_raw').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											},
+											"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+											"taskStepNumber": {
+												"value": "@pipeline().parameters.p_src_code",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_nala_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "nala_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('sql_nala_to_raw').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						},
+						{
+							"value": "3",
+							"activities": [
+								{
+									"name": "sql_d365_to_raw",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "WarehouseSource",
+											"additionalColumns": [
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "LAST_MODIFIED_DATE",
+													"value": {
+														"value": "@pipeline().TriggerTime",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": {
+												"value": "@concat('select \nsct1.dataareaid as DATAAREAID,\nsct1.carriercode as CARRIERID,\nsct1.carriercode as CARRIERNAME,\nsct1.name as CARRIERSERVICEDESCRIPTION,\nsct1.carriercode as SHIPCARRIERCOMPANY_CARRIERNAME,\n'''' AS SHIPCARRIERCOMPANY_ANCILLARYCHARGE,\n''''  AS SHIPCARRIERCOMPANY_CORECHARGE,\n'''' AS SHIPCARRIERCOMPANY_FUELSURCHAGE,\n''''  AS SHIPCARRIERCOMPANY_HANDLINGCHARGE,\n''''  AS SHIPCARRIERCOMPANYACCOUNTS_CARRIERNAME,\n'''' AS SHIPCARRIERCOMPANYACCOUNTS_ACCOUNTNUMBER,\n'''' AS SHIPCARRIERCOMPANYACCOUNTS_CURRENCYCODE,\n'''' AS CURRENCY_TXT,\n'''' AS MARKUPTABLE1_TXT,\n'''' AS MARKUPTABLE2_TXT,\n'''' AS MARKUPTABLE3_TXT,\n'''' AS MARKUPTABLE4_TXT\nfrom '\n,pipeline().globalParameters.d365_dbName,'.','tmscarrier sct1 \nwhere [IsDelete] <> 1\nor [IsDelete] is  null')",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "SnowflakeSink",
+											"importSettings": {
+												"type": "SnowflakeImportCopyCommand"
+											}
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ls_blob_storage",
+												"type": "LinkedServiceReference"
+											},
+											"path": {
+												"value": "@pipeline().globalParameters.rootDir",
+												"type": "Expression"
+											},
+											"enableCompression": true
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DATAAREAID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "DATAAREAID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "CARRIERID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "CARRIERID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "CARRIERNAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "CARRIERNAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "CARRIERSERVICEDESCRIPTION",
+														"type": "String"
+													},
+													"sink": {
+														"name": "CARRIERSERVICEDESCRIPTION",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERCOMPANY_CARRIERNAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "SHIPCARRIERCOMPANY_CARRIERNAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERCOMPANY_ANCILLARYCHARGE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "SHIPCARRIERCOMPANY_ANCILLARYCHARGE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERCOMPANY_CORECHARGE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "SHIPCARRIERCOMPANY_CORECHARGE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERCOMPANY_FUELSURCHAGE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "SHIPCARRIERCOMPANY_FUELSURCHAGE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERCOMPANY_HANDLINGCHARGE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "SHIPCARRIERCOMPANY_HANDLINGCHARGE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERCOMPANYACCOUNTS_CARRIERNAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "SHIPCARRIERCOMPANYACCOUNTS_CARRIERNAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERCOMPANYACCOUNTS_ACCOUNTNUMBER",
+														"type": "String"
+													},
+													"sink": {
+														"name": "SHIPCARRIERCOMPANYACCOUNTS_ACCOUNTNUMBER",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "SHIPCARRIERCOMPANYACCOUNTS_CURRENCYCODE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "SHIPCARRIERCOMPANYACCOUNTS_CURRENCYCODE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "CURRENCY_TXT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "CURRENCY_TXT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "MARKUPTABLE1_TXT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "MARKUPTABLE1_TXT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "MARKUPTABLE2_TXT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "MARKUPTABLE2_TXT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "MARKUPTABLE3_TXT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "MARKUPTABLE3_TXT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "MARKUPTABLE4_TXT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "MARKUPTABLE4_TXT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LAST_MODIFIED_DATE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_fabric_wh",
+											"type": "DatasetReference"
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_snowflake",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_tgt_table_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+													"type": "Expression"
+												},
+												"p_tgt_schema_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_DbName": {
+													"value": "@pipeline().globalParameters.snow_rawDb",
+													"type": "Expression"
+												},
+												"p_ls_Env": {
+													"value": "@pipeline().globalParameters.environment",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "d365_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "sql_d365_to_raw",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('sql_d365_to_raw').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('sql_d365_to_raw').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('sql_d365_to_raw').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('sql_d365_to_raw').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											},
+											"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+											"taskStepNumber": {
+												"value": "@pipeline().parameters.p_src_code",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_d365_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "d365_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('sql_d365_to_raw').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "pipeline_execution_notification",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(equals(activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE'],'TRUE'),bool('TRUE'), bool('FALSE'))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "pp_stored_procedure_failure_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@toUpper('failed')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": {
+										"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+										"type": "Expression"
+									},
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "curate_load_failure",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "pp_stored_procedure_failure_notification",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": {
+									"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+									"type": "Expression"
+								},
+								"errorCode": "500"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "stored_procedure_success_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@activity('raw_to_curate_sp_call').Status",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat(pipeline().parameters.p_tgt_curate_table_nm, ' is successfully loaded')",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": {
+										"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+										"type": "Expression"
+									},
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "SHIPCARRIERTABLE"
+			},
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_tgt_raw_table_nm": {
+				"type": "string",
+				"defaultValue": "SHIPCARRIERTABLE"
+			},
+			"p_tgt_raw_schema_nm": {
+				"type": "string",
+				"defaultValue": "AX_NALA"
+			},
+			"p_tgt_curate_table_nm": {
+				"type": "string",
+				"defaultValue": "DIM_SHIPPING_CARRIER"
+			},
+			"p_tgt_curate_schema_nm": {
+				"type": "string",
+				"defaultValue": "GLOBAL"
+			},
+			"p_src_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA"
+			},
+			"p_src_code": {
+				"type": "string",
+				"defaultValue": "1"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-06-03T10:58:13Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

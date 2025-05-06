@@ -1,0 +1,2342 @@
+{
+	"name": "pp_Salestable",
+	"properties": {
+		"description": "Raw tables needed for fact_sales_orders",
+		"activities": [
+			{
+				"name": "LoadStageTable",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "TruncateStageTable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"additionalColumns": [
+							{
+								"name": "HK_SOURCE_NAME",
+								"value": {
+									"value": "@pipeline().parameters.p_src_schema_nm",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "HK_JOB_RUN_ID",
+								"value": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							},
+							{
+								"name": "HK_LAST_UPDATED_TIMESTAMP",
+								"value": {
+									"value": "@pipeline().TriggerTime",
+									"type": "Expression"
+								}
+							}
+						],
+						"sqlReaderQuery": {
+							"value": "select [SALESID]\n      ,[SALESNAME]\n      ,[RESERVATION]\n      ,[CUSTACCOUNT]\n      ,[INVOICEACCOUNT]\n      ,[DELIVERYDATE]\n      ,[URL]\n      ,[PURCHORDERFORMNUM]\n      ,[SALESGROUP]\n      ,[FREIGHTSLIPTYPE]\n      ,[DOCUMENTSTATUS]\n      ,[INTERCOMPANYORIGINALSALESID]\n      ,[CURRENCYCODE]\n      ,[PAYMENT]\n      ,[CASHDISC]\n      ,[TAXGROUP]\n      ,[LINEDISC]\n      ,[CUSTGROUP]\n      ,[DISCPERCENT]\n      ,[INTERCOMPANYORIGINALCUSTACCOUNT]\n      ,[PRICEGROUPID]\n      ,[MULTILINEDISC]\n      ,[ENDDISC]\n      ,[CUSTOMERREF]\n      ,[COUNTYORIGDEST]\n      ,[LISTCODE]\n      ,[DLVTERM]\n      ,[DLVMODE]\n      ,[PURCHID]\n      ,[SALESSTATUS]\n      ,[MARKUPGROUP]\n      ,[SALESTYPE]\n      ,[SALESPOOLID]\n      ,[POSTINGPROFILE]\n      ,[TRANSACTIONCODE]\n      ,[INTERCOMPANYAUTOCREATEORDERS]\n      ,[INTERCOMPANYDIRECTDELIVERY]\n      ,[INTERCOMPANYDIRECTDELIVERYORIG]\n      ,[SETTLEVOUCHER]\n      ,[ENTERPRISENUMBER]\n      ,[INTERCOMPANYALLOWINDIRECTCREATION]\n      ,[INTERCOMPANYALLOWINDIRECTCREATIONORIG]\n      ,[DELIVERYNAME]\n      ,[ONETIMECUSTOMER]\n      ,[COVSTATUS]\n      ,[COMMISSIONGROUP]\n      ,[PAYMENTSCHED]\n      ,[INTERCOMPANYORIGIN]\n      ,[EMAIL]\n      ,[FREIGHTZONE]\n      ,[RETURNITEMNUM]\n      ,[CASHDISCPERCENT]\n      ,[CONTACTPERSONID]\n      ,[DEADLINE]\n      ,[PROJID]\n      ,[INVENTLOCATIONID]\n      ,[ADDRESSREFTABLEID]\n      ,[VATNUM]\n      ,[PORT]\n      ,[INCLTAX]\n      ,[EINVOICELINESPEC]\n      ,[NUMBERSEQUENCEGROUP]\n      ,[FIXEDEXCHRATE]\n      ,[LANGUAGEID]\n      ,[AUTOSUMMARYMODULETYPE]\n      ,[GIROTYPE]\n      ,[SALESORIGINID]\n      ,[ESTIMATE]\n      ,[TRANSPORT]\n      ,[PAYMMODE]\n      ,[PAYMSPEC]\n      ,[FIXEDDUEDATE]\n      ,[EXPORTREASON]\n      ,[STATPROCID]\n      ,[BANKCENTRALBANKPURPOSETEXT]\n      ,[INTERCOMPANYCOMPANYID]\n      ,[INTERCOMPANYPURCHID]\n      ,[INTERCOMPANYORDER]\n      ,[DLVREASON]\n      ,[QUOTATIONID]\n      ,[RECEIPTDATEREQUESTED]\n      ,[RECEIPTDATECONFIRMED]\n      ,[SHIPPINGDATEREQUESTED]\n      ,[SHIPPINGDATECONFIRMED]\n      ,[BANKCENTRALBANKPURPOSECODE]\n      ,[EINVOICEACCOUNTCODE]\n      ,[ITEMTAGGING]\n      ,[CASETAGGING]\n      ,[PALLETTAGGING]\n      ,[ADDRESSREFRECID]\n      ,[CUSTINVOICEID]\n      ,[INVENTSITEID]\n      ,[DEFAULTDIMENSION]\n      ,[CREDITCARDCUSTREFID]\n      ,[SHIPCARRIERACCOUNT]\n      ,[SHIPCARRIERID]\n      ,[SHIPCARRIERFUELSURCHARGE]\n      ,[SHIPCARRIERBLINDSHIPMENT]\n      ,[SHIPCARRIERDELIVERYCONTACT]\n      ,[CREDITCARDAPPROVALAMOUNT]\n      ,[CREDITCARDAUTHORIZATION]\n      ,[RETURNDEADLINE]\n      ,[RETURNREPLACEMENTID]\n      ,[RETURNSTATUS]\n      ,[RETURNREASONCODEID]\n      ,[CREDITCARDAUTHORIZATIONERROR]\n      ,[SHIPCARRIERACCOUNTCODE]\n      ,[RETURNREPLACEMENTCREATED]\n      ,[SHIPCARRIERDLVTYPE]\n      ,[DELIVERYDATECONTROLTYPE]\n      ,[SHIPCARRIEREXPEDITEDSHIPMENT]\n      ,[SHIPCARRIERRESIDENTIAL]\n      ,[MATCHINGAGREEMENT]\n      ,[SYSTEMENTRYSOURCE]\n      ,[SYSTEMENTRYCHANGEPOLICY]\n      ,[MANUALENTRYCHANGEPOLICY]\n      ,[DELIVERYPOSTALADDRESS]\n      ,[SHIPCARRIERPOSTALADDRESS]\n      ,[SHIPCARRIERNAME]\n      ,[WORKERSALESTAKER]\n      ,[SOURCEDOCUMENTHEADER]\n      ,[BANKDOCUMENTTYPE]\n      ,[SALESUNITID]\n      ,[SMMSALESAMOUNTTOTAL]\n      ,[SMMCAMPAIGNID]\n      ,[PDSREBATEPROGRAMTMAGROUP]\n      ,[PDSCUSTREBATEGROUPID]\n      ,[PDSBATCHATTRIBAUTORES]\n      ,[WORKERSALESRESPONSIBLE]\n      ,[CASHDISCBASEDATE]\n      ,[CASHDISCBASEDAYS]\n      ,[MODIFIEDDATETIME]\n      ,[MODIFIEDBY]\n      ,[CREATEDDATETIME]\n      ,[CREATEDBY]\n      ,[DATAAREAID]\n      ,[RECVERSION]\n      ,[RECID]\n      ,[VSIDELIVERYADDRESSRECID]\n      ,[ORDERBLOCKED]\n      ,[SCRIBECRMKEY]\n      ,[CUSTOMSEXPORTORDER_IN]\n      ,[CUSTOMSSHIPPINGBILL_IN]\n      ,[TDSGROUP_IN]\n      ,[TCSGROUP_IN]\n      ,[NATUREOFASSESSEE_IN]\n      ,[CONSTARGET_JP]\n      ,[INTRASTATFULFILLMENTDATE_HU]\n      ,[UNITEDVATINVOICE_LT]\n      ,[INTRASTATADDVALUE_LV]\n      ,[INVOICEREGISTER_LT]\n      ,[PACKINGSLIPREGISTER_LT]\n      ,[BANKACCOUNT_LV]\n      ,[CREDITNOTEREASONCODE]\n      ,[CURBANKACCOUNT_LV]\n      ,[CUSTBANKACCOUNT_LV]\n      ,[FISCALDOCTYPE_PL]\n      ,[TAXPERIODPAYMENTCODE_PL]\n      ,[TRANSPORTATIONDOCUMENT]\n      ,[PARTITION]\n      ,[DIRECTDEBITMANDATE]\n      ,[DAXINTEGRATIONID]\n      ,[EARLYCREDIT]\n      ,[RMAFREETEXTINVOICEID]\n      ,[MCRORDERSTOPPED]\n      ,[RELEASESTATUS]\n      ,[NDS_INTERCOMPANY]\n      ,[NDS_SUSALLOWCHG]\n      ,[NDS_CUSTOPENBALANCE]\n      ,[AUTHORIZATION_]\n      ,[WFACCOUNTNUMBER]\n      ,[WFPROCESSED]\n      ,[MERCHANTNUMBER]\n      ,[PLANNUMBER]\n      ,[BOLFREIGHTCHARGETERMS]\n      ,[ATAGENT]\n      ,[DXCPOORDERTOTAL]\n      ,[EBCINTEGRATIONORIGIN]\n      ,[EBCOVERRIDESOVALIDATION]\n      ,[EBCREPLACEMENTID]\n      ,[EBCRETURNORDERSENT]\n      ,[MCSSALESREP1CODE]\n      ,[MCSSALESREP1SPLITPERCENT]\n      ,[MCSSALESREP3CODE]\n      ,[MCSSALESREP2CODE]\n      ,[MCSSALESREP2SPLITPERCENT]\n      ,[MCSSALESREP3SPLITPERCENT]\n      ,[TPX_ARN]\n      ,[TPXDISABLEPRICEDISCRECALC]\n      ,[TPX_PREFERREDDATE]\n      ,[MCSREQUESTEDRECEIPTEARLYTIME]\n      ,[MCSREQUESTEDRECEIPTLATETIME]\n      ,[MCSRIRREFERENCENO]\n      ,[TPX_PREDICTIONID]\n      ,[TPX_HASSOEXTNOTES]\n      ,[TPX_WHITEGLOVEPURCHID]\n      ,[TPX_940SENT]\n      ,[TPX_B2BORDERNUMBER]\n      ,[TPX_RETURNLOCATIONID]\n      ,[TPXORIGRECEIPTDATECONFIRMED]\n  FROM [dbo].[SALESTABLE]\n  where MODIFIEDDATETIME >= '@{variables('v_prv_max_upd_timestamp')}'",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "SnowflakeV2Sink",
+						"importSettings": {
+							"type": "SnowflakeImportCopyCommand"
+						}
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ls_blob_storage",
+							"type": "LinkedServiceReference"
+						},
+						"path": {
+							"value": "@pipeline().globalParameters.rootDir",
+							"type": "Expression"
+						}
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "HK_SOURCE_NAME",
+									"type": "String"
+								},
+								"sink": {
+									"name": "HK_SOURCE_NAME",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "HK_JOB_RUN_ID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "HK_JOB_RUN_ID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "HK_LAST_UPDATED_TIMESTAMP",
+									"type": "String"
+								},
+								"sink": {
+									"name": "HK_LAST_UPDATED_TIMESTAMP",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "SALESID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SALESID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SALESNAME",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SALESNAME",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RESERVATION",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "RESERVATION",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "CUSTACCOUNT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CUSTACCOUNT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INVOICEACCOUNT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVOICEACCOUNT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DELIVERYDATE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "DELIVERYDATE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "URL",
+									"type": "String"
+								},
+								"sink": {
+									"name": "URL",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PURCHORDERFORMNUM",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PURCHORDERFORMNUM",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SALESGROUP",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SALESGROUP",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "FREIGHTSLIPTYPE",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "FREIGHTSLIPTYPE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "DOCUMENTSTATUS",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "DOCUMENTSTATUS",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "INTERCOMPANYORIGINALSALESID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INTERCOMPANYORIGINALSALESID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CURRENCYCODE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CURRENCYCODE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PAYMENT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PAYMENT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CASHDISC",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CASHDISC",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TAXGROUP",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TAXGROUP",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "LINEDISC",
+									"type": "String"
+								},
+								"sink": {
+									"name": "LINEDISC",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CUSTGROUP",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CUSTGROUP",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DISCPERCENT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "DISCPERCENT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "INTERCOMPANYORIGINALCUSTACCOUNT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INTERCOMPANYORIGINALCUSTACCOUNT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PRICEGROUPID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PRICEGROUPID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "MULTILINEDISC",
+									"type": "String"
+								},
+								"sink": {
+									"name": "MULTILINEDISC",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ENDDISC",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ENDDISC",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CUSTOMERREF",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CUSTOMERREF",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "COUNTYORIGDEST",
+									"type": "String"
+								},
+								"sink": {
+									"name": "COUNTYORIGDEST",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "LISTCODE",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "LISTCODE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "DLVTERM",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DLVTERM",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DLVMODE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DLVMODE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PURCHID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PURCHID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SALESSTATUS",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "SALESSTATUS",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "MARKUPGROUP",
+									"type": "String"
+								},
+								"sink": {
+									"name": "MARKUPGROUP",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SALESTYPE",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "SALESTYPE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SALESPOOLID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SALESPOOLID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "POSTINGPROFILE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "POSTINGPROFILE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TRANSACTIONCODE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TRANSACTIONCODE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INTERCOMPANYAUTOCREATEORDERS",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "INTERCOMPANYAUTOCREATEORDERS",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "INTERCOMPANYDIRECTDELIVERY",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "INTERCOMPANYDIRECTDELIVERY",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "INTERCOMPANYDIRECTDELIVERYORIG",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "INTERCOMPANYDIRECTDELIVERYORIG",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SETTLEVOUCHER",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "SETTLEVOUCHER",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "ENTERPRISENUMBER",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ENTERPRISENUMBER",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INTERCOMPANYALLOWINDIRECTCREATION",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "INTERCOMPANYALLOWINDIRECTCREATION",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "INTERCOMPANYALLOWINDIRECTCREATIONORIG",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "INTERCOMPANYALLOWINDIRECTCREATIONORIG",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "DELIVERYNAME",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DELIVERYNAME",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ONETIMECUSTOMER",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "ONETIMECUSTOMER",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "COVSTATUS",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "COVSTATUS",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "COMMISSIONGROUP",
+									"type": "String"
+								},
+								"sink": {
+									"name": "COMMISSIONGROUP",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PAYMENTSCHED",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PAYMENTSCHED",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INTERCOMPANYORIGIN",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "INTERCOMPANYORIGIN",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "EMAIL",
+									"type": "String"
+								},
+								"sink": {
+									"name": "EMAIL",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "FREIGHTZONE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "FREIGHTZONE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RETURNITEMNUM",
+									"type": "String"
+								},
+								"sink": {
+									"name": "RETURNITEMNUM",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CASHDISCPERCENT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "CASHDISCPERCENT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "CONTACTPERSONID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CONTACTPERSONID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DEADLINE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "DEADLINE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "PROJID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PROJID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INVENTLOCATIONID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVENTLOCATIONID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ADDRESSREFTABLEID",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "ADDRESSREFTABLEID",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "VATNUM",
+									"type": "String"
+								},
+								"sink": {
+									"name": "VATNUM",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PORT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PORT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INCLTAX",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "INCLTAX",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "EINVOICELINESPEC",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "EINVOICELINESPEC",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "NUMBERSEQUENCEGROUP",
+									"type": "String"
+								},
+								"sink": {
+									"name": "NUMBERSEQUENCEGROUP",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "FIXEDEXCHRATE",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "FIXEDEXCHRATE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "LANGUAGEID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "LANGUAGEID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "AUTOSUMMARYMODULETYPE",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "AUTOSUMMARYMODULETYPE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "GIROTYPE",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "GIROTYPE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SALESORIGINID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SALESORIGINID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ESTIMATE",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "ESTIMATE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "TRANSPORT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TRANSPORT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PAYMMODE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PAYMMODE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PAYMSPEC",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PAYMSPEC",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "FIXEDDUEDATE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "FIXEDDUEDATE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "EXPORTREASON",
+									"type": "String"
+								},
+								"sink": {
+									"name": "EXPORTREASON",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "STATPROCID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "STATPROCID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "BANKCENTRALBANKPURPOSETEXT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "BANKCENTRALBANKPURPOSETEXT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INTERCOMPANYCOMPANYID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INTERCOMPANYCOMPANYID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INTERCOMPANYPURCHID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INTERCOMPANYPURCHID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INTERCOMPANYORDER",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "INTERCOMPANYORDER",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "DLVREASON",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DLVREASON",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "QUOTATIONID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "QUOTATIONID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RECEIPTDATEREQUESTED",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "RECEIPTDATEREQUESTED",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "RECEIPTDATECONFIRMED",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "RECEIPTDATECONFIRMED",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "SHIPPINGDATEREQUESTED",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "SHIPPINGDATEREQUESTED",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "SHIPPINGDATECONFIRMED",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "SHIPPINGDATECONFIRMED",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "BANKCENTRALBANKPURPOSECODE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "BANKCENTRALBANKPURPOSECODE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "EINVOICEACCOUNTCODE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "EINVOICEACCOUNTCODE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ITEMTAGGING",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "ITEMTAGGING",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "CASETAGGING",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "CASETAGGING",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "PALLETTAGGING",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "PALLETTAGGING",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "ADDRESSREFRECID",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "ADDRESSREFRECID",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "CUSTINVOICEID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CUSTINVOICEID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "INVENTSITEID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "INVENTSITEID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DEFAULTDIMENSION",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "DEFAULTDIMENSION",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "CREDITCARDCUSTREFID",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "CREDITCARDCUSTREFID",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SHIPCARRIERACCOUNT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SHIPCARRIERACCOUNT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SHIPCARRIERID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SHIPCARRIERID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SHIPCARRIERFUELSURCHARGE",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "SHIPCARRIERFUELSURCHARGE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SHIPCARRIERBLINDSHIPMENT",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "SHIPCARRIERBLINDSHIPMENT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SHIPCARRIERDELIVERYCONTACT",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SHIPCARRIERDELIVERYCONTACT",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CREDITCARDAPPROVALAMOUNT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "CREDITCARDAPPROVALAMOUNT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "CREDITCARDAUTHORIZATION",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CREDITCARDAUTHORIZATION",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RETURNDEADLINE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "RETURNDEADLINE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "RETURNREPLACEMENTID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "RETURNREPLACEMENTID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RETURNSTATUS",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "RETURNSTATUS",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "RETURNREASONCODEID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "RETURNREASONCODEID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CREDITCARDAUTHORIZATIONERROR",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "CREDITCARDAUTHORIZATIONERROR",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SHIPCARRIERACCOUNTCODE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SHIPCARRIERACCOUNTCODE",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RETURNREPLACEMENTCREATED",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "RETURNREPLACEMENTCREATED",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SHIPCARRIERDLVTYPE",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "SHIPCARRIERDLVTYPE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "DELIVERYDATECONTROLTYPE",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "DELIVERYDATECONTROLTYPE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SHIPCARRIEREXPEDITEDSHIPMENT",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "SHIPCARRIEREXPEDITEDSHIPMENT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SHIPCARRIERRESIDENTIAL",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "SHIPCARRIERRESIDENTIAL",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "MATCHINGAGREEMENT",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "MATCHINGAGREEMENT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SYSTEMENTRYSOURCE",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "SYSTEMENTRYSOURCE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SYSTEMENTRYCHANGEPOLICY",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "SYSTEMENTRYCHANGEPOLICY",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "MANUALENTRYCHANGEPOLICY",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "MANUALENTRYCHANGEPOLICY",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "DELIVERYPOSTALADDRESS",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "DELIVERYPOSTALADDRESS",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SHIPCARRIERPOSTALADDRESS",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "SHIPCARRIERPOSTALADDRESS",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SHIPCARRIERNAME",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SHIPCARRIERNAME",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "WORKERSALESTAKER",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "WORKERSALESTAKER",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SOURCEDOCUMENTHEADER",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "SOURCEDOCUMENTHEADER",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "BANKDOCUMENTTYPE",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "BANKDOCUMENTTYPE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SALESUNITID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SALESUNITID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SMMSALESAMOUNTTOTAL",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "SMMSALESAMOUNTTOTAL",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SMMCAMPAIGNID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SMMCAMPAIGNID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PDSREBATEPROGRAMTMAGROUP",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PDSREBATEPROGRAMTMAGROUP",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PDSCUSTREBATEGROUPID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PDSCUSTREBATEGROUPID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PDSBATCHATTRIBAUTORES",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "PDSBATCHATTRIBAUTORES",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "WORKERSALESRESPONSIBLE",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "WORKERSALESRESPONSIBLE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "CASHDISCBASEDATE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "CASHDISCBASEDATE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "CASHDISCBASEDAYS",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "CASHDISCBASEDAYS",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "MODIFIEDDATETIME",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "MODIFIEDDATETIME",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "MODIFIEDBY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "MODIFIEDBY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CREATEDDATETIME",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "CREATEDDATETIME",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "CREATEDBY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CREATEDBY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DATAAREAID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "DATAAREAID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "RECVERSION",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "RECVERSION",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "RECID",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "RECID",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "VSIDELIVERYADDRESSRECID",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "VSIDELIVERYADDRESSRECID",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "ORDERBLOCKED",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "ORDERBLOCKED",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "SCRIBECRMKEY",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SCRIBECRMKEY",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CUSTOMSEXPORTORDER_IN",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "CUSTOMSEXPORTORDER_IN",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "CUSTOMSSHIPPINGBILL_IN",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "CUSTOMSSHIPPINGBILL_IN",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "TDSGROUP_IN",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TDSGROUP_IN",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TCSGROUP_IN",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TCSGROUP_IN",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "NATUREOFASSESSEE_IN",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "NATUREOFASSESSEE_IN",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "CONSTARGET_JP",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "CONSTARGET_JP",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "INTRASTATFULFILLMENTDATE_HU",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "INTRASTATFULFILLMENTDATE_HU",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "UNITEDVATINVOICE_LT",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "UNITEDVATINVOICE_LT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "INTRASTATADDVALUE_LV",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "INTRASTATADDVALUE_LV",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "INVOICEREGISTER_LT",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "INVOICEREGISTER_LT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "PACKINGSLIPREGISTER_LT",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "PACKINGSLIPREGISTER_LT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "BANKACCOUNT_LV",
+									"type": "String"
+								},
+								"sink": {
+									"name": "BANKACCOUNT_LV",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CREDITNOTEREASONCODE",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "CREDITNOTEREASONCODE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "CURBANKACCOUNT_LV",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CURBANKACCOUNT_LV",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CUSTBANKACCOUNT_LV",
+									"type": "String"
+								},
+								"sink": {
+									"name": "CUSTBANKACCOUNT_LV",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "FISCALDOCTYPE_PL",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "FISCALDOCTYPE_PL",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "TAXPERIODPAYMENTCODE_PL",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TAXPERIODPAYMENTCODE_PL",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TRANSPORTATIONDOCUMENT",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "TRANSPORTATIONDOCUMENT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "PARTITION",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "PARTITION",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "DIRECTDEBITMANDATE",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "DIRECTDEBITMANDATE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "DAXINTEGRATIONID",
+									"type": "Guid"
+								},
+								"sink": {
+									"name": "DAXINTEGRATIONID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "EARLYCREDIT",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "EARLYCREDIT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "RMAFREETEXTINVOICEID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "RMAFREETEXTINVOICEID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "MCRORDERSTOPPED",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "MCRORDERSTOPPED",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "RELEASESTATUS",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "RELEASESTATUS",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "NDS_INTERCOMPANY",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "NDS_INTERCOMPANY",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "NDS_SUSALLOWCHG",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "NDS_SUSALLOWCHG",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "NDS_CUSTOPENBALANCE",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "NDS_CUSTOPENBALANCE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "AUTHORIZATION_",
+									"type": "String"
+								},
+								"sink": {
+									"name": "AUTHORIZATION_",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "WFACCOUNTNUMBER",
+									"type": "String"
+								},
+								"sink": {
+									"name": "WFACCOUNTNUMBER",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "WFPROCESSED",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "WFPROCESSED",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "MERCHANTNUMBER",
+									"type": "String"
+								},
+								"sink": {
+									"name": "MERCHANTNUMBER",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PLANNUMBER",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PLANNUMBER",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "BOLFREIGHTCHARGETERMS",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "BOLFREIGHTCHARGETERMS",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "ATAGENT",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "ATAGENT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "DXCPOORDERTOTAL",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "DXCPOORDERTOTAL",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "EBCINTEGRATIONORIGIN",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "EBCINTEGRATIONORIGIN",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "EBCOVERRIDESOVALIDATION",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "EBCOVERRIDESOVALIDATION",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "EBCREPLACEMENTID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "EBCREPLACEMENTID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "EBCRETURNORDERSENT",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "EBCRETURNORDERSENT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "MCSSALESREP1CODE",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "MCSSALESREP1CODE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "MCSSALESREP1SPLITPERCENT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "MCSSALESREP1SPLITPERCENT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "MCSSALESREP3CODE",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "MCSSALESREP3CODE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "MCSSALESREP2CODE",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "MCSSALESREP2CODE",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "MCSSALESREP2SPLITPERCENT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "MCSSALESREP2SPLITPERCENT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "MCSSALESREP3SPLITPERCENT",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "MCSSALESREP3SPLITPERCENT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "TPX_ARN",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TPX_ARN",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TPXDISABLEPRICEDISCRECALC",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "TPXDISABLEPRICEDISCRECALC",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "TPX_PREFERREDDATE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "TPX_PREFERREDDATE",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "MCSREQUESTEDRECEIPTEARLYTIME",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "MCSREQUESTEDRECEIPTEARLYTIME",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "MCSREQUESTEDRECEIPTLATETIME",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "MCSREQUESTEDRECEIPTLATETIME",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "MCSRIRREFERENCENO",
+									"type": "String"
+								},
+								"sink": {
+									"name": "MCSRIRREFERENCENO",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TPX_PREDICTIONID",
+									"type": "Guid"
+								},
+								"sink": {
+									"name": "TPX_PREDICTIONID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TPX_HASSOEXTNOTES",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "TPX_HASSOEXTNOTES",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "TPX_WHITEGLOVEPURCHID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TPX_WHITEGLOVEPURCHID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TPX_940SENT",
+									"type": "Int32"
+								},
+								"sink": {
+									"name": "TPX_940SENT",
+									"type": "Int64"
+								}
+							},
+							{
+								"source": {
+									"name": "TPX_B2BORDERNUMBER",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TPX_B2BORDERNUMBER",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TPX_RETURNLOCATIONID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "TPX_RETURNLOCATIONID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "TPXORIGRECEIPTDATECONFIRMED",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "TPXORIGRECEIPTDATECONFIRMED",
+									"type": "DateTime"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_sql_server",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_src_table_name": "@pipeline().parameters.p_src_table_nm",
+							"p_src_schema_name": "@pipeline().parameters.p_src_schema_nm",
+							"p_ls_serverName": "@pipeline().globalParameters.nala_sql_serverName",
+							"p_ls_dbName": "@pipeline().globalParameters.nala_sql_dbName",
+							"p_ls_sqlUsername": "@pipeline().globalParameters.sql_userName",
+							"p_ls_sqlPassword": "@pipeline().globalParameters.sql_password"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_tgt_table_name": "@pipeline().parameters.p_tgt_raw_table_nm",
+							"p_tgt_schema_name": "@pipeline().parameters.p_tgt_raw_schema_nm",
+							"p_ls_DbName": "@pipeline().globalParameters.snow_rawDb",
+							"p_ls_Env": "@pipeline().globalParameters.environment"
+						}
+					}
+				]
+			},
+			{
+				"name": "TruncateStageTable",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "set_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_rawDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('TRUNCATE TABLE ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_rawDb,'.',pipeline().parameters.p_tgt_raw_schema_nm,'.',pipeline().parameters.p_tgt_raw_table_nm)",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "lkp_raw_last_modified_date",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SnowflakeSource",
+						"query": {
+							"value": "@concat('select max(to_varchar(modifieddatetime::timestamp, ''','yyyy-mm-dd hh24:mi:ss',''')) as max_date from ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_rawDb,'.',pipeline().parameters.p_tgt_raw_schema_nm, '.', pipeline().parameters.p_src_table_nm)",
+							"type": "Expression"
+						},
+						"exportSettings": {
+							"type": "SnowflakeExportCopyCommand"
+						}
+					},
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_tgt_table_name": {
+								"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+								"type": "Expression"
+							},
+							"p_tgt_schema_name": {
+								"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_DbName": {
+								"value": "@pipeline().globalParameters.snow_rawDb",
+								"type": "Expression"
+							},
+							"p_ls_Env": {
+								"value": "@pipeline().globalParameters.environment",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "set_last_modified_date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkp_raw_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_prv_max_upd_timestamp",
+					"value": {
+						"value": "@coalesce(activity('lkp_raw_last_modified_date').output.firstRow.max_date, '1950-01-01 00:00:00')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "axnala_stage_sp_call",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "LoadStageTable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_auditDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('CALL ',pipeline().globalParameters.environment,'_RAW.',\npipeline().parameters.p_tgt_raw_schema_nm,'.SP_SALESTABLE_INCR','(''',pipeline().globalParameters.environment,''')')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"p_src_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA_STAGE"
+			},
+			"p_tgt_raw_table_nm": {
+				"type": "string",
+				"defaultValue": "SALESTABLE_INCR"
+			},
+			"p_tgt_raw_schema_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA_STAGE"
+			},
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "SALESTABLE"
+			},
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_temp_directory": {
+				"type": "string",
+				"defaultValue": "temp_files"
+			}
+		},
+		"variables": {
+			"v_prv_max_upd_timestamp": {
+				"type": "String"
+			},
+			"v_prv_max_upd_timestamp2": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "AXNALA_Staging"
+		},
+		"annotations": []
+	}
+}

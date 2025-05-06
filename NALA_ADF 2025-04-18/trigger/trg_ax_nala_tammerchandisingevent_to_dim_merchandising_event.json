@@ -1,0 +1,17 @@
+{
+	"name": "trg_ax_nala_tammerchandisingevent_to_dim_merchandising_event",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2024-06-28T10:00:00",
+				"timeZone": "Eastern Standard Time"
+			}
+		}
+	}
+}

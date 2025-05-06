@@ -1,0 +1,5540 @@
+{
+	"name": "pp_ax_custtable_to_dim_customer",
+	"properties": {
+		"activities": [
+			{
+				"name": "lkp_raw_last_modified_date",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "set_last_mod_tmstmp_repodealexc",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SnowflakeSource",
+						"query": {
+							"value": "@concat('select max(to_varchar(LATEST_MODIFIEDDATETIME::timestamp, ''','yyyy-mm-dd hh24:mi:ss',''')) as max_date from ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_rawDb,'.',pipeline().parameters.p_tgt_raw_schema_nm, '.', pipeline().parameters.p_tgt_raw_table_nm)",
+							"type": "Expression"
+						},
+						"exportSettings": {
+							"type": "SnowflakeExportCopyCommand"
+						}
+					},
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_tgt_table_name": {
+								"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+								"type": "Expression"
+							},
+							"p_tgt_schema_name": {
+								"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_DbName": {
+								"value": "@pipeline().globalParameters.snow_rawDb",
+								"type": "Expression"
+							},
+							"p_ls_Env": {
+								"value": "@pipeline().globalParameters.environment",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "set_last_modified_date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkp_raw_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_prev_max_timestamp",
+					"value": {
+						"value": "@coalesce(activity('lkp_raw_last_modified_date').output.firstRow.max_date, '1950-01-01 00:00:00')\n\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "load_dim_customer",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "switch_nala_retail_d365",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_load_dim_customer",
+						"type": "DataFlowReference",
+						"parameters": {
+							"df_prev_max_timestamp": {
+								"value": "'@{variables('v_prev_max_timestamp')}'",
+								"type": "Expression"
+							},
+							"df_last_mod_tmstmp_repodealexc": {
+								"value": "'@{variables('v_last_mod_tmstmp_repodealexc')}'",
+								"type": "Expression"
+							}
+						},
+						"datasetParameters": {
+							"SrcCusttable": {
+								"p_directory": {
+									"value": "@pipeline().parameters.p_temp_directory",
+									"type": "Expression"
+								},
+								"p_root_system": {
+									"value": "@pipeline().globalParameters.rootDir",
+									"type": "Expression"
+								},
+								"p_file_name": {
+									"value": "@pipeline().parameters.p_temp_file_nm",
+									"type": "Expression"
+								}
+							},
+							"ReportDealerExclusionSegment": {
+								"p_src_directory": {
+									"value": "@pipeline().parameters.p_src_directory",
+									"type": "Expression"
+								},
+								"p_src_file_name": {
+									"value": "@pipeline().parameters.p_src_file_nm",
+									"type": "Expression"
+								},
+								"p_src_root_system": {
+									"value": "@pipeline().globalParameters.rootDir",
+									"type": "Expression"
+								},
+								"p_sheet_name": {
+									"value": "@pipeline().parameters.p_src_file_sheet_1",
+									"type": "Expression"
+								}
+							},
+							"ReportDealerExclusionSubSegment": {
+								"p_src_directory": {
+									"value": "@pipeline().parameters.p_src_directory",
+									"type": "Expression"
+								},
+								"p_src_file_name": {
+									"value": "@pipeline().parameters.p_src_file_nm",
+									"type": "Expression"
+								},
+								"p_src_root_system": {
+									"value": "@pipeline().globalParameters.rootDir",
+									"type": "Expression"
+								},
+								"p_sheet_name": {
+									"value": "@pipeline().parameters.p_src_file_sheet_2",
+									"type": "Expression"
+								}
+							},
+							"LkpTruckVolume": {
+								"p_tgt_table_name": {
+									"value": "@pipeline().parameters.p_lkp_curate_table_nm",
+									"type": "Expression"
+								},
+								"p_tgt_schema_name": {
+									"value": "@pipeline().parameters.p_tgt_curate_schema_nm",
+									"type": "Expression"
+								},
+								"p_ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_curateDb",
+									"type": "Expression"
+								},
+								"p_ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							},
+							"SrcCusttableExt": {
+								"p_tgt_table_name": {
+									"value": "@pipeline().parameters.p_tgt_raw_table_nm_2",
+									"type": "Expression"
+								},
+								"p_tgt_schema_name": {
+									"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+									"type": "Expression"
+								},
+								"p_ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_rawDb",
+									"type": "Expression"
+								},
+								"p_ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							},
+							"CusttableExt": {
+								"p_tgt_table_name": {
+									"value": "@pipeline().parameters.p_tgt_raw_table_nm_2",
+									"type": "Expression"
+								},
+								"p_tgt_schema_name": {
+									"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+									"type": "Expression"
+								},
+								"p_ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_rawDb",
+									"type": "Expression"
+								},
+								"p_ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							},
+							"Custtable": {
+								"p_tgt_table_name": {
+									"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+									"type": "Expression"
+								},
+								"p_tgt_schema_name": {
+									"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+									"type": "Expression"
+								},
+								"p_ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_rawDb",
+									"type": "Expression"
+								},
+								"p_ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"integrationRuntime": {
+						"referenceName": "IR-Snowflake-NALA",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "get_last_modifieddatetime_ReportingDealerExclusion",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_excel",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_src_directory": {
+								"value": "@pipeline().parameters.p_src_directory",
+								"type": "Expression"
+							},
+							"p_src_file_name": {
+								"value": "@pipeline().parameters.p_src_file_nm",
+								"type": "Expression"
+							},
+							"p_src_root_system": {
+								"value": "@pipeline().globalParameters.rootDir",
+								"type": "Expression"
+							},
+							"p_sheet_name": {
+								"value": "@pipeline().parameters.p_src_file_sheet_1",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"itemName",
+						"lastModified"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					}
+				}
+			},
+			{
+				"name": "set_last_mod_tmstmp_repodealexc",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "get_last_modifieddatetime_ReportingDealerExclusion",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_last_mod_tmstmp_repodealexc",
+					"value": {
+						"value": "@coalesce(activity('get_last_modifieddatetime_ReportingDealerExclusion').output.lastModified,'1950-01-01 00:00:00')",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "raw_to_curate_sp_call",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "load_dim_customer",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_auditDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('CALL ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_auditDb,'.CONTROL.SP_TASK_INITIALIZE(','''',pipeline().RunId,'''',',','''',pipeline().globalParameters.environment,'''',',','''',pipeline().parameters.p_tgt_curate_table_nm,'''',',',pipeline().parameters.p_src_code,')')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "raw_to_curate_storedprocedure_failure_notification",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_adf_pipeline_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"subscription": {
+							"value": "@pipeline().globalParameters.subscriptionId",
+							"type": "Expression"
+						},
+						"resourceGroup": {
+							"value": "@pipeline().globalParameters.resourceGroup",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@coalesce(pipeline().RunId, -1)",
+							"type": "Expression"
+						},
+						"name": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"triggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"status": {
+							"value": "@activity('raw_to_curate_sp_call').Status",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@activity('raw_to_curate_sp_call').Error['message']",
+							"type": "Expression"
+						},
+						"executionEndTime": {
+							"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+							"type": "Expression"
+						},
+						"runDuration": {
+							"value": "@activity('raw_to_curate_sp_call').Duration",
+							"type": "Expression"
+						},
+						"teamWebhookUrl": {
+							"value": "@pipeline().globalParameters.teamsWebhookUrl",
+							"type": "Expression"
+						},
+						"notificationTime": {
+							"value": "@utcNow()",
+							"type": "Expression"
+						},
+						"taskName": {
+							"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+							"type": "Expression"
+						},
+						"taskStepNumber": {
+							"value": "@pipeline().parameters.p_src_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "switch_nala_retail_d365",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "set_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.p_src_code",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "1",
+							"activities": [
+								{
+									"name": "custtable_to_adls_nala",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": {
+												"value": "select ct1.DATAAREAID ,ct1.ACCOUNTNUM ,ct1.PARTY ,ct1.EBCCOMPANYID ,ct1.OURACCOUNTNUM ,ct1.INVOICEACCOUNT ,ct1.CURRENCY ,ct1.USECASHDISC ,ct1.MAINCONTACTWORKER ,ct1.BLOCKED ,ct1.PASTDUECHECK ,ct1.CREDITMAX ,ct1.MANDATORYCREDITLIMIT ,ct1.EXCLUDECREDITLIMITBLOCKING ,ct1.GRACEDAYS ,ct1.EBCBUYGRPEXEMPTION ,ct1.EBCBUYGRPKICKER ,ct1.CASHDISC ,ct1.DLVMODE ,ct1.DLVTERM ,ct1.PAYMMODE ,ct1.PAYMTERMID ,ct1.CUSTCLASSIFICATIONID ,ct1.COMPANYCHAINID ,ct1.CUSTGROUP ,ct1.EBCDIVISIONID ,ct1.LINEOFBUSINESSID ,ct1.MARKUPGROUP ,ct1.PRICEGROUP ,ct1.DEFAULTDIMENSION ,ct1.SALESDISTRICTID ,ct1.SALESGROUP ,ct1.SALESPOOLID ,ct1.SEGMENTID ,ct1.SUBSEGMENTID ,ct1.TAXGROUP ,ct1.EBCREPORTPARENT ,ct1.MCSEXTERNALPRICING ,ct1.MCSNETWORKID ,ct1.MODIFIEDDATETIME ,dpt1.NAME as DIRPARTYTABLE1_NAME ,dpt1.INSTANCERELATIONTYPE as DIRPARTYTABLE1_INSTANCERELATIONTYPE ,dpt1.EBCLEGACY as DIRPARTYTABLE1_EBCLEGACY ,dpt1.ORGNUMBER as DIRPARTYTABLE1_ORGNUMBER ,dpt1.PRIMARYADDRESSLOCATION as DIRPARTYTABLE1_PRIMARYADDRESSLOCATION ,dpt1.MODIFIEDDATETIME as DIRPARTYTABLE1_MODIFIEDDATETIME ,c1.TXT as CURRENCY_TXT ,c1.MODIFIEDDATETIME as CURRENCY_MODIFIEDDATETIME ,hw1.PERSONNELNUMBER as HCMWORKER1_PERSONNELNUMBER ,hw1.PERSON as HCMWORKER1_PERSON ,hw1.MODIFIEDDATETIME as HCMWORKER1_MODIFIEDDATETIME ,dpt2.NAME as DIRPARTYTABLE2_NAME ,dpt2.MODIFIEDDATETIME as DIRPARTYTABLE2_MODIFIEDDATETIME ,tad1.CPAVGDAY as TSIAVGDAYS_CPAVGDAY ,tad1.YRAVGDAY as TSIAVGDAYS_YRAVGDAY ,cd1.DESCRIPTION as CASHDISC_DESCRIPTION ,cd1.PERCENT_ as CASHDISC_PERCENT ,dm1.TXT as DLVMODE_TXT ,dt1.TXT as DLVTERM_TXT ,cpmt1.NAME as CUSTPAYMMODETABLE_NAME ,pt1.DESCRIPTION as PAYMTERM_DESCRIPTION ,pt1.NUMOFDAYS as PAYMTERM_NUMOFDAYS ,pt1.NUMOFMONTHS as PAYMTERM_NUMOFMONTHS ,ccg1.TXT as CUSTCLASSIFICATIONGROUP_TXT ,sbrcg1.DESCRIPTION as SMMBUSRELCHAINGROUP_DESCRIPTION ,cg1.NAME as CUSTGROUP_NAME ,sbrsdg1.EBCDIVISIONID as SMMBUSRELSALESDISTRICTGROUP1_EBCDIVISIONID ,sbrsdg1.DESCRIPTION as SMMBUSRELSALESDISTRICTGROUP1_DESCRIPTION ,sbrsdg1.ALTROLLUP1 as SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP1 ,sbrsdg1.ALTROLLUP2 as SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP2 ,sbrsdg1.ALTROLLUP3 as SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP3 ,esmd1.EBCDIVISIONDESC as EBCSALESMKTDIVISION1_EBCDIVISIONDESC ,lob1.DESCRIPTION as LINEOFBUSINESS_DESCRIPTION ,mug1.TXT as MARKUPGROUP_TXT ,pdg1.NAME as PRICEDISCGROUP_NAME ,def1.C_SALES_CHANNEL as DEFAULTDIMENSION_C_SALES_CHANNEL ,def1.C_SALES_CHANNEL_DESCRIPTION as DEFAULTDIMENSION_C_SALES_CHANNEL_DESCRIPTION ,def1.DEFAULTDIMENSION_MODIFIEDDATETIME ,csg1.NAME as COMMISSIONSALESGROUP_NAME ,sp1.NAME as SALESPOOL_NAME ,sbrsg1.DESCRIPTION as SMMBUSRELSEGMENTGROUP_DESCRIPTION ,sbrssg1.SUBSEGMENTDESCRIPTION as SMMBUSRELSUBSEGMENTGROUP_DESCRIPTION ,tgh1.TAXGROUPNAME as TAXGROUPHEADING_TAXGROUPNAME ,lpa1.STREET as LOGISTICSPOSTALADDRESS1_STREET ,lpa1.CITY as LOGISTICSPOSTALADDRESS1_CITY ,lpa1.STATE as LOGISTICSPOSTALADDRESS1_STATE ,lpa1.ZIPCODE as LOGISTICSPOSTALADDRESS1_ZIPCODE ,lpa1.COUNTRYREGIONID as LOGISTICSPOSTALADDRESS1_COUNTRYREGIONID ,lpa1.TIMEZONE as LOGISTICSPOSTALADDRESS1_TIMEZONE ,tzl1.TIMEZONEKEYNAME as TIMEZONESLIST_TIMEZONEKEYNAME ,ll1.DESCRIPTION as LOGISTICSLOCATION1_DESCRIPTION ,lea1.LOCATOR as LOGISTICSELECTRONICADDRESS1_LOCATOR ,lea2.LOCATOR as LOGISTICSELECTRONICADDRESS2_LOCATOR ,lea3.LOCATOR as LOGISTICSELECTRONICADDRESS3_LOCATOR ,lpa2.STREET as LOGISTICSPOSTALADDRESS2_STREET ,lpa2.CITY as LOGISTICSPOSTALADDRESS2_CITY ,lpa2.STATE as LOGISTICSPOSTALADDRESS2_STATE ,lpa2.ZIPCODE as LOGISTICSPOSTALADDRESS2_ZIPCODE ,lpa2.COUNTRYREGIONID as LOGISTICSPOSTALADDRESS2_COUNTRYREGIONID ,ll2.DESCRIPTION as LOGISTICSLOCATION2_DESCRIPTION ,ll2.LOCATIONID as LOGISTICSLOCATION2_LOCATIONID ,ct2.EBCDIVISIONID as CUSTTABLE2_EBCDIVISIONID ,ct2.SALESDISTRICTID as CUSTTABLE2_SALESDISTRICTID ,ct2.MAINCONTACTWORKER as CUSTTABLE2_MAINCONTACTWORKER ,ct2.MODIFIEDDATETIME as CUSTTABLE2_MODIFIEDDATETIME ,sbrsdg2.DESCRIPTION as SMMBUSRELSALESDISTRICTGROUP2_DESCRIPTION ,esmd2.EBCDIVISIONDESC as EBCSALESMKTDIVISION2_EBCDIVISIONDESC ,hw2.PERSONNELNUMBER as HCMWORKER2_PERSONNELNUMBER ,hw2.PERSON as HCMWORKER2_PERSON ,hw2.MODIFIEDDATETIME as HCMWORKER2_MODIFIEDDATETIME ,dpt3.NAME as DIRPARTYTABLE3_NAME ,dpt3.MODIFIEDDATETIME as DIRPARTYTABLE3_MODIFIEDDATETIME ,(SELECT MAX(LastUpdateDate) FROM (VALUES (ct1.MODIFIEDDATETIME), (isnull(dpt1.MODIFIEDDATETIME, '1950-01-01')), (isnull(c1.MODIFIEDDATETIME, '1950-01-01')), (isnull(hw1.MODIFIEDDATETIME, '1950-01-01')), (isnull(dpt2.MODIFIEDDATETIME, '1950-01-01')), (isnull(dpt2.MODIFIEDDATETIME, '1950-01-01')), (isnull(def1.DEFAULTDIMENSION_MODIFIEDDATETIME, '1950-01-01')), (isnull(ct2.MODIFIEDDATETIME, '1950-01-01')), (isnull(hw2.MODIFIEDDATETIME, '1950-01-01')), (isnull(dpt3.MODIFIEDDATETIME, '1950-01-01'))) AS UpdateDate(LastUpdateDate)) AS LATEST_MODIFIEDDATETIME from dbo.CUSTTABLE ct1 left join dbo.DIRPARTYTABLE dpt1 on \tct1.PARTY = dpt1.RECID left join dbo.CURRENCY c1 on \tct1.CURRENCY = c1.CURRENCYCODE left join dbo.HCMWORKER hw1 on \tct1.MAINCONTACTWORKER = hw1.RECID left join dbo.DIRPARTYTABLE dpt2 on \thw1.PERSON = dpt2.RECID left join dbo.TSIAVGDAYS tad1 on \tct1.DATAAREAID = tad1.DATAAREAID and \tct1.ACCOUNTNUM = tad1.CUSTACCOUNT left join dbo.CASHDISC cd1 on \tct1.DATAAREAID = cd1.DATAAREAID and \tct1.CASHDISC = cd1.CASHDISCCODE left join dbo.DLVMODE dm1 on \tct1.DATAAREAID = dm1.DATAAREAID and \tct1.DLVMODE = dm1.CODE left join dbo.DLVTERM dt1 on \tct1.DATAAREAID = dt1.DATAAREAID and \tct1.DLVTERM = dt1.CODE left join dbo.CUSTPAYMMODETABLE cpmt1 on \tct1.DATAAREAID = cpmt1.DATAAREAID and \tct1.PAYMMODE = cpmt1.PAYMMODE left join dbo.PAYMTERM pt1 on \tct1.DATAAREAID = pt1.DATAAREAID and \tct1.PAYMTERMID = pt1.PAYMTERMID left join dbo.CUSTCLASSIFICATIONGROUP ccg1 on \tct1.DATAAREAID = ccg1.DATAAREAID and \tct1.CUSTCLASSIFICATIONID = ccg1.CODE left join dbo.SMMBUSRELCHAINGROUP sbrcg1 on \tct1.DATAAREAID = sbrcg1.DATAAREAID and \tct1.COMPANYCHAINID = sbrcg1.CHAINID left join dbo.CUSTGROUP cg1 on \tct1.DATAAREAID = cg1.DATAAREAID and \tct1.CUSTGROUP = cg1.CUSTGROUP left join dbo.SMMBUSRELSALESDISTRICTGROUP sbrsdg1 on \tct1.DATAAREAID = sbrsdg1.DATAAREAID and \tct1.SALESDISTRICTID = sbrsdg1.SALESDISTRICTID left join dbo.EBCSALESMKTDIVISION esmd1 on \tsbrsdg1.DATAAREAID = esmd1.DATAAREAID and \tsbrsdg1.EBCDIVISIONID = esmd1.EBCDIVISIONID left join dbo.LINEOFBUSINESS lob1 on \tct1.DATAAREAID = lob1.DATAAREAID and \tct1.LINEOFBUSINESSID = lob1.LINEOFBUSINESSID left join dbo.MARKUPGROUP mug1 on \tmug1.MODULE = 1 and \tct1.DATAAREAID = mug1.DATAAREAID and \tct1.MARKUPGROUP = mug1.GROUPID left join dbo.PRICEDISCGROUP pdg1 on \tpdg1.TYPE = 0 and \tpdg1.MODULE = 1 and \tct1.DATAAREAID = pdg1.DATAAREAID and \tct1.PRICEGROUP = pdg1.GROUPID left join (select distinct ct1.DEFAULTDIMENSION \t\t\t\t, max( \t\t\t\t\tcase when da1.NAME = 'C_Sales_Channel' then davsi1.DISPLAYVALUE \t\t\t\t\t\telse null \t\t\t\t\t\tend \t\t\t\t\t) over (partition by ct1.DEFAULTDIMENSION) as C_SALES_CHANNEL \t\t\t\t, min( \t\t\t\t\tcase when da1.NAME = 'C_Sales_Channel' then desc1.DESCRIPTION \t\t\t\t\telse null \t\t\t\t\tend \t\t\t\t\t) over (partition by ct1.DEFAULTDIMENSION) as C_SALES_CHANNEL_DESCRIPTION \t\t\t\t, max( \t\t\t\t\t(select max(i) from (values (davsi1.MODIFIEDDATETIME), (dav1.MODIFIEDDATETIME), (da1.MODIFIEDDATETIME), (desc1.DESC_MODIFIEDDATETIME)) AS T(i)) \t\t\t\t\t) over (partition by ct1.DEFAULTDIMENSION) as DEFAULTDIMENSION_MODIFIEDDATETIME \t\t\tfrom (select distinct DEFAULTDIMENSION from dbo.CUSTTABLE) ct1 \t\t\tleft join dbo.DIMENSIONATTRIBUTEVALUESETITEM davsi1 on \t\t\t\tct1.DEFAULTDIMENSION = davsi1.DIMENSIONATTRIBUTEVALUESET \t\t\tleft join dbo.DIMENSIONATTRIBUTEVALUE dav1 on \t\t\t\tdavsi1.DIMENSIONATTRIBUTEVALUE = dav1.RECID \t\t\tleft join dbo.DIMENSIONATTRIBUTE da1 on \t\t\t\tdav1.DIMENSIONATTRIBUTE = da1.RECID \t\t\tleft join (select dft1.VALUE, da2.NAME, dft1.DESCRIPTION \t\t\t\t\t\t\t, (select max(i) from (values (dft1.MODIFIEDDATETIME), (dadc1.MODIFIEDDATETIME), (da2.MODIFIEDDATETIME)) AS T(i)) as DESC_MODIFIEDDATETIME \t\t\t\t\t\tfrom dbo.DIMENSIONFINANCIALTAG dft1 \t\t\t\t\t\tleft join dbo.DIMENSIONATTRIBUTEDIRCATEGORY dadc1 on \t\t\t\t\t\t\tdft1.FINANCIALTAGCATEGORY = dadc1.DIRCATEGORY \t\t\t\t\t\tleft join dbo.DIMENSIONATTRIBUTE da2 on \t\t\t\t\t\t\tdadc1.DIMENSIONATTRIBUTE = da2.RECID) desc1 on \t\t\t\tdavsi1.DISPLAYVALUE = desc1.VALUE and \t\t\t\tda1.NAME = desc1.NAME \t\t\t) def1 on \tct1.DEFAULTDIMENSION = def1.DEFAULTDIMENSION left join dbo.COMMISSIONSALESGROUP csg1 on \tct1.DATAAREAID = csg1.DATAAREAID and \tct1.SALESGROUP = csg1.GROUPID left join dbo.SALESPOOL sp1 on \tct1.DATAAREAID = sp1.DATAAREAID and \tct1.SALESPOOLID = sp1.SALESPOOLID left join dbo.SMMBUSRELSEGMENTGROUP sbrsg1 on \tct1.DATAAREAID = sbrsg1.DATAAREAID and \tct1.SEGMENTID = sbrsg1.SEGMENTID left join dbo.SMMBUSRELSUBSEGMENTGROUP sbrssg1 on \tct1.DATAAREAID = sbrssg1.DATAAREAID and \tct1.SEGMENTID = sbrssg1.SEGMENTID and \tct1.SUBSEGMENTID = sbrssg1.SUBSEGMENTID left join dbo.TAXGROUPHEADING tgh1 on \tct1.DATAAREAID = tgh1.DATAAREAID and \tct1.TAXGROUP = tgh1.TAXGROUP left join (select LOCATION, STREET, CITY, STATE, ZIPCODE, COUNTRYREGIONID, TIMEZONE \t\t\t\t, row_number() over (partition by LOCATION order by VALIDTO) as ROW_NUM \t\t\tfrom dbo.LOGISTICSPOSTALADDRESS) lpa1 on \tlpa1.ROW_NUM = 1 and \tdpt1.PRIMARYADDRESSLOCATION = lpa1.LOCATION left join dbo.TIMEZONESLIST tzl1 on \tlpa1.TIMEZONE = tzl1.TZENUM left join dbo.LOGISTICSLOCATION ll1 on \tlpa1.LOCATION = ll1.RECID left join dbo.LOGISTICSELECTRONICADDRESS lea1 on \tdpt1.PRIMARYCONTACTEMAIL = lea1.RECID left join dbo.LOGISTICSELECTRONICADDRESS lea2 on \tdpt1.PRIMARYCONTACTFAX = lea2.RECID left join dbo.LOGISTICSELECTRONICADDRESS lea3 on \tdpt1.PRIMARYCONTACTPHONE = lea3.RECID left join (select dpl10.PARTY, dpl10.LOCATION, lpa10.STREET, lpa10.CITY, lpa10.STATE, lpa10.ZIPCODE, lpa10.COUNTRYREGIONID \t\t\t, row_number() over (partition by dpl10.PARTY order by ll10.LOCATIONID desc) as ROW_NUM \t\tfrom dbo.DIRPARTYLOCATION dpl10 \t\tleft join dbo.LOGISTICSPOSTALADDRESS lpa10 on \t\t\tlpa10.VALIDTO = '2154-12-31T23:59:59' and \t\t\tdpl10.LOCATION = lpa10.LOCATION \t\tleft join dbo.LOGISTICSLOCATION ll10 on \t\t\tlpa10.LOCATION = ll10.RECID \t\twhere dpl10.ISROLEINVOICE = 1) lpa2 on \tlpa2.ROW_NUM = 1 and \tct1.PARTY = lpa2.PARTY left join dbo.LOGISTICSLOCATION ll2 on \tlpa2.LOCATION = ll2.RECID left join dbo.CUSTTABLE ct2 on \tct1.DATAAREAID = ct2.DATAAREAID and \tct1.EBCREPORTPARENT = ct2.ACCOUNTNUM left join dbo.SMMBUSRELSALESDISTRICTGROUP sbrsdg2 on \tct2.DATAAREAID = sbrsdg2.DATAAREAID and \tct2.SALESDISTRICTID = sbrsdg2.SALESDISTRICTID left join dbo.EBCSALESMKTDIVISION esmd2 on \tsbrsdg2.DATAAREAID = esmd2.DATAAREAID and \tsbrsdg2.EBCDIVISIONID = esmd2.EBCDIVISIONID left join dbo.HCMWORKER hw2 on \tct1.EBCREPORTPARENT = convert(nvarchar(20), hw2.RECID) left join dbo.DIRPARTYTABLE dpt3 on \thw2.PERSON = dpt3.RECID",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "DATAAREAID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DATAAREAID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "ACCOUNTNUM",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "ACCOUNTNUM",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "PARTY",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "PARTY",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "EBCCOMPANYID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "EBCCOMPANYID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "OURACCOUNTNUM",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "OURACCOUNTNUM",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "INVOICEACCOUNT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "INVOICEACCOUNT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CURRENCY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CURRENCY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "USECASHDISC",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "USECASHDISC",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINCONTACTWORKER",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "MAINCONTACTWORKER",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "BLOCKED",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "BLOCKED",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "PASTDUECHECK",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "PASTDUECHECK",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "CREDITMAX",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "CREDITMAX",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "MANDATORYCREDITLIMIT",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "MANDATORYCREDITLIMIT",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "EXCLUDECREDITLIMITBLOCKING",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "EXCLUDECREDITLIMITBLOCKING",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "GRACEDAYS",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "GRACEDAYS",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "EBCBUYGRPEXEMPTION",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "EBCBUYGRPEXEMPTION",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "EBCBUYGRPKICKER",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "EBCBUYGRPKICKER",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "CASHDISC",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CASHDISC",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DLVMODE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DLVMODE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DLVTERM",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DLVTERM",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "PAYMMODE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "PAYMMODE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "PAYMTERMID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "PAYMTERMID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTCLASSIFICATIONID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTCLASSIFICATIONID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "COMPANYCHAINID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "COMPANYCHAINID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTGROUP",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTGROUP",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "EBCDIVISIONID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "EBCDIVISIONID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LINEOFBUSINESSID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LINEOFBUSINESSID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MARKUPGROUP",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MARKUPGROUP",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "PRICEGROUP",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "PRICEGROUP",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESDISTRICTID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESDISTRICTID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESGROUP",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESGROUP",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESPOOLID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESPOOLID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SEGMENTID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SEGMENTID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SUBSEGMENTID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SUBSEGMENTID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TAXGROUP",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TAXGROUP",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "EBCREPORTPARENT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "EBCREPORTPARENT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MCSEXTERNALPRICING",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "MCSEXTERNALPRICING",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "MCSNETWORKID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MCSNETWORKID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE1_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE1_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE1_INSTANCERELATIONTYPE",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE1_INSTANCERELATIONTYPE",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE1_EBCLEGACY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE1_EBCLEGACY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE1_ORGNUMBER",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE1_ORGNUMBER",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE1_PRIMARYADDRESSLOCATION",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE1_PRIMARYADDRESSLOCATION",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE1_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE1_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "CURRENCY_TXT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CURRENCY_TXT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CURRENCY_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "CURRENCY_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "HCMWORKER1_PERSONNELNUMBER",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "HCMWORKER1_PERSONNELNUMBER",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "HCMWORKER1_PERSON",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "HCMWORKER1_PERSON",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "HCMWORKER1_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "HCMWORKER1_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE2_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE2_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE2_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE2_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "TSIAVGDAYS_CPAVGDAY",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "TSIAVGDAYS_CPAVGDAY",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "TSIAVGDAYS_YRAVGDAY",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "TSIAVGDAYS_YRAVGDAY",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "CASHDISC_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CASHDISC_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CASHDISC_PERCENT",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "CASHDISC_PERCENT",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "DLVMODE_TXT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DLVMODE_TXT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DLVTERM_TXT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DLVTERM_TXT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPAYMMODETABLE_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPAYMMODETABLE_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "PAYMTERM_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "PAYMTERM_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "PAYMTERM_NUMOFDAYS",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "PAYMTERM_NUMOFDAYS",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "PAYMTERM_NUMOFMONTHS",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "PAYMTERM_NUMOFMONTHS",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTCLASSIFICATIONGROUP_TXT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTCLASSIFICATIONGROUP_TXT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SMMBUSRELCHAINGROUP_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SMMBUSRELCHAINGROUP_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTGROUP_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTGROUP_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_EBCDIVISIONID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_EBCDIVISIONID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP1",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP1",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP2",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP2",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP3",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP3",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "EBCSALESMKTDIVISION1_EBCDIVISIONDESC",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "EBCSALESMKTDIVISION1_EBCDIVISIONDESC",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LINEOFBUSINESS_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LINEOFBUSINESS_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MARKUPGROUP_TXT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MARKUPGROUP_TXT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "PRICEDISCGROUP_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "PRICEDISCGROUP_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION_C_SALES_CHANNEL",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION_C_SALES_CHANNEL",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION_C_SALES_CHANNEL_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION_C_SALES_CHANNEL_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "COMMISSIONSALESGROUP_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "COMMISSIONSALESGROUP_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESPOOL_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESPOOL_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SMMBUSRELSEGMENTGROUP_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SMMBUSRELSEGMENTGROUP_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SMMBUSRELSUBSEGMENTGROUP_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SMMBUSRELSUBSEGMENTGROUP_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TAXGROUPHEADING_TAXGROUPNAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TAXGROUPHEADING_TAXGROUPNAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS1_STREET",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS1_STREET",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS1_CITY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS1_CITY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS1_STATE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS1_STATE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS1_ZIPCODE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS1_ZIPCODE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS1_COUNTRYREGIONID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS1_COUNTRYREGIONID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS1_TIMEZONE",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS1_TIMEZONE",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEZONESLIST_TIMEZONEKEYNAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEZONESLIST_TIMEZONEKEYNAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSLOCATION1_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSLOCATION1_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSELECTRONICADDRESS1_LOCATOR",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSELECTRONICADDRESS1_LOCATOR",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSELECTRONICADDRESS2_LOCATOR",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSELECTRONICADDRESS2_LOCATOR",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSELECTRONICADDRESS3_LOCATOR",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSELECTRONICADDRESS3_LOCATOR",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS2_STREET",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS2_STREET",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS2_CITY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS2_CITY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS2_STATE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS2_STATE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS2_ZIPCODE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS2_ZIPCODE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS2_COUNTRYREGIONID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS2_COUNTRYREGIONID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSLOCATION2_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSLOCATION2_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSLOCATION2_LOCATIONID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSLOCATION2_LOCATIONID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTTABLE2_EBCDIVISIONID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTTABLE2_EBCDIVISIONID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTTABLE2_SALESDISTRICTID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTTABLE2_SALESDISTRICTID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTTABLE2_MAINCONTACTWORKER",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "CUSTTABLE2_MAINCONTACTWORKER",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTTABLE2_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "CUSTTABLE2_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP2_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP2_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "EBCSALESMKTDIVISION2_EBCDIVISIONDESC",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "EBCSALESMKTDIVISION2_EBCDIVISIONDESC",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "HCMWORKER2_PERSONNELNUMBER",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "HCMWORKER2_PERSONNELNUMBER",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "HCMWORKER2_PERSON",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "HCMWORKER2_PERSON",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "HCMWORKER2_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "HCMWORKER2_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE3_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE3_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE3_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE3_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": true
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_sql_server",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_src_table_name": {
+													"value": "@pipeline().parameters.p_src_table_nm",
+													"type": "Expression"
+												},
+												"p_src_schema_name": {
+													"value": "@pipeline().parameters.p_src_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_serverName": {
+													"value": "@pipeline().globalParameters.nala_sql_serverName",
+													"type": "Expression"
+												},
+												"p_ls_dbName": {
+													"value": "@pipeline().globalParameters.nala_sql_dbName",
+													"type": "Expression"
+												},
+												"p_ls_sqlUsername": {
+													"value": "@pipeline().globalParameters.sql_userName",
+													"type": "Expression"
+												},
+												"p_ls_sqlPassword": {
+													"value": "@pipeline().globalParameters.sql_password",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_directory": {
+													"value": "@pipeline().parameters.p_temp_directory",
+													"type": "Expression"
+												},
+												"p_root_system": {
+													"value": "@pipeline().globalParameters.rootDir",
+													"type": "Expression"
+												},
+												"p_file_name": {
+													"value": "@pipeline().parameters.p_temp_file_nm",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "nala_notify_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "custtable_to_adls_nala",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('custtable_to_adls_nala').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('custtable_to_adls_nala').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('custtable_to_adls_nala').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('custtable_to_adls_nala').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_nala_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "nala_notify_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('custtable_to_adls_nala').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						},
+						{
+							"value": "2",
+							"activities": [
+								{
+									"name": "custtable_to_adls_retail",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": {
+												"value": "select ct1.DATAAREAID ,ct1.ACCOUNTNUM ,ct1.PARTY ,null as EBCCOMPANYID ,ct1.OURACCOUNTNUM ,ct1.INVOICEACCOUNT ,ct1.CURRENCY ,ct1.USECASHDISC ,ct1.MAINCONTACTWORKER ,ct1.BLOCKED ,null as PASTDUECHECK ,ct1.CREDITMAX ,ct1.MANDATORYCREDITLIMIT ,null as EXCLUDECREDITLIMITBLOCKING ,null as GRACEDAYS ,null as EBCBUYGRPEXEMPTION ,null as EBCBUYGRPKICKER ,ct1.CASHDISC ,ct1.DLVMODE ,ct1.DLVTERM ,ct1.PAYMMODE ,ct1.PAYMTERMID ,ct1.CUSTCLASSIFICATIONID ,ct1.COMPANYCHAINID ,ct1.CUSTGROUP ,null as EBCDIVISIONID ,ct1.LINEOFBUSINESSID ,ct1.MARKUPGROUP ,ct1.PRICEGROUP ,ct1.DEFAULTDIMENSION ,ct1.SALESDISTRICTID ,ct1.SALESGROUP ,ct1.SALESPOOLID ,ct1.SEGMENTID ,ct1.SUBSEGMENTID ,ct1.TAXGROUP ,null as EBCREPORTPARENT ,null as MCSEXTERNALPRICING ,null as MCSNETWORKID ,ct1.MODIFIEDDATETIME ,dpt1.NAME as DIRPARTYTABLE1_NAME ,dpt1.INSTANCERELATIONTYPE as DIRPARTYTABLE1_INSTANCERELATIONTYPE ,null as DIRPARTYTABLE1_EBCLEGACY ,dpt1.ORGNUMBER as DIRPARTYTABLE1_ORGNUMBER ,dpt1.PRIMARYADDRESSLOCATION as DIRPARTYTABLE1_PRIMARYADDRESSLOCATION ,dpt1.MODIFIEDDATETIME as DIRPARTYTABLE1_MODIFIEDDATETIME ,c1.TXT as CURRENCY_TXT ,c1.MODIFIEDDATETIME as CURRENCY_MODIFIEDDATETIME ,hw1.PERSONNELNUMBER as HCMWORKER1_PERSONNELNUMBER ,hw1.PERSON as HCMWORKER1_PERSON ,hw1.MODIFIEDDATETIME as HCMWORKER1_MODIFIEDDATETIME ,dpt2.NAME as DIRPARTYTABLE2_NAME ,dpt2.MODIFIEDDATETIME as DIRPARTYTABLE2_MODIFIEDDATETIME ,null as TSIAVGDAYS_CPAVGDAY ,null as TSIAVGDAYS_YRAVGDAY ,cd1.DESCRIPTION as CASHDISC_DESCRIPTION ,cd1.PERCENT_ as CASHDISC_PERCENT ,dm1.TXT as DLVMODE_TXT ,dt1.TXT as DLVTERM_TXT ,cpmt1.NAME as CUSTPAYMMODETABLE_NAME ,pt1.DESCRIPTION as PAYMTERM_DESCRIPTION ,pt1.NUMOFDAYS as PAYMTERM_NUMOFDAYS ,pt1.NUMOFMONTHS as PAYMTERM_NUMOFMONTHS ,ccg1.TXT as CUSTCLASSIFICATIONGROUP_TXT ,sbrcg1.DESCRIPTION as SMMBUSRELCHAINGROUP_DESCRIPTION ,cg1.NAME as CUSTGROUP_NAME ,null as SMMBUSRELSALESDISTRICTGROUP1_EBCDIVISIONID ,sbrsdg1.DESCRIPTION as SMMBUSRELSALESDISTRICTGROUP1_DESCRIPTION ,null as SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP1 ,null as SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP2 ,null as SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP3 ,null as EBCSALESMKTDIVISION1_EBCDIVISIONDESC ,lob1.DESCRIPTION as LINEOFBUSINESS_DESCRIPTION ,mug1.TXT as MARKUPGROUP_TXT ,pdg1.NAME as PRICEDISCGROUP_NAME ,def1.C_SALES_CHANNEL as DEFAULTDIMENSION_C_SALES_CHANNEL ,def1.C_SALES_CHANNEL_DESCRIPTION as DEFAULTDIMENSION_C_SALES_CHANNEL_DESCRIPTION ,def1.DEFAULTDIMENSION_MODIFIEDDATETIME ,csg1.NAME as COMMISSIONSALESGROUP_NAME ,sp1.NAME as SALESPOOL_NAME ,sbrsg1.DESCRIPTION as SMMBUSRELSEGMENTGROUP_DESCRIPTION ,sbrssg1.SUBSEGMENTDESCRIPTION as SMMBUSRELSUBSEGMENTGROUP_DESCRIPTION ,tgh1.TAXGROUPNAME as TAXGROUPHEADING_TAXGROUPNAME ,lpa1.STREET as LOGISTICSPOSTALADDRESS1_STREET ,lpa1.CITY as LOGISTICSPOSTALADDRESS1_CITY ,lpa1.STATE as LOGISTICSPOSTALADDRESS1_STATE ,lpa1.ZIPCODE as LOGISTICSPOSTALADDRESS1_ZIPCODE ,lpa1.COUNTRYREGIONID as LOGISTICSPOSTALADDRESS1_COUNTRYREGIONID ,lpa1.TIMEZONE as LOGISTICSPOSTALADDRESS1_TIMEZONE ,tzl1.TIMEZONEKEYNAME as TIMEZONESLIST_TIMEZONEKEYNAME ,ll1.DESCRIPTION as LOGISTICSLOCATION1_DESCRIPTION ,lea1.LOCATOR as LOGISTICSELECTRONICADDRESS1_LOCATOR ,lea2.LOCATOR as LOGISTICSELECTRONICADDRESS2_LOCATOR ,lea3.LOCATOR as LOGISTICSELECTRONICADDRESS3_LOCATOR ,lpa2.STREET as LOGISTICSPOSTALADDRESS2_STREET ,lpa2.CITY as LOGISTICSPOSTALADDRESS2_CITY ,lpa2.STATE as LOGISTICSPOSTALADDRESS2_STATE ,lpa2.ZIPCODE as LOGISTICSPOSTALADDRESS2_ZIPCODE ,lpa2.COUNTRYREGIONID as LOGISTICSPOSTALADDRESS2_COUNTRYREGIONID ,ll2.DESCRIPTION as LOGISTICSLOCATION2_DESCRIPTION ,ll2.LOCATIONID as LOGISTICSLOCATION2_LOCATIONID ,null as CUSTTABLE2_EBCDIVISIONID ,null as CUSTTABLE2_SALESDISTRICTID ,null as CUSTTABLE2_MAINCONTACTWORKER ,null as CUSTTABLE2_MODIFIEDDATETIME ,null as SMMBUSRELSALESDISTRICTGROUP2_DESCRIPTION ,null as EBCSALESMKTDIVISION2_EBCDIVISIONDESC ,null as HCMWORKER2_PERSONNELNUMBER ,null as HCMWORKER2_PERSON ,null as HCMWORKER2_MODIFIEDDATETIME ,null as DIRPARTYTABLE3_NAME ,null as DIRPARTYTABLE3_MODIFIEDDATETIME ,(SELECT MAX(LastUpdateDate) FROM (VALUES (ct1.MODIFIEDDATETIME), (isnull(dpt1.MODIFIEDDATETIME, '1950-01-01')), (isnull(c1.MODIFIEDDATETIME, '1950-01-01')), (isnull(hw1.MODIFIEDDATETIME, '1950-01-01')), (isnull(dpt2.MODIFIEDDATETIME, '1950-01-01')), (isnull(dpt2.MODIFIEDDATETIME, '1950-01-01')), (isnull(def1.DEFAULTDIMENSION_MODIFIEDDATETIME, '1950-01-01'))) AS UpdateDate(LastUpdateDate)) AS LATEST_MODIFIEDDATETIME from dbo.CUSTTABLE ct1 left join dbo.DIRPARTYTABLE dpt1 on \tct1.PARTY = dpt1.RECID left join dbo.CURRENCY c1 on \tct1.CURRENCY = c1.CURRENCYCODE left join dbo.HCMWORKER hw1 on \tct1.MAINCONTACTWORKER = hw1.RECID left join dbo.DIRPARTYTABLE dpt2 on \thw1.PERSON = dpt2.RECID left join dbo.CASHDISC cd1 on \tct1.DATAAREAID = cd1.DATAAREAID and \tct1.CASHDISC = cd1.CASHDISCCODE left join dbo.DLVMODE dm1 on \tct1.DATAAREAID = dm1.DATAAREAID and \tct1.DLVMODE = dm1.CODE left join dbo.DLVTERM dt1 on \tct1.DATAAREAID = dt1.DATAAREAID and \tct1.DLVTERM = dt1.CODE left join dbo.CUSTPAYMMODETABLE cpmt1 on \tct1.DATAAREAID = cpmt1.DATAAREAID and \tct1.PAYMMODE = cpmt1.PAYMMODE left join dbo.PAYMTERM pt1 on \tct1.DATAAREAID = pt1.DATAAREAID and \tct1.PAYMTERMID = pt1.PAYMTERMID left join dbo.CUSTCLASSIFICATIONGROUP ccg1 on \tct1.DATAAREAID = ccg1.DATAAREAID and \tct1.CUSTCLASSIFICATIONID = ccg1.CODE left join dbo.SMMBUSRELCHAINGROUP sbrcg1 on \tct1.DATAAREAID = sbrcg1.DATAAREAID and \tct1.COMPANYCHAINID = sbrcg1.CHAINID left join dbo.CUSTGROUP cg1 on \tct1.DATAAREAID = cg1.DATAAREAID and \tct1.CUSTGROUP = cg1.CUSTGROUP left join dbo.SMMBUSRELSALESDISTRICTGROUP sbrsdg1 on \tct1.DATAAREAID = sbrsdg1.DATAAREAID and \tct1.SALESDISTRICTID = sbrsdg1.SALESDISTRICTID left join dbo.LINEOFBUSINESS lob1 on \tct1.DATAAREAID = lob1.DATAAREAID and \tct1.LINEOFBUSINESSID = lob1.LINEOFBUSINESSID left join dbo.MARKUPGROUP mug1 on \tmug1.MODULE = 1 and \tct1.DATAAREAID = mug1.DATAAREAID and \tct1.MARKUPGROUP = mug1.GROUPID left join dbo.PRICEDISCGROUP pdg1 on \tpdg1.TYPE = 0 and \tpdg1.MODULE = 1 and \tct1.DATAAREAID = pdg1.DATAAREAID and \tct1.PRICEGROUP = pdg1.GROUPID left join (select distinct ct1.DEFAULTDIMENSION \t\t\t\t, max( \t\t\t\t\tcase when da1.NAME = 'C_Sales_Channel' then davsi1.DISPLAYVALUE \t\t\t\t\t\telse null \t\t\t\t\t\tend \t\t\t\t\t) over (partition by ct1.DEFAULTDIMENSION) as C_SALES_CHANNEL \t\t\t\t, min( \t\t\t\t\tcase when da1.NAME = 'C_Sales_Channel' then desc1.DESCRIPTION \t\t\t\t\telse null \t\t\t\t\tend \t\t\t\t\t) over (partition by ct1.DEFAULTDIMENSION) as C_SALES_CHANNEL_DESCRIPTION \t\t\t\t, max( \t\t\t\t\t(select max(i) from (values (davsi1.MODIFIEDDATETIME), (dav1.MODIFIEDDATETIME), (da1.MODIFIEDDATETIME), (desc1.DESC_MODIFIEDDATETIME)) AS T(i)) \t\t\t\t\t) over (partition by ct1.DEFAULTDIMENSION) as DEFAULTDIMENSION_MODIFIEDDATETIME \t\t\tfrom (select distinct DEFAULTDIMENSION from dbo.CUSTTABLE) ct1 \t\t\tleft join dbo.DIMENSIONATTRIBUTEVALUESETITEM davsi1 on \t\t\t\tct1.DEFAULTDIMENSION = davsi1.DIMENSIONATTRIBUTEVALUESET \t\t\tleft join dbo.DIMENSIONATTRIBUTEVALUE dav1 on \t\t\t\tdavsi1.DIMENSIONATTRIBUTEVALUE = dav1.RECID \t\t\tleft join dbo.DIMENSIONATTRIBUTE da1 on \t\t\t\tdav1.DIMENSIONATTRIBUTE = da1.RECID \t\t\tleft join (select dft1.VALUE, da2.NAME, dft1.DESCRIPTION \t\t\t\t\t\t\t, (select max(i) from (values (dft1.MODIFIEDDATETIME), (dadc1.MODIFIEDDATETIME), (da2.MODIFIEDDATETIME)) AS T(i)) as DESC_MODIFIEDDATETIME \t\t\t\t\t\tfrom dbo.DIMENSIONFINANCIALTAG dft1 \t\t\t\t\t\tleft join dbo.DIMENSIONATTRIBUTEDIRCATEGORY dadc1 on \t\t\t\t\t\t\tdft1.FINANCIALTAGCATEGORY = dadc1.DIRCATEGORY \t\t\t\t\t\tleft join dbo.DIMENSIONATTRIBUTE da2 on \t\t\t\t\t\t\tdadc1.DIMENSIONATTRIBUTE = da2.RECID) desc1 on \t\t\t\tdavsi1.DISPLAYVALUE = desc1.VALUE and \t\t\t\tda1.NAME = desc1.NAME \t\t\t) def1 on \tct1.DEFAULTDIMENSION = def1.DEFAULTDIMENSION left join dbo.COMMISSIONSALESGROUP csg1 on \tct1.DATAAREAID = csg1.DATAAREAID and \tct1.SALESGROUP = csg1.GROUPID left join dbo.SALESPOOL sp1 on \tct1.DATAAREAID = sp1.DATAAREAID and \tct1.SALESPOOLID = sp1.SALESPOOLID left join dbo.SMMBUSRELSEGMENTGROUP sbrsg1 on \tct1.DATAAREAID = sbrsg1.DATAAREAID and \tct1.SEGMENTID = sbrsg1.SEGMENTID left join dbo.SMMBUSRELSUBSEGMENTGROUP sbrssg1 on \tct1.DATAAREAID = sbrssg1.DATAAREAID and \tct1.SEGMENTID = sbrssg1.SEGMENTID and \tct1.SUBSEGMENTID = sbrssg1.SUBSEGMENTID left join dbo.TAXGROUPHEADING tgh1 on \tct1.DATAAREAID = tgh1.DATAAREAID and \tct1.TAXGROUP = tgh1.TAXGROUP left join (select LOCATION, STREET, CITY, STATE, ZIPCODE, COUNTRYREGIONID, TIMEZONE \t\t\t\t, row_number() over (partition by LOCATION order by VALIDTO) as ROW_NUM \t\t\tfrom dbo.LOGISTICSPOSTALADDRESS) lpa1 on \tlpa1.ROW_NUM = 1 and \tdpt1.PRIMARYADDRESSLOCATION = lpa1.LOCATION left join dbo.TIMEZONESLIST tzl1 on \tlpa1.TIMEZONE = tzl1.TZENUM left join dbo.LOGISTICSLOCATION ll1 on \tlpa1.LOCATION = ll1.RECID left join dbo.LOGISTICSELECTRONICADDRESS lea1 on \tdpt1.PRIMARYCONTACTEMAIL = lea1.RECID left join dbo.LOGISTICSELECTRONICADDRESS lea2 on \tdpt1.PRIMARYCONTACTFAX = lea2.RECID left join dbo.LOGISTICSELECTRONICADDRESS lea3 on \tdpt1.PRIMARYCONTACTPHONE = lea3.RECID left join (select dpl10.PARTY, dpl10.LOCATION, lpa10.STREET, lpa10.CITY, lpa10.STATE, lpa10.ZIPCODE, lpa10.COUNTRYREGIONID \t\t\t, row_number() over (partition by dpl10.PARTY order by ll10.LOCATIONID desc) as ROW_NUM \t\tfrom dbo.DIRPARTYLOCATION dpl10 \t\tleft join dbo.LOGISTICSPOSTALADDRESS lpa10 on \t\t\tlpa10.VALIDTO = '2154-12-31T23:59:59' and \t\t\tdpl10.LOCATION = lpa10.LOCATION \t\tleft join dbo.LOGISTICSLOCATION ll10 on \t\t\tlpa10.LOCATION = ll10.RECID \t\twhere dpl10.ISROLEINVOICE = 1) lpa2 on \tlpa2.ROW_NUM = 1 and \tct1.PARTY = lpa2.PARTY left join dbo.LOGISTICSLOCATION ll2 on \tlpa2.LOCATION = ll2.RECID\t\t\t\t \t\t\t\t\t",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "DATAAREAID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DATAAREAID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "ACCOUNTNUM",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "ACCOUNTNUM",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "PARTY",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "PARTY",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "EBCCOMPANYID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "EBCCOMPANYID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "OURACCOUNTNUM",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "OURACCOUNTNUM",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "INVOICEACCOUNT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "INVOICEACCOUNT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CURRENCY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CURRENCY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "USECASHDISC",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "USECASHDISC",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINCONTACTWORKER",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "MAINCONTACTWORKER",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "BLOCKED",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "BLOCKED",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "PASTDUECHECK",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "PASTDUECHECK",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "CREDITMAX",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "CREDITMAX",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "MANDATORYCREDITLIMIT",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "MANDATORYCREDITLIMIT",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "EXCLUDECREDITLIMITBLOCKING",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "EXCLUDECREDITLIMITBLOCKING",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "GRACEDAYS",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "GRACEDAYS",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "EBCBUYGRPEXEMPTION",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "EBCBUYGRPEXEMPTION",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "EBCBUYGRPKICKER",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "EBCBUYGRPKICKER",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "CASHDISC",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CASHDISC",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DLVMODE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DLVMODE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DLVTERM",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DLVTERM",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "PAYMMODE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "PAYMMODE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "PAYMTERMID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "PAYMTERMID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTCLASSIFICATIONID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTCLASSIFICATIONID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "COMPANYCHAINID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "COMPANYCHAINID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTGROUP",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTGROUP",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "EBCDIVISIONID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "EBCDIVISIONID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LINEOFBUSINESSID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LINEOFBUSINESSID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MARKUPGROUP",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MARKUPGROUP",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "PRICEGROUP",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "PRICEGROUP",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESDISTRICTID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESDISTRICTID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESGROUP",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESGROUP",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESPOOLID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESPOOLID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SEGMENTID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SEGMENTID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SUBSEGMENTID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SUBSEGMENTID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TAXGROUP",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TAXGROUP",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "EBCREPORTPARENT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "EBCREPORTPARENT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MCSEXTERNALPRICING",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "MCSEXTERNALPRICING",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "MCSNETWORKID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MCSNETWORKID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE1_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE1_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE1_INSTANCERELATIONTYPE",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE1_INSTANCERELATIONTYPE",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE1_EBCLEGACY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE1_EBCLEGACY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE1_ORGNUMBER",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE1_ORGNUMBER",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE1_PRIMARYADDRESSLOCATION",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE1_PRIMARYADDRESSLOCATION",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE1_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE1_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "CURRENCY_TXT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CURRENCY_TXT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CURRENCY_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "CURRENCY_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "HCMWORKER1_PERSONNELNUMBER",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "HCMWORKER1_PERSONNELNUMBER",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "HCMWORKER1_PERSON",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "HCMWORKER1_PERSON",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "HCMWORKER1_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "HCMWORKER1_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE2_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE2_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE2_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE2_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "TSIAVGDAYS_CPAVGDAY",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "TSIAVGDAYS_CPAVGDAY",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "TSIAVGDAYS_YRAVGDAY",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "TSIAVGDAYS_YRAVGDAY",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "CASHDISC_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CASHDISC_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CASHDISC_PERCENT",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 16,
+														"precision": 32
+													},
+													"sink": {
+														"name": "CASHDISC_PERCENT",
+														"type": "Decimal",
+														"physicalType": "DECIMAL"
+													}
+												},
+												{
+													"source": {
+														"name": "DLVMODE_TXT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DLVMODE_TXT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DLVTERM_TXT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DLVTERM_TXT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTPAYMMODETABLE_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTPAYMMODETABLE_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "PAYMTERM_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "PAYMTERM_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "PAYMTERM_NUMOFDAYS",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "PAYMTERM_NUMOFDAYS",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "PAYMTERM_NUMOFMONTHS",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "PAYMTERM_NUMOFMONTHS",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTCLASSIFICATIONGROUP_TXT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTCLASSIFICATIONGROUP_TXT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SMMBUSRELCHAINGROUP_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SMMBUSRELCHAINGROUP_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTGROUP_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTGROUP_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_EBCDIVISIONID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_EBCDIVISIONID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP1",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP1",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP2",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP2",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP3",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP3",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "EBCSALESMKTDIVISION1_EBCDIVISIONDESC",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "EBCSALESMKTDIVISION1_EBCDIVISIONDESC",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LINEOFBUSINESS_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LINEOFBUSINESS_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "MARKUPGROUP_TXT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "MARKUPGROUP_TXT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "PRICEDISCGROUP_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "PRICEDISCGROUP_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION_C_SALES_CHANNEL",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION_C_SALES_CHANNEL",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION_C_SALES_CHANNEL_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION_C_SALES_CHANNEL_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "COMMISSIONSALESGROUP_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "COMMISSIONSALESGROUP_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SALESPOOL_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SALESPOOL_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SMMBUSRELSEGMENTGROUP_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SMMBUSRELSEGMENTGROUP_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "SMMBUSRELSUBSEGMENTGROUP_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SMMBUSRELSUBSEGMENTGROUP_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "TAXGROUPHEADING_TAXGROUPNAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TAXGROUPHEADING_TAXGROUPNAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS1_STREET",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS1_STREET",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS1_CITY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS1_CITY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS1_STATE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS1_STATE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS1_ZIPCODE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS1_ZIPCODE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS1_COUNTRYREGIONID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS1_COUNTRYREGIONID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS1_TIMEZONE",
+														"type": "Int32",
+														"physicalType": "int"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS1_TIMEZONE",
+														"type": "Int32",
+														"physicalType": "INT_32"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEZONESLIST_TIMEZONEKEYNAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "TIMEZONESLIST_TIMEZONEKEYNAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSLOCATION1_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSLOCATION1_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSELECTRONICADDRESS1_LOCATOR",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSELECTRONICADDRESS1_LOCATOR",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSELECTRONICADDRESS2_LOCATOR",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSELECTRONICADDRESS2_LOCATOR",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSELECTRONICADDRESS3_LOCATOR",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSELECTRONICADDRESS3_LOCATOR",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS2_STREET",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS2_STREET",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS2_CITY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS2_CITY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS2_STATE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS2_STATE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS2_ZIPCODE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS2_ZIPCODE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSPOSTALADDRESS2_COUNTRYREGIONID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSPOSTALADDRESS2_COUNTRYREGIONID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSLOCATION2_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSLOCATION2_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LOGISTICSLOCATION2_LOCATIONID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "LOGISTICSLOCATION2_LOCATIONID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTTABLE2_EBCDIVISIONID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTTABLE2_EBCDIVISIONID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTTABLE2_SALESDISTRICTID",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "CUSTTABLE2_SALESDISTRICTID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTTABLE2_MAINCONTACTWORKER",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "CUSTTABLE2_MAINCONTACTWORKER",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "CUSTTABLE2_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "CUSTTABLE2_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP2_DESCRIPTION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "SMMBUSRELSALESDISTRICTGROUP2_DESCRIPTION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "EBCSALESMKTDIVISION2_EBCDIVISIONDESC",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "EBCSALESMKTDIVISION2_EBCDIVISIONDESC",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "HCMWORKER2_PERSONNELNUMBER",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "HCMWORKER2_PERSONNELNUMBER",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "HCMWORKER2_PERSON",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "HCMWORKER2_PERSON",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "HCMWORKER2_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "HCMWORKER2_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE3_NAME",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE3_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE3_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE3_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": true
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_sql_server",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_src_table_name": {
+													"value": "@pipeline().parameters.p_src_table_nm",
+													"type": "Expression"
+												},
+												"p_src_schema_name": {
+													"value": "@pipeline().parameters.p_src_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_serverName": {
+													"value": "@pipeline().globalParameters.retail_sql_serverName",
+													"type": "Expression"
+												},
+												"p_ls_dbName": {
+													"value": "@pipeline().globalParameters.retail_sql_dbName",
+													"type": "Expression"
+												},
+												"p_ls_sqlUsername": {
+													"value": "@pipeline().globalParameters.sql_userName",
+													"type": "Expression"
+												},
+												"p_ls_sqlPassword": {
+													"value": "@pipeline().globalParameters.sql_password",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_directory": {
+													"value": "@pipeline().parameters.p_temp_directory",
+													"type": "Expression"
+												},
+												"p_root_system": {
+													"value": "@pipeline().globalParameters.rootDir",
+													"type": "Expression"
+												},
+												"p_file_name": {
+													"value": "@pipeline().parameters.p_temp_file_nm",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "retail_notify_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "custtable_to_adls_retail",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('custtable_to_adls_retail').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('custtable_to_adls_retail').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('custtable_to_adls_retail').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('custtable_to_adls_retail').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_retail_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "retail_notify_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('custtable_to_adls_retail').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						}
+					],
+					"defaultActivities": [
+						{
+							"name": "custtable_to_adls_d365",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "WarehouseSource",
+									"additionalColumns": [
+										{
+											"name": "HK_JOB_RUN_ID",
+											"value": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											}
+										},
+										{
+											"name": "HK_SOURCE_NAME",
+											"value": {
+												"value": "@pipeline().parameters.p_src_nm",
+												"type": "Expression"
+											}
+										}
+									],
+									"sqlReaderQuery": {
+										"value": "select \nct1.dataareaid as DATAAREAID\n,ct1.accountnum as ACCOUNTNUM\n,ct1.party as PARTY\n,ct1.ebccompanyid as EBCCOMPANYID\n,ct1.ouraccountnum as OURACCOUNTNUM\n,ct1.invoiceaccount as INVOICEACCOUNT\n,ct1.currency as CURRENCY\n,ct1.usecashdisc as USECASHDISC\n,ct1.maincontactworker as MAINCONTACTWORKER\n,ct1.blocked as BLOCKED\n,ct1.pastduecheck as PASTDUECHECK\n,ct1.creditmax as CREDITMAX\n,ct1.mandatorycreditlimit as MANDATORYCREDITLIMIT\n,ct1.excludecreditlimitblocking as EXCLUDECREDITLIMITBLOCKING\n,ct1.gracedays as GRACEDAYS\n,ct1.ebcbuygrpexemption as EBCBUYGRPEXEMPTION\n,ct1.ebcbuygrpkicker as EBCBUYGRPKICKER\n,ct1.cashdisc as CASHDISC\n,ct1.dlvmode as DLVMODE\n,ct1.dlvterm as DLVTERM\n,ct1.paymmode as PAYMMODE\n,ct1.paymtermid as PAYMTERMID\n,ct1.custclassificationid as CUSTCLASSIFICATIONID\n,ct1.companychainid as COMPANYCHAINID\n,ct1.custgroup as CUSTGROUP\n,ct1.ebcdivisionid as EBCDIVISIONID\n,ct1.lineofbusinessid as LINEOFBUSINESSID\n,ct1.markupgroup as MARKUPGROUP\n,ct1.pricegroup as PRICEGROUP\n,ct1.defaultdimension as DEFAULTDIMENSION\n,ct1.salesdistrictid as SALESDISTRICTID\n,ct1.salesgroup as SALESGROUP\n,ct1.salespoolid as SALESPOOLID\n,ct1.segmentid as SEGMENTID\n,ct1.subsegmentid as SUBSEGMENTID\n,ct1.taxgroup as TAXGROUP\n,ct1.ebcreportparent as EBCREPORTPARENT\n,ct1.mcsexternalpricing as MCSEXTERNALPRICING\n,ct1.mcsnetworkid as MCSNETWORKID\n,ct1.modifieddatetime as MODIFIEDDATETIME\n,dpt1.name as DIRPARTYTABLE1_NAME\n,dpt1.instancerelationtype as DIRPARTYTABLE1_INSTANCERELATIONTYPE\n,dpt1.ebclegacy as DIRPARTYTABLE1_EBCLEGACY\n,do1.orgnumber as DIRPARTYTABLE1_ORGNUMBER\n,dpt1.primaryaddresslocation as DIRPARTYTABLE1_PRIMARYADDRESSLOCATION\n,dpt1.modifieddatetime as DIRPARTYTABLE1_MODIFIEDDATETIME\n,c1.txt as CURRENCY_TXT\n,c1.modifieddatetime as CURRENCY_MODIFIEDDATETIME\n,hw1.personnelnumber as HCMWORKER1_PERSONNELNUMBER\n,hw1.person as HCMWORKER1_PERSON\n,hw1.modifieddatetime as HCMWORKER1_MODIFIEDDATETIME\n,dpt2.name as DIRPARTYTABLE2_NAME\n,dpt2.modifieddatetime as DIRPARTYTABLE2_MODIFIEDDATETIME\n,tad1.cpavgday as TSIAVGDAYS_CPAVGDAY\n,tad1.yravgday as TSIAVGDAYS_YRAVGDAY\n,cd1.description as CASHDISC_DESCRIPTION\n,cd1.\"percent\" as CASHDISC_PERCENT\n,dm1.txt as DLVMODE_TXT\n,dt1.txt as DLVTERM_TXT\n,cpmt1.name as CUSTPAYMMODETABLE_NAME\n,pt1.description as PAYMTERM_DESCRIPTION\n,pt1.numofdays as PAYMTERM_NUMOFDAYS\n,pt1.numofmonths as PAYMTERM_NUMOFMONTHS\n,ccg1.txt as CUSTCLASSIFICATIONGROUP_TXT\n,sbrcg1.description as SMMBUSRELCHAINGROUP_DESCRIPTION\n,cg1.name as CUSTGROUP_NAME\n,sbrsdg1.ebcdivisionid as SMMBUSRELSALESDISTRICTGROUP1_EBCDIVISIONID\n,sbrsdg1.description as SMMBUSRELSALESDISTRICTGROUP1_DESCRIPTION\n,sbrsdg1.altrollup1 as SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP1\n,sbrsdg1.altrollup2 as SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP2\n,sbrsdg1.altrollup3 as SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP3\n,esmd1.ebcdivisiondesc as EBCSALESMKTDIVISION1_EBCDIVISIONDESC\n,lob1.description as LINEOFBUSINESS_DESCRIPTION\n,mug1.txt as MARKUPGROUP_TXT\n,pdg1.name as PRICEDISCGROUP_NAME\n,def1.C_SALES_CHANNEL as DEFAULTDIMENSION_C_SALES_CHANNEL\n,def1.C_SALES_CHANNEL_DESCRIPTION as DEFAULTDIMENSION_C_SALES_CHANNEL_DESCRIPTION\n,def1.DEFAULTDIMENSION_MODIFIEDDATETIME as DEFAULTDIMENSION_MODIFIEDDATETIME\n,csg1.name as COMMISSIONSALESGROUP_NAME\n,sp1.name as SALESPOOL_NAME\n,sbrsg1.description as SMMBUSRELSEGMENTGROUP_DESCRIPTION\n,sbrssg1.subsegmentdescription as SMMBUSRELSUBSEGMENTGROUP_DESCRIPTION\n,tgh1.taxgroupname as TAXGROUPHEADING_TAXGROUPNAME\n,lpa1.street as LOGISTICSPOSTALADDRESS1_STREET\n,lpa1.city as LOGISTICSPOSTALADDRESS1_CITY\n,lpa1.state as LOGISTICSPOSTALADDRESS1_STATE\n,lpa1.zipcode as LOGISTICSPOSTALADDRESS1_ZIPCODE\n,lpa1.countryregionid as LOGISTICSPOSTALADDRESS1_COUNTRYREGIONID\n,lpa1.timezone as LOGISTICSPOSTALADDRESS1_TIMEZONE\n,tzl1.timezonekeyname as TIMEZONESLIST_TIMEZONEKEYNAME\n,ll1.description as LOGISTICSLOCATION1_DESCRIPTION\n,lea1.locator as LOGISTICSELECTRONICADDRESS1_LOCATOR\n,lea2.locator as LOGISTICSELECTRONICADDRESS2_LOCATOR\n,lea3.locator as LOGISTICSELECTRONICADDRESS3_LOCATOR\n,lpa2.street as LOGISTICSPOSTALADDRESS2_STREET\n,lpa2.city as LOGISTICSPOSTALADDRESS2_CITY\n,lpa2.state as LOGISTICSPOSTALADDRESS2_STATE\n,lpa2.zipcode as LOGISTICSPOSTALADDRESS2_ZIPCODE\n,lpa2.countryregionid as LOGISTICSPOSTALADDRESS2_COUNTRYREGIONID\n,ll2.description as LOGISTICSLOCATION2_DESCRIPTION\n,ll2.locationid as LOGISTICSLOCATION2_LOCATIONID\n,ct2.ebcdivisionid as CUSTTABLE2_EBCDIVISIONID\n,ct2.salesdistrictid as CUSTTABLE2_SALESDISTRICTID\n,ct2.maincontactworker as CUSTTABLE2_MAINCONTACTWORKER\n,ct2.modifieddatetime as CUSTTABLE2_MODIFIEDDATETIME\n,sbrsdg2.description as SMMBUSRELSALESDISTRICTGROUP2_DESCRIPTION\n,esmd2.ebcdivisiondesc as EBCSALESMKTDIVISION2_EBCDIVISIONDESC\n,hw2.personnelnumber as HCMWORKER2_PERSONNELNUMBER\n,hw2.person as HCMWORKER2_PERSON\n,hw2.modifieddatetime as HCMWORKER2_MODIFIEDDATETIME\n,dpt3.name as DIRPARTYTABLE3_NAME\n,dpt3.modifieddatetime as DIRPARTYTABLE3_MODIFIEDDATETIME\n,(SELECT MAX(LastUpdateDate)\nFROM (VALUES (ct1.modifieddatetime),\n(isnull(dpt1.modifieddatetime, '1950-01-01')),\n(isnull(c1.modifieddatetime, '1950-01-01')),\n(isnull(hw1.modifieddatetime, '1950-01-01')),\n(isnull(dpt2.modifieddatetime, '1950-01-01')),\n(isnull(def1.DEFAULTDIMENSION_MODIFIEDDATETIME, '1950-01-01')),\n(isnull(ct2.modifieddatetime, '1950-01-01')),\n(isnull(hw2.modifieddatetime, '1950-01-01')),\n(isnull(dpt3.modifieddatetime, '1950-01-01'))) AS UpdateDate(LastUpdateDate)) AS LATEST_MODIFIEDDATETIME\nfrom\ndataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.custtable ct1\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dirpartytable dpt1 on\n\tct1.party = dpt1.recid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dirorganization do1 on\n\tdpt1.recid = do1.recid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.currency c1 on\n\tct1.currency = c1.currencycode\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.hcmworker hw1 on\n\tct1.maincontactworker = hw1.recid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dirpartytable dpt2 on\n\thw1.person = dpt2.recid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.tsiavgdays tad1 on\n\tct1.dataareaid = tad1.dataareaid and\n\tct1.accountnum = tad1.custaccount\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.cashdisc cd1 on\n\tct1.dataareaid = cd1.dataareaid and\n\tct1.cashdisc = cd1.cashdisccode\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dlvmode dm1 on\n\tct1.dataareaid = dm1.dataareaid and\n\tct1.dlvmode = dm1.code\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dlvterm dt1 on\n\tct1.dataareaid = dt1.dataareaid and\n\tct1.dlvterm = dt1.code\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.custpaymmodetable cpmt1 on\n\tct1.dataareaid = cpmt1.dataareaid and\n\tct1.paymmode = cpmt1.paymmode\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.paymterm pt1 on\n\tct1.dataareaid = pt1.dataareaid and\n\tct1.paymtermid = pt1.paymtermid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.custclassificationgroup ccg1 on\n\tct1.dataareaid = ccg1.dataareaid and\n\tct1.custclassificationid = ccg1.code\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.smmbusrelchaingroup sbrcg1 on\n\tct1.dataareaid = sbrcg1.dataareaid and\n\tct1.companychainid = sbrcg1.chainid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.custgroup cg1 on\n\tct1.dataareaid = cg1.dataareaid and\n\tct1.custgroup = cg1.custgroup\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.smmbusrelsalesdistrictgroup sbrsdg1 on\n\tct1.dataareaid = sbrsdg1.dataareaid and\n\tct1.salesdistrictid = sbrsdg1.salesdistrictid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.ebcsalesmktdivision esmd1 on\n\tsbrsdg1.dataareaid = esmd1.dataareaid and\n\tsbrsdg1.ebcdivisionid = esmd1.ebcdivisionid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.lineofbusiness lob1 on\n\tct1.dataareaid = lob1.dataareaid and\n\tct1.lineofbusinessid = lob1.lineofbusinessid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.markupgroup mug1 on\n\tmug1.module = 1 and\n\tct1.dataareaid = mug1.dataareaid and\n\tct1.markupgroup = mug1.groupid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.pricediscgroup pdg1 on\n\tpdg1.type = 0 and\n\tpdg1.module = 1 and\n\tct1.dataareaid = pdg1.dataareaid and\n\tct1.pricegroup = pdg1.groupid\nleft join (select distinct ct1.defaultdimension\n\t\t\t\t, max(\n\t\t\t\t\tcase when da1.name = 'C_Sales_Channel' then davsi1.displayvalue\n\t\t\t\t\t\telse null\n\t\t\t\t\t\tend\n\t\t\t\t\t) over (partition by ct1.defaultdimension) as C_SALES_CHANNEL\n\t\t\t\t, min(\n\t\t\t\t\tcase when da1.name = 'C_Sales_Channel' then desc1.description\n\t\t\t\t\telse null\n\t\t\t\t\tend\n\t\t\t\t\t) over (partition by ct1.defaultdimension) as C_SALES_CHANNEL_DESCRIPTION\n\t\t\t\t, max(\n\t\t\t\t\t(select max(i) from (values (davsi1.modifieddatetime), (dav1.modifieddatetime), (da1.modifieddatetime), (desc1.DESC_MODIFIEDDATETIME)) as t(i))\n\t\t\t\t\t) over (partition by ct1.defaultdimension) as DEFAULTDIMENSION_MODIFIEDDATETIME\n\t\t\tfrom (select distinct defaultdimension from dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.custtable) ct1\n\t\t\tleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionattributevaluesetitem davsi1 on\n\t\t\t\tct1.defaultdimension = davsi1.dimensionattributevalueset\n\t\t\tleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionattributevalue dav1 on\n\t\t\t\tdavsi1.dimensionattributevalue = dav1.recid\n\t\t\tleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionattribute da1 on\n\t\t\t\tdav1.dimensionattribute = da1.recid\n\t\t\tleft join (select dft1.value, da2.name, dft1.description\n\t\t\t\t\t\t\t, (select max(i) from (values (dft1.modifieddatetime), (dadc1.modifieddatetime), (da2.modifieddatetime)) as t(i)) as DESC_MODIFIEDDATETIME\n\t\t\t\t\t\tfrom dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionfinancialtag dft1\n\t\t\t\t\t\tleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionattributedircategory dadc1 on\n\t\t\t\t\t\t\tdft1.financialtagcategory = dadc1.dircategory\n\t\t\t\t\t\tleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionattribute da2 on\n\t\t\t\t\t\t\tdadc1.dimensionattribute = da2.recid) desc1 on\n\t\t\t\tdavsi1.displayvalue = desc1.value and\n\t\t\t\tda1.name = desc1.name\n\t\t\t) def1 on\n\tct1.defaultdimension = def1.defaultdimension\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.commissionsalesgroup csg1 on\n\tct1.dataareaid = csg1.dataareaid and\n\tct1.salesgroup = csg1.groupid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.salespool sp1 on\n\tct1.dataareaid = sp1.dataareaid and\n\tct1.salespoolid = sp1.salespoolid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.smmbusrelsegmentgroup sbrsg1 on\n\tct1.dataareaid = sbrsg1.dataareaid and\n\tct1.segmentid = sbrsg1.segmentid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.smmbusrelsubsegmentgroup sbrssg1 on\n\tct1.dataareaid = sbrssg1.dataareaid and\n\tct1.segmentid = sbrssg1.segmentid and\n\tct1.subsegmentid = sbrssg1.subsegmentid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.taxgroupheading tgh1 on\n\tct1.dataareaid = tgh1.dataareaid and\n\tct1.taxgroup = tgh1.taxgroup\nleft join (select location, street, city, state, zipcode, countryregionid, timezone\n\t\t\t\t, row_number() over (partition by location order by validto) as ROW_NUM\n\t\t\tfrom dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.logisticspostaladdress) lpa1 on\n\tlpa1.ROW_NUM = 1 and\n\tdpt1.primaryaddresslocation = lpa1.location\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.timezoneslist tzl1 on\n\tlpa1.timezone = tzl1.tzenum\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.logisticslocation ll1 on\n\tlpa1.location = ll1.recid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.logisticselectronicaddress lea1 on\n\tdpt1.primarycontactemail = lea1.recid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.logisticselectronicaddress lea2 on\n\tdpt1.primarycontactfax = lea2.recid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.logisticselectronicaddress lea3 on\n\tdpt1.primarycontactphone = lea3.recid\nleft join (select dpl10.party, dpl10.location, lpa10.street, lpa10.city, lpa10.state, lpa10.zipcode, lpa10.countryregionid\n\t\t\t, row_number() over (partition by dpl10.party order by ll10.locationid desc) as ROW_NUM\n\t\tfrom dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dirpartylocation dpl10\n\t\tleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.logisticspostaladdress lpa10 on\n\t\t\tlpa10.validto = '2154-12-31T23:59:59' and\n\t\t\tdpl10.location = lpa10.location\n\t\tleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.logisticslocation ll10 on\n\t\t\tlpa10.location = ll10.recid\n\t\twhere dpl10.isroleinvoice = 1) lpa2 on\n\tlpa2.ROW_NUM = 1 and\n\tct1.party = lpa2.party\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.logisticslocation ll2 on\n\tlpa2.location = ll2.recid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.custtable ct2 on\n\tct1.dataareaid = ct2.dataareaid and\n\tct1.ebcreportparent = ct2.accountnum\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.smmbusrelsalesdistrictgroup sbrsdg2 on\n\tct2.dataareaid = sbrsdg2.dataareaid and\n\tct2.salesdistrictid = sbrsdg2.salesdistrictid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.ebcsalesmktdivision esmd2 on\n\tsbrsdg2.dataareaid = esmd2.dataareaid and\n\tsbrsdg2.ebcdivisionid = esmd2.ebcdivisionid\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.hcmworker hw2 on\n\tct1.ebcreportparent = convert(nvarchar(20), hw2.recid)\nleft join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dirpartytable dpt3 on\n\thw2.person = dpt3.recid\nwhere ct1.dataareaid is not null",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"mappings": [
+										{
+											"source": {
+												"name": "DATAAREAID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "DATAAREAID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "ACCOUNTNUM",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "ACCOUNTNUM",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "PARTY",
+												"type": "Int64",
+												"physicalType": "bigint"
+											},
+											"sink": {
+												"name": "PARTY",
+												"type": "Int64",
+												"physicalType": "INT_64"
+											}
+										},
+										{
+											"source": {
+												"name": "EBCCOMPANYID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "EBCCOMPANYID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "OURACCOUNTNUM",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "OURACCOUNTNUM",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "INVOICEACCOUNT",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "INVOICEACCOUNT",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "CURRENCY",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "CURRENCY",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "USECASHDISC",
+												"type": "Int32",
+												"physicalType": "int"
+											},
+											"sink": {
+												"name": "USECASHDISC",
+												"type": "Int32",
+												"physicalType": "INT_32"
+											}
+										},
+										{
+											"source": {
+												"name": "MAINCONTACTWORKER",
+												"type": "Int64",
+												"physicalType": "bigint"
+											},
+											"sink": {
+												"name": "MAINCONTACTWORKER",
+												"type": "Int64",
+												"physicalType": "INT_64"
+											}
+										},
+										{
+											"source": {
+												"name": "BLOCKED",
+												"type": "Int32",
+												"physicalType": "int"
+											},
+											"sink": {
+												"name": "BLOCKED",
+												"type": "Int32",
+												"physicalType": "INT_32"
+											}
+										},
+										{
+											"source": {
+												"name": "PASTDUECHECK",
+												"type": "Int32",
+												"physicalType": "int"
+											},
+											"sink": {
+												"name": "PASTDUECHECK",
+												"type": "Int32",
+												"physicalType": "INT_32"
+											}
+										},
+										{
+											"source": {
+												"name": "CREDITMAX",
+												"type": "Decimal",
+												"physicalType": "decimal",
+												"scale": 16,
+												"precision": 32
+											},
+											"sink": {
+												"name": "CREDITMAX",
+												"type": "Decimal",
+												"physicalType": "DECIMAL"
+											}
+										},
+										{
+											"source": {
+												"name": "MANDATORYCREDITLIMIT",
+												"type": "Int32",
+												"physicalType": "int"
+											},
+											"sink": {
+												"name": "MANDATORYCREDITLIMIT",
+												"type": "Int32",
+												"physicalType": "INT_32"
+											}
+										},
+										{
+											"source": {
+												"name": "EXCLUDECREDITLIMITBLOCKING",
+												"type": "Int32",
+												"physicalType": "int"
+											},
+											"sink": {
+												"name": "EXCLUDECREDITLIMITBLOCKING",
+												"type": "Int32",
+												"physicalType": "INT_32"
+											}
+										},
+										{
+											"source": {
+												"name": "GRACEDAYS",
+												"type": "Decimal",
+												"physicalType": "decimal",
+												"scale": 16,
+												"precision": 32
+											},
+											"sink": {
+												"name": "GRACEDAYS",
+												"type": "Decimal",
+												"physicalType": "DECIMAL"
+											}
+										},
+										{
+											"source": {
+												"name": "EBCBUYGRPEXEMPTION",
+												"type": "Int32",
+												"physicalType": "int"
+											},
+											"sink": {
+												"name": "EBCBUYGRPEXEMPTION",
+												"type": "Int32",
+												"physicalType": "INT_32"
+											}
+										},
+										{
+											"source": {
+												"name": "EBCBUYGRPKICKER",
+												"type": "Int32",
+												"physicalType": "int"
+											},
+											"sink": {
+												"name": "EBCBUYGRPKICKER",
+												"type": "Int32",
+												"physicalType": "INT_32"
+											}
+										},
+										{
+											"source": {
+												"name": "CASHDISC",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "CASHDISC",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "DLVMODE",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "DLVMODE",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "DLVTERM",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "DLVTERM",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "PAYMMODE",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "PAYMMODE",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "PAYMTERMID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "PAYMTERMID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "CUSTCLASSIFICATIONID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "CUSTCLASSIFICATIONID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "COMPANYCHAINID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "COMPANYCHAINID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "CUSTGROUP",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "CUSTGROUP",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "EBCDIVISIONID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "EBCDIVISIONID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LINEOFBUSINESSID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LINEOFBUSINESSID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "MARKUPGROUP",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "MARKUPGROUP",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "PRICEGROUP",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "PRICEGROUP",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "DEFAULTDIMENSION",
+												"type": "Int64",
+												"physicalType": "bigint"
+											},
+											"sink": {
+												"name": "DEFAULTDIMENSION",
+												"type": "Int64",
+												"physicalType": "INT_64"
+											}
+										},
+										{
+											"source": {
+												"name": "SALESDISTRICTID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SALESDISTRICTID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "SALESGROUP",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SALESGROUP",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "SALESPOOLID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SALESPOOLID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "SEGMENTID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SEGMENTID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "SUBSEGMENTID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SUBSEGMENTID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "TAXGROUP",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "TAXGROUP",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "EBCREPORTPARENT",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "EBCREPORTPARENT",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "MCSEXTERNALPRICING",
+												"type": "Int32",
+												"physicalType": "int"
+											},
+											"sink": {
+												"name": "MCSEXTERNALPRICING",
+												"type": "Int32",
+												"physicalType": "INT_32"
+											}
+										},
+										{
+											"source": {
+												"name": "MCSNETWORKID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "MCSNETWORKID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "datetime"
+											},
+											"sink": {
+												"name": "MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "INT_96"
+											}
+										},
+										{
+											"source": {
+												"name": "DIRPARTYTABLE1_NAME",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "DIRPARTYTABLE1_NAME",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "DIRPARTYTABLE1_INSTANCERELATIONTYPE",
+												"type": "Int64",
+												"physicalType": "bigint"
+											},
+											"sink": {
+												"name": "DIRPARTYTABLE1_INSTANCERELATIONTYPE",
+												"type": "Int64",
+												"physicalType": "INT_64"
+											}
+										},
+										{
+											"source": {
+												"name": "DIRPARTYTABLE1_EBCLEGACY",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "DIRPARTYTABLE1_EBCLEGACY",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "DIRPARTYTABLE1_ORGNUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "DIRPARTYTABLE1_ORGNUMBER",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "DIRPARTYTABLE1_PRIMARYADDRESSLOCATION",
+												"type": "Int64",
+												"physicalType": "bigint"
+											},
+											"sink": {
+												"name": "DIRPARTYTABLE1_PRIMARYADDRESSLOCATION",
+												"type": "Int64",
+												"physicalType": "INT_64"
+											}
+										},
+										{
+											"source": {
+												"name": "DIRPARTYTABLE1_MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "datetime"
+											},
+											"sink": {
+												"name": "DIRPARTYTABLE1_MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "INT_96"
+											}
+										},
+										{
+											"source": {
+												"name": "CURRENCY_TXT",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "CURRENCY_TXT",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "CURRENCY_MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "datetime"
+											},
+											"sink": {
+												"name": "CURRENCY_MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "INT_96"
+											}
+										},
+										{
+											"source": {
+												"name": "HCMWORKER1_PERSONNELNUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "HCMWORKER1_PERSONNELNUMBER",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "HCMWORKER1_PERSON",
+												"type": "Int64",
+												"physicalType": "bigint"
+											},
+											"sink": {
+												"name": "HCMWORKER1_PERSON",
+												"type": "Int64",
+												"physicalType": "INT_64"
+											}
+										},
+										{
+											"source": {
+												"name": "HCMWORKER1_MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "datetime"
+											},
+											"sink": {
+												"name": "HCMWORKER1_MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "INT_96"
+											}
+										},
+										{
+											"source": {
+												"name": "DIRPARTYTABLE2_NAME",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "DIRPARTYTABLE2_NAME",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "DIRPARTYTABLE2_MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "datetime"
+											},
+											"sink": {
+												"name": "DIRPARTYTABLE2_MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "INT_96"
+											}
+										},
+										{
+											"source": {
+												"name": "TSIAVGDAYS_CPAVGDAY",
+												"type": "Int32",
+												"physicalType": "int"
+											},
+											"sink": {
+												"name": "TSIAVGDAYS_CPAVGDAY",
+												"type": "Int32",
+												"physicalType": "INT_32"
+											}
+										},
+										{
+											"source": {
+												"name": "TSIAVGDAYS_YRAVGDAY",
+												"type": "Int32",
+												"physicalType": "int"
+											},
+											"sink": {
+												"name": "TSIAVGDAYS_YRAVGDAY",
+												"type": "Int32",
+												"physicalType": "INT_32"
+											}
+										},
+										{
+											"source": {
+												"name": "CASHDISC_DESCRIPTION",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "CASHDISC_DESCRIPTION",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "CASHDISC_PERCENT",
+												"type": "Decimal",
+												"physicalType": "decimal",
+												"scale": 16,
+												"precision": 32
+											},
+											"sink": {
+												"name": "CASHDISC_PERCENT",
+												"type": "Decimal",
+												"physicalType": "DECIMAL"
+											}
+										},
+										{
+											"source": {
+												"name": "DLVMODE_TXT",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "DLVMODE_TXT",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "DLVTERM_TXT",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "DLVTERM_TXT",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "CUSTPAYMMODETABLE_NAME",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "CUSTPAYMMODETABLE_NAME",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "PAYMTERM_DESCRIPTION",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "PAYMTERM_DESCRIPTION",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "PAYMTERM_NUMOFDAYS",
+												"type": "Int32",
+												"physicalType": "int"
+											},
+											"sink": {
+												"name": "PAYMTERM_NUMOFDAYS",
+												"type": "Int32",
+												"physicalType": "INT_32"
+											}
+										},
+										{
+											"source": {
+												"name": "PAYMTERM_NUMOFMONTHS",
+												"type": "Int32",
+												"physicalType": "int"
+											},
+											"sink": {
+												"name": "PAYMTERM_NUMOFMONTHS",
+												"type": "Int32",
+												"physicalType": "INT_32"
+											}
+										},
+										{
+											"source": {
+												"name": "CUSTCLASSIFICATIONGROUP_TXT",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "CUSTCLASSIFICATIONGROUP_TXT",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "SMMBUSRELCHAINGROUP_DESCRIPTION",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SMMBUSRELCHAINGROUP_DESCRIPTION",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "CUSTGROUP_NAME",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "CUSTGROUP_NAME",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "SMMBUSRELSALESDISTRICTGROUP1_EBCDIVISIONID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SMMBUSRELSALESDISTRICTGROUP1_EBCDIVISIONID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "SMMBUSRELSALESDISTRICTGROUP1_DESCRIPTION",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SMMBUSRELSALESDISTRICTGROUP1_DESCRIPTION",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP1",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP1",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP2",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP2",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP3",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SMMBUSRELSALESDISTRICTGROUP1_ALTROLLUP3",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "EBCSALESMKTDIVISION1_EBCDIVISIONDESC",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "EBCSALESMKTDIVISION1_EBCDIVISIONDESC",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LINEOFBUSINESS_DESCRIPTION",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LINEOFBUSINESS_DESCRIPTION",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "MARKUPGROUP_TXT",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "MARKUPGROUP_TXT",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "PRICEDISCGROUP_NAME",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "PRICEDISCGROUP_NAME",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "DEFAULTDIMENSION_C_SALES_CHANNEL",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "DEFAULTDIMENSION_C_SALES_CHANNEL",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "DEFAULTDIMENSION_C_SALES_CHANNEL_DESCRIPTION",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "DEFAULTDIMENSION_C_SALES_CHANNEL_DESCRIPTION",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "DEFAULTDIMENSION_MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "datetime"
+											},
+											"sink": {
+												"name": "DEFAULTDIMENSION_MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "INT_96"
+											}
+										},
+										{
+											"source": {
+												"name": "COMMISSIONSALESGROUP_NAME",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "COMMISSIONSALESGROUP_NAME",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "SALESPOOL_NAME",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SALESPOOL_NAME",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "SMMBUSRELSEGMENTGROUP_DESCRIPTION",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SMMBUSRELSEGMENTGROUP_DESCRIPTION",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "SMMBUSRELSUBSEGMENTGROUP_DESCRIPTION",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SMMBUSRELSUBSEGMENTGROUP_DESCRIPTION",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "TAXGROUPHEADING_TAXGROUPNAME",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "TAXGROUPHEADING_TAXGROUPNAME",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LOGISTICSPOSTALADDRESS1_STREET",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LOGISTICSPOSTALADDRESS1_STREET",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LOGISTICSPOSTALADDRESS1_CITY",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LOGISTICSPOSTALADDRESS1_CITY",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LOGISTICSPOSTALADDRESS1_STATE",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LOGISTICSPOSTALADDRESS1_STATE",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LOGISTICSPOSTALADDRESS1_ZIPCODE",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LOGISTICSPOSTALADDRESS1_ZIPCODE",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LOGISTICSPOSTALADDRESS1_COUNTRYREGIONID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LOGISTICSPOSTALADDRESS1_COUNTRYREGIONID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LOGISTICSPOSTALADDRESS1_TIMEZONE",
+												"type": "Int32",
+												"physicalType": "int"
+											},
+											"sink": {
+												"name": "LOGISTICSPOSTALADDRESS1_TIMEZONE",
+												"type": "Int32",
+												"physicalType": "INT_32"
+											}
+										},
+										{
+											"source": {
+												"name": "TIMEZONESLIST_TIMEZONEKEYNAME",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "TIMEZONESLIST_TIMEZONEKEYNAME",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LOGISTICSLOCATION1_DESCRIPTION",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LOGISTICSLOCATION1_DESCRIPTION",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LOGISTICSELECTRONICADDRESS1_LOCATOR",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LOGISTICSELECTRONICADDRESS1_LOCATOR",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LOGISTICSELECTRONICADDRESS2_LOCATOR",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LOGISTICSELECTRONICADDRESS2_LOCATOR",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LOGISTICSELECTRONICADDRESS3_LOCATOR",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LOGISTICSELECTRONICADDRESS3_LOCATOR",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LOGISTICSPOSTALADDRESS2_STREET",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LOGISTICSPOSTALADDRESS2_STREET",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LOGISTICSPOSTALADDRESS2_CITY",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LOGISTICSPOSTALADDRESS2_CITY",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LOGISTICSPOSTALADDRESS2_STATE",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LOGISTICSPOSTALADDRESS2_STATE",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LOGISTICSPOSTALADDRESS2_ZIPCODE",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LOGISTICSPOSTALADDRESS2_ZIPCODE",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LOGISTICSPOSTALADDRESS2_COUNTRYREGIONID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LOGISTICSPOSTALADDRESS2_COUNTRYREGIONID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LOGISTICSLOCATION2_DESCRIPTION",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LOGISTICSLOCATION2_DESCRIPTION",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "LOGISTICSLOCATION2_LOCATIONID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "LOGISTICSLOCATION2_LOCATIONID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "CUSTTABLE2_EBCDIVISIONID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "CUSTTABLE2_EBCDIVISIONID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "CUSTTABLE2_SALESDISTRICTID",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "CUSTTABLE2_SALESDISTRICTID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "CUSTTABLE2_MAINCONTACTWORKER",
+												"type": "Int64",
+												"physicalType": "bigint"
+											},
+											"sink": {
+												"name": "CUSTTABLE2_MAINCONTACTWORKER",
+												"type": "Int64",
+												"physicalType": "INT_64"
+											}
+										},
+										{
+											"source": {
+												"name": "CUSTTABLE2_MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "datetime"
+											},
+											"sink": {
+												"name": "CUSTTABLE2_MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "INT_96"
+											}
+										},
+										{
+											"source": {
+												"name": "SMMBUSRELSALESDISTRICTGROUP2_DESCRIPTION",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "SMMBUSRELSALESDISTRICTGROUP2_DESCRIPTION",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "EBCSALESMKTDIVISION2_EBCDIVISIONDESC",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "EBCSALESMKTDIVISION2_EBCDIVISIONDESC",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "HCMWORKER2_PERSONNELNUMBER",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "HCMWORKER2_PERSONNELNUMBER",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "HCMWORKER2_PERSON",
+												"type": "Int64",
+												"physicalType": "bigint"
+											},
+											"sink": {
+												"name": "HCMWORKER2_PERSON",
+												"type": "Int64",
+												"physicalType": "INT_64"
+											}
+										},
+										{
+											"source": {
+												"name": "HCMWORKER2_MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "datetime"
+											},
+											"sink": {
+												"name": "HCMWORKER2_MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "INT_96"
+											}
+										},
+										{
+											"source": {
+												"name": "DIRPARTYTABLE3_NAME",
+												"type": "String",
+												"physicalType": "nvarchar"
+											},
+											"sink": {
+												"name": "DIRPARTYTABLE3_NAME",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "DIRPARTYTABLE3_MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "datetime"
+											},
+											"sink": {
+												"name": "DIRPARTYTABLE3_MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "INT_96"
+											}
+										},
+										{
+											"source": {
+												"name": "LATEST_MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "datetime"
+											},
+											"sink": {
+												"name": "LATEST_MODIFIEDDATETIME",
+												"type": "DateTime",
+												"physicalType": "INT_96"
+											}
+										},
+										{
+											"source": {
+												"name": "HK_JOB_RUN_ID",
+												"type": "String"
+											},
+											"sink": {
+												"name": "HK_JOB_RUN_ID",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										},
+										{
+											"source": {
+												"name": "HK_SOURCE_NAME",
+												"type": "String"
+											},
+											"sink": {
+												"name": "HK_SOURCE_NAME",
+												"type": "String",
+												"physicalType": "UTF8"
+											}
+										}
+									],
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": true
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_fabric_wh",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_parquet",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_directory": {
+											"value": "@pipeline().parameters.p_temp_directory",
+											"type": "Expression"
+										},
+										"p_root_system": {
+											"value": "@pipeline().globalParameters.rootDir",
+											"type": "Expression"
+										},
+										"p_file_name": {
+											"value": "@pipeline().parameters.p_temp_file_nm",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "d365_notify_raw_load_failure_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "custtable_to_adls_d365",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@activity('custtable_to_adls_d365').Status",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@activity('custtable_to_adls_d365').Error['message']",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('custtable_to_adls_d365').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('custtable_to_adls_d365').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "d365_load_to_raw_fail",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "d365_notify_raw_load_failure_notification",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": {
+									"value": "@activity('custtable_to_adls_d365').Error['message']",
+									"type": "Expression"
+								},
+								"errorCode": "500"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "pipeline_execution_notification",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(equals(activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE'],'TRUE'),bool('TRUE'), bool('FALSE'))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "pp_stored_procedure_failure_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@toUpper('failed')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "curate_load_failure",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "pp_stored_procedure_failure_notification",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": {
+									"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+									"type": "Expression"
+								},
+								"errorCode": "500"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "stored_procedure_success_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@activity('raw_to_curate_sp_call').Status",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat(pipeline().parameters.p_tgt_curate_table_nm, ' is successfully loaded')",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": {
+										"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+										"type": "Expression"
+									},
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "load_raw_failure_notification",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "load_dim_customer",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_adf_pipeline_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"subscription": {
+							"value": "@pipeline().globalParameters.subscriptionId",
+							"type": "Expression"
+						},
+						"resourceGroup": {
+							"value": "@pipeline().globalParameters.resourceGroup",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@coalesce(pipeline().RunId, -1)",
+							"type": "Expression"
+						},
+						"name": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"triggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"status": {
+							"value": "@activity('load_dim_customer').Status",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@activity('load_dim_customer').Error['message']",
+							"type": "Expression"
+						},
+						"executionEndTime": {
+							"value": "@activity('load_dim_customer').ExecutionEndTime",
+							"type": "Expression"
+						},
+						"runDuration": {
+							"value": "@activity('load_dim_customer').Duration",
+							"type": "Expression"
+						},
+						"teamWebhookUrl": {
+							"value": "@pipeline().globalParameters.teamsWebhookUrl",
+							"type": "Expression"
+						},
+						"notificationTime": {
+							"value": "@utcNow()",
+							"type": "Expression"
+						},
+						"taskName": {
+							"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+							"type": "Expression"
+						},
+						"taskStepNumber": {
+							"value": "@pipeline().parameters.p_src_code",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "CUSTTABLE"
+			},
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_tgt_raw_table_nm": {
+				"type": "string",
+				"defaultValue": "CUSTTABLE"
+			},
+			"p_tgt_raw_schema_nm": {
+				"type": "string",
+				"defaultValue": "AX_NALA"
+			},
+			"p_tgt_curate_table_nm": {
+				"type": "string",
+				"defaultValue": "DIM_CUSTOMER"
+			},
+			"p_tgt_curate_schema_nm": {
+				"type": "string",
+				"defaultValue": "GLOBAL"
+			},
+			"p_src_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA"
+			},
+			"p_src_directory": {
+				"type": "string",
+				"defaultValue": "business_files"
+			},
+			"p_temp_file_nm": {
+				"type": "string",
+				"defaultValue": "custtable_nala.parquet"
+			},
+			"p_tgt_raw_table_nm_2": {
+				"type": "string",
+				"defaultValue": "CUSTTABLE_EXT"
+			},
+			"p_src_file_nm": {
+				"type": "string",
+				"defaultValue": "ReportingDealerExclusion.xlsx"
+			},
+			"p_temp_directory": {
+				"type": "string",
+				"defaultValue": "temp_files"
+			},
+			"p_src_file_sheet_1": {
+				"type": "string",
+				"defaultValue": "Segment"
+			},
+			"p_src_file_sheet_2": {
+				"type": "string",
+				"defaultValue": "SubSegment"
+			},
+			"p_lkp_curate_table_nm": {
+				"type": "string",
+				"defaultValue": "LKP_TRUCK_VOLUME"
+			},
+			"p_src_code": {
+				"type": "string",
+				"defaultValue": "1"
+			}
+		},
+		"variables": {
+			"v_prev_max_timestamp": {
+				"type": "String"
+			},
+			"v_last_mod_tmstmp_repodealexc": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-06-03T11:55:32Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

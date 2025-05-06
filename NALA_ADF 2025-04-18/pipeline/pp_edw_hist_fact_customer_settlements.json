@@ -1,0 +1,235 @@
+{
+	"name": "pp_edw_hist_fact_customer_settlements",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy from sqlserver to ADLS",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "select f1.DW_Id,\n\tf1.CustomerSettlementKey,\n\tf1.LegalEntityKey,\n\tf1.TransactionDate,\n\tf1.RecordID,\n\tf1.LegalEntity,\n\tf1.CompanyCurrencySettleAmount,\n\tf1.TransactionCurrencySettleAmount,\n\tf1.IncrementalTimestamp,\n\tf2.transcompany,\n\tf2.accountnum,\n\tf2.transrecid,\n\tf1.DW_Batch,\n\tf1.DW_SourceCode,\n\tf1.DW_TimeStamp\nfrom dbo.FACTCUSTOMERSETTLEMENTS f1 with (nolock)\n\tleft join edw_hka.dbo.FACTCUSTOMERSETTLEMENTS f2 with (nolock) on\n\t\tf1.RecordID = f2.RecordID\n;\n\n",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": false,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_sql_server",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_src_table_name": {
+								"value": "@pipeline().parameters.p_src_table_nm",
+								"type": "Expression"
+							},
+							"p_src_schema_name": {
+								"value": "@pipeline().parameters.p_src_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_serverName": {
+								"value": "@pipeline().globalParameters.edw_sql_serverName",
+								"type": "Expression"
+							},
+							"p_ls_dbName": {
+								"value": "@pipeline().globalParameters.edw_sql_dbName",
+								"type": "Expression"
+							},
+							"p_ls_sqlUsername": {
+								"value": "@pipeline().globalParameters.sql_userName",
+								"type": "Expression"
+							},
+							"p_ls_sqlPassword": {
+								"value": "@pipeline().globalParameters.sql_password",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_parq_edw",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_root_system": {
+								"value": "@pipeline().globalParameters.rootDir",
+								"type": "Expression"
+							},
+							"p_directory": {
+								"value": "@pipeline().parameters.p_temp_directory",
+								"type": "Expression"
+							},
+							"p_file_name": {
+								"value": "@concat(toUpper(pipeline().parameters.p_curate_table_name),'_HIST_',substring(string(utcNow()),0,4),'_',substring(string(utcNow()),5,2),'_',substring(string(utcNow()),8,2),'.snappy.parquet')",
+								"type": "Expression"
+							}
+						}
+					}
+				]
+			},
+			{
+				"name": "ADLS to Snowflake RAW with HK columns",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "Copy from sqlserver to ADLS",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_load_edw_history",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"adlsSource": {
+								"p_root_system": {
+									"value": "@pipeline().globalParameters.rootDir",
+									"type": "Expression"
+								},
+								"p_directory": {
+									"value": "@pipeline().parameters.p_temp_directory",
+									"type": "Expression"
+								},
+								"p_file_name": {
+									"value": "@concat(toUpper(pipeline().parameters.p_curate_table_name),'_HIST_',substring(string(utcNow()),0,4),'_',substring(string(utcNow()),5,2),'_',substring(string(utcNow()),8,2),'.snappy.parquet')",
+									"type": "Expression"
+								}
+							},
+							"snowflakeRawTarget": {
+								"p_tgt_table_name": {
+									"value": "@pipeline().parameters.p_src_table_nm",
+									"type": "Expression"
+								},
+								"p_tgt_schema_name": {
+									"value": "@pipeline().parameters.p_tgt_schema_nm",
+									"type": "Expression"
+								},
+								"p_ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_rawDb",
+									"type": "Expression"
+								},
+								"p_ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"integrationRuntime": {
+						"referenceName": "IR-Snowflake-NALA",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "RAW to CURATE SP",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "ADLS to Snowflake RAW with HK columns",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_curateDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "truncate table global.FACT_CUSTOMER_SETTLEMENTS;\n\ninsert into global.FACT_CUSTOMER_SETTLEMENTS (fact_customer_settlements_key, source_name, record_id, dim_source_system_key, dim_source_system_snkey, transaction_date_dim_date_key, transaction_date_dim_date_snkey, dim_legal_entity_key, dim_legal_entity_snkey, customer_settlement_key, trans_company, account_num, trans_rec_id, transaction_date, legal_entity, company_currency_settle_amount, transaction_currency_settle_amount, hk_hash_key, hk_source_name, hk_soft_delete_flag, hk_source_created_timestamp, hk_source_last_updated_timestamp, hk_created_job_run_id, hk_last_updated_job_run_id, hk_created_timestamp, hk_last_updated_timestamp, hk_warehouse_id)\n\tselect hash(a.source_name, '~', to_char(a.record_id))::number as FACT_CUSTOMER_SETTLEMENTS_KEY\n\t\t, a.source_name as SOURCE_NAME, a.record_id as RECORD_ID\n\t\t\n\t\t, case when a.source_name = '' then -2\n\t\t\telse nvl(dss1.dim_source_system_key, -1)\n\t\t\tend::number as DIM_SOURCE_SYSTEM_KEY\n\t\t, a.dim_source_system_snkey as DIM_SOURCE_SYSTEM_SNKEY\n\t\t\n\t\t, nvl(dd1.dim_date_key, -1)::number as TRANSACTION_DATE_DIM_DATE_KEY\n\t\t, a.transaction_date_dim_date_snkey as TRANSACTION_DATE_DIM_DATE_SNKEY\n\t\t\n\t\t, case when a.dim_legal_entity_snkey = -2 then -2\n\t\t\t\telse nvl(dle1.dim_legal_entity_key, -1)\n\t\t\tend::number as DIM_LEGAL_ENTITY_KEY\n\t\t, a.dim_legal_entity_snkey as DIM_LEGAL_ENTITY_SNKEY\n\t\t, a.customer_settlement_key as CUSTOMER_SETTLEMENT_KEY\n\t\t\n\t\t, a.trans_company as TRANS_COMPANY, a.account_num as ACCOUNT_NUM, a.trans_rec_id as TRANS_REC_ID, a.transaction_date as TRANSACTION_DATE, a.legal_entity as LEGAL_ENTITY, a.company_currency_settle_amount as COMPANY_CURRENCY_SETTLE_AMOUNT, a.transaction_currency_settle_amount as TRANSACTION_CURRENCY_SETTLE_AMOUNT\n\t\t\n\t\t, hash(a.source_name, '~', to_char(a.record_id), '~', a.trans_company, '~', a.account_num, '~', to_char(a.trans_rec_id), '~', to_char(a.transaction_date, 'yyyymmdd'), '~', a.legal_entity, '~', to_char(a.company_currency_settle_amount), '~', to_char(a.transaction_currency_settle_amount))::number as HK_HASH_KEY\n\t\t\n\t\t, a.hk_source_name as HK_SOURCE_NAME\n\t\t, false::boolean as HK_SOFT_DELETE_FLAG\n\t\t, a.hk_source_created_timestamp as HK_SOURCE_CREATED_TIMESTAMP, a.hk_source_last_updated_timestamp as HK_SOURCE_LAST_UPDATED_TIMESTAMP, a.hk_created_job_run_id as HK_CREATED_JOB_RUN_ID, a.hk_last_updated_job_run_id as HK_LAST_UPDATED_JOB_RUN_ID\n\t\t, current_timestamp::timestamp_tz as HK_CREATED_TIMESTAMP\n\t\t, current_timestamp::timestamp_tz as HK_LAST_UPDATED_TIMESTAMP\n\t\t, uuid_string()::varchar as HK_WAREHOUSE_ID\n\t\n\tfrom (select 'AXNALA'::varchar as SOURCE_NAME\n\t\t\t, nvl(b.recordid, 0)::number(38, 0) as RECORD_ID\n\t\t\t\n\t\t\t, nvl(b.transcompany, '')::varchar as TRANS_COMPANY\n\t\t\t, nvl(b.accountnum, '')::varchar as ACCOUNT_NUM\n\t\t\t, nvl(b.transrecid, 0)::number(38, 0) as TRANS_REC_ID\n\t\t\t, case when nvl(b.transactiondate, '1900-01-01') in ('1900-01-01') then '1950-01-01'\n\t\t\t\t\twhen b.transactiondate < dd1.min_date_value then '1951-12-31'\n\t\t\t\t\twhen b.transactiondate > dd1.max_date_value then '9951-12-31'\n\t\t\t\telse b.transactiondate\n\t\t\t\tend::date as TRANSACTION_DATE\n\t\t\t, nvl(b.legalentity, '')::varchar as LEGAL_ENTITY\n\t\t\t, nvl(b.companycurrencysettleamount, 0)::number(38, 16) as COMPANY_CURRENCY_SETTLE_AMOUNT\n\t\t\t, nvl(b.transactioncurrencysettleamount, 0)::number(38, 16) as TRANSACTION_CURRENCY_SETTLE_AMOUNT\n\t\t\t\n\t\t\t, case when nvl(SOURCE_NAME, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME)\n\t\t\t\tend::number as DIM_SOURCE_SYSTEM_SNKEY\n\t\t\t, case when nvl(TRANSACTION_DATE, '1950-01-01') = '1950-01-01' then -2\n\t\t\t\telse hash('', '~', to_char(TRANSACTION_DATE, 'yyyymmdd'))\n\t\t\t\tend::number as TRANSACTION_DATE_DIM_DATE_SNKEY\n\t\t\t\n\t\t\t, case when nvl(LEGAL_ENTITY, '') = '' then -2\n\t\t\t\telse hash(SOURCE_NAME, '~', LEGAL_ENTITY)\n\t\t\t\tend::number as DIM_LEGAL_ENTITY_SNKEY\n\t\t\t, hash(TRANS_COMPANY, '~', ACCOUNT_NUM, '~', to_char(TRANS_REC_ID))::number(38, 0) as CUSTOMER_SETTLEMENT_KEY\n\t\n\t\t\t, nvl(b.dw_sourcecode, '')::varchar as HK_SOURCE_NAME\n\t\t\t, '1950-01-01 00:00:00'::timestamp_tz as HK_SOURCE_CREATED_TIMESTAMP\n\t\t\t, nvl(b.dw_timestamp, '1950-01-01 00:00:00')::timestamp_tz as HK_SOURCE_LAST_UPDATED_TIMESTAMP\n\t\t\t, '-1'::varchar as HK_CREATED_JOB_RUN_ID\n\t\t\t, nvl(b.dw_batch, '-1')::varchar as HK_LAST_UPDATED_JOB_RUN_ID\n\t\t\t\n\t\tfrom (select hk_source_name, hk_job_run_id, hk_created_timestamp, hk_warehouse_id, dw_id, customersettlementkey, legalentitykey, transactiondate, recordid, legalentity, companycurrencysettleamount, transactioncurrencysettleamount, incrementaltimestamp, transcompany, accountnum, transrecid, dw_batch, dw_sourcecode, dw_timestamp\n\t\t\tfrom @{pipeline().globalParameters.environment}_raw.edw_dwh.FACTCUSTOMERSETTLEMENTS\n\t\t\t) b\n\t\t\tinner join (select min(date_value) as MIN_DATE_VALUE\n\t\t\t\t\t\t\t, max(date_value) as MAX_DATE_VALUE\n\t\t\t\t\t\tfrom global.DIM_DATE\n\t\t\t\t\t\twhere date_value not in ('1950-01-01', '1951-12-31', '9000-01-01', '9951-12-31')) dd1 on\n\t\t\t\t1=1\n\t\t) a\n\tleft join global.DIM_SOURCE_SYSTEM dss1 on\n\t\ta.dim_source_system_snkey = dss1.dim_source_system_snkey\n\tleft join global.DIM_DATE dd1 on\n\t\ta.transaction_date_dim_date_snkey = dd1.dim_date_snkey\n\tleft join global.DIM_LEGAL_ENTITY dle1 on\n\t\ta.dim_legal_entity_snkey = dle1.dim_legal_entity_snkey\n;",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "FACTCUSTOMERSETTLEMENTS"
+			},
+			"p_temp_directory": {
+				"type": "string",
+				"defaultValue": "temp_files"
+			},
+			"p_tgt_schema_nm": {
+				"type": "string",
+				"defaultValue": "EDW_DWH"
+			},
+			"p_curate_table_name": {
+				"type": "string",
+				"defaultValue": "FACT_CUSTOMER_SETTLEMENTS"
+			}
+		},
+		"folder": {
+			"name": "history_fact"
+		},
+		"annotations": []
+	}
+}

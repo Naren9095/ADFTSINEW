@@ -1,0 +1,445 @@
+{
+	"name": "NALA-CA-Pipeline-Incremental",
+	"properties": {
+		"activities": [
+			{
+				"name": "MetadataLookup",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "StartEmail",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT * FROM [DataFactory].[Vw_GetSnowflakeLookupConfig]",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_ca_sql_server",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "''",
+							"TableName": "''"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEach1",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "MetadataLookup",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('MetadataLookup').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "LoadData",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SnowflakeSource",
+									"query": {
+										"value": "@item().SourceQuery",
+										"type": "Expression"
+									},
+									"exportSettings": {
+										"type": "SnowflakeExportCopyCommand"
+									}
+								},
+								"sink": {
+									"type": "AzureSqlSink",
+									"preCopyScript": {
+										"value": "@{concat('TRUNCATE TABLE ', item().SchemaName,'_Wrk.',item().TableName)}",
+										"type": "Expression"
+									},
+									"writeBehavior": "insert",
+									"sqlWriterUseTableLock": false,
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ls_blob_storage",
+										"type": "LinkedServiceReference"
+									},
+									"path": {
+										"value": "@pipeline().globalParameters.rootDir",
+										"type": "Expression"
+									},
+									"enableCompression": true
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_snowflake",
+									"type": "DatasetReference",
+									"parameters": {
+										"p_tgt_table_name": "''",
+										"p_tgt_schema_name": "''",
+										"p_ls_DbName": {
+											"value": "@pipeline().parameters.ls_Dbname",
+											"type": "Expression"
+										},
+										"p_ls_Env": {
+											"value": "@pipeline().globalParameters.environment",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_ca_sql_server",
+									"type": "DatasetReference",
+									"parameters": {
+										"SchemaName": {
+											"value": "@concat(item().SchemaName,'_Wrk')",
+											"type": "Expression"
+										},
+										"TableName": {
+											"value": "@item().TableName",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "UpdateAudit",
+							"type": "Script",
+							"dependsOn": [
+								{
+									"activity": "LoadData",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"linkedServiceName": {
+								"referenceName": "ls_CA_AzureSqlDatabase",
+								"type": "LinkedServiceReference"
+							},
+							"typeProperties": {
+								"scripts": [
+									{
+										"parameters": [
+											{
+												"name": "SName",
+												"type": "String",
+												"value": {
+													"value": "@item().SchemaName",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											},
+											{
+												"name": "TName",
+												"type": "String",
+												"value": {
+													"value": "@item().TableName",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											},
+											{
+												"name": "CCount",
+												"type": "Int64",
+												"value": {
+													"value": "@activity('LoadData').output.rowsCopied",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											},
+											{
+												"name": "CDuration",
+												"type": "Int32",
+												"value": {
+													"value": "@activity('LoadData').output.copyDuration",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											},
+											{
+												"name": "CSize",
+												"type": "Int64",
+												"value": {
+													"value": "@activity('LoadData').output.dataWritten",
+													"type": "Expression"
+												},
+												"direction": "Input"
+											}
+										],
+										"type": "NonQuery",
+										"text": {
+											"value": "EXECUTE Datafactory.usp_UpdateAuditValues @SName,@TName,@CCount,@CDuration,@CSize",
+											"type": "Expression"
+										}
+									}
+								],
+								"scriptBlockExecutionTimeout": "02:00:00"
+							}
+						},
+						{
+							"name": "AppendTableName",
+							"type": "AppendVariable",
+							"dependsOn": [
+								{
+									"activity": "LoadMainTable",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "TablesList",
+								"value": {
+									"value": "@item().TableName",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "LoadMainTable",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "UpdateAudit",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "DataFactory.usp_RefreshSnowflakeTables",
+								"storedProcedureParameters": {
+									"SchemaName": {
+										"value": {
+											"value": "@item().SchemaName",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"TableName": {
+										"value": {
+											"value": "@item().TableName",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "ls_CA_AzureSqlDatabase",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "StartEmail",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": "https://prod-25.centralus.logic.azure.com:443/workflows/3b03be0230f8431eb88d7d144e0546bb/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=C0LfCFLYpk2WnlFLp6551I96WUg-cXcdb_wMyoxHyaI",
+					"connectVia": {
+						"referenceName": "AutoResolveIntegrationRuntime",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"cc\":\"prince.a@customeranalytics.com,pokuri.t@customeranalytics.com\",\n    \"sender\":\"TSIdata-noreply@customeranalytics.com\",\n    \"to\":\"ca_tsidatawarehouse@customeranalytics.com\",\n    \"message\":\"MDW ingestion process has been started\",\n    \"sub\": \"Alert! MDW Data Ingestion started\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "FailureEmail",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "ForEach1",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": "https://prod-25.centralus.logic.azure.com:443/workflows/3b03be0230f8431eb88d7d144e0546bb/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=C0LfCFLYpk2WnlFLp6551I96WUg-cXcdb_wMyoxHyaI",
+					"connectVia": {
+						"referenceName": "AutoResolveIntegrationRuntime",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"cc\":\"prince.a@customeranalytics.com,pokuri.t@customeranalytics.com\",\n    \"sender\":\"TSIdata-noreply@customeranalytics.com\",\n    \"to\":\"ca_tsidatawarehouse@customeranalytics.com\",\n    \"message\":\"MDW ingestion has been failed.\",\n    \"sub\": \"Failure! MDW Data Ingestion Failed\"\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "LookupForEmail",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "ForEach1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[Developer].[usp_MDWRefreshedtableInHTML]",
+						"storedProcedureParameters": {
+							"TablesList": {
+								"type": "String",
+								"value": {
+									"value": "@String(variables('TablesList'))",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_ca_sql_server",
+						"type": "DatasetReference",
+						"parameters": {
+							"SchemaName": "''",
+							"TableName": "''"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "OnSuccess",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "LookupForEmail",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": "https://prod-25.centralus.logic.azure.com:443/workflows/3b03be0230f8431eb88d7d144e0546bb/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=C0LfCFLYpk2WnlFLp6551I96WUg-cXcdb_wMyoxHyaI",
+					"connectVia": {
+						"referenceName": "AutoResolveIntegrationRuntime",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "{\n    \"cc\":\"prince.a@customeranalytics.com,pokuri.t@customeranalytics.com\",\n    \"sender\":\"TSIdata-noreply@customeranalytics.com\",\n    \"to\":\"ca_tsidatawarehouse@customeranalytics.com\",\n    \"message\":\"@{activity('LookupForEmail').output.value[0].HTMLOutput}\",\n    \"sub\": \"Alert! MDW Data Ingestion Completed\"\n}",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"ls_Dbname": {
+				"type": "string",
+				"defaultValue": "PUBLISH"
+			}
+		},
+		"variables": {
+			"TablesList": {
+				"type": "Array"
+			}
+		},
+		"folder": {
+			"name": "NALA-CA-Pipeline"
+		},
+		"annotations": []
+	}
+}

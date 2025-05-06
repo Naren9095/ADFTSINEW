@@ -1,0 +1,38 @@
+{
+	"name": "trg_ax_nala_custpackingsliptrans_to_fact_sales_deliveries",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "pp_ax_custpackingsliptrans_to_fact_sales_deliveries",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"p_src_table_nm": "CUSTPACKINGSLIPTRANS",
+					"p_src_schema_nm": "dbo",
+					"p_tgt_raw_table_nm": "CUSTPACKINGSLIPTRANS",
+					"p_tgt_raw_schema_nm": "AX_NALA",
+					"p_tgt_curate_table_nm": "FACT_SALES_DELIVERIES",
+					"p_tgt_curate_schema_nm": "GLOBAL",
+					"p_src_nm": "AXNALA",
+					"p_src_directory": "business_files",
+					"p_temp_file_nm": "custpackingsliptrans_nala.parquet",
+					"p_tgt_raw_table_nm_2": "CUSTPACKINGSLIPTRANS_EXT",
+					"p_src_code": "1",
+					"p_temp_directory": "temp_files"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2024-08-09T06:00:00",
+				"timeZone": "Eastern Standard Time"
+			}
+		}
+	}
+}

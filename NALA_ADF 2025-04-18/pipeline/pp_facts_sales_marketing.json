@@ -1,0 +1,266 @@
+{
+	"name": "pp_facts_sales_marketing",
+	"properties": {
+		"activities": [
+			{
+				"name": "sp_fact_sales_order",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_SALES_ORDERS"
+					}
+				}
+			},
+			{
+				"name": "trigger_pbi_refresh_sales_and_marketing",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "sp_fact_sales_order",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "sp_fact_sales_invoices",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "sp_fact_monthly_forecast",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "sp_fact_monthly_wmape",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "sp_fact_picking_line",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "sp_fact_rebate_transactions",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "sp_fact_sales_deliveries",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "sp_fact_transportation_load",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "sp_fact_ledger_journal_transactions",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_partition_or_full",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_table_nm": "'FACT_SALES_INVOICES','FACT_SALES_ORDERS','FACT_LEDGER_JOURNAL_TRANSACTIONS','FACT_MONTHLY_WMAPE','FACT_MONTHLY_FORECAST','FACT_PICKING_LINE','FACT_REBATE_TRANSACTIONS','FACT_SALES_DELIVERIES','FACT_TRANSPORTATION_LOAD'",
+						"p_tgt_audit_table_nm": "PBI_SNOWFLAKE_BRIDGE",
+						"p_tgt_audit_schema_nm": "CONTROL",
+						"p_webhook_url": "https://tempursealyinc.webhook.office.com/webhookb2/7aa89678-96e1-4bbf-a53a-a4ed05939336@7c6c07f6-1ef4-4368-8d5d-4686d15efd79/IncomingWebhook/d916d4c4051f4d71906694bcb9f82fcc/4c6968dc-2ec8-4f99-b936-1206cdf30aeb/V2F9jTBrJgcOsJviMqjdKWgsO_3u6_BGg1d9ZcDgAFI3M1",
+						"p_dataset_nm": "Sales & Marketing Gold Dataset",
+						"p_web_body_fullrefresh": {
+							"value": "@createArray('{\n  \"type\": \"full\",\n  \"objects\":[\n    {\n      \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n      \"table\": \"Sales Invoices\"\n    },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Order Lines\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Picking Lines\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Rebate Transactions\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Transportation Load\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Monthly WMAPE\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Ledger Journal Transactions\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Deliveries\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Monthly Forecast\"\n  }\n  ],\n  \"applyRefreshPolicy\": \"true\"\n}',\n'{\n  \"type\": \"full\",\n  \"objects\":[\n    {\n      \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n      \"table\": \"Inventory\"\n    },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Bridge Invoice\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Order\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Inventory Summary\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Trade Promotion\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Campaign\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"General Ledger Non Invoice\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Global Trade Item Number\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Weekly Forecast\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Item\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Operator Worker\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Responsible\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Taker\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"RLS Invoice Customer Accounts\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"RLS Order Customer Accounts\"\n  }\n  ],\n  \"applyRefreshPolicy\": \"false\"\n}',\n'{\n  \"type\": \"full\",\n  \"objects\":[\n    {\n      \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n      \"table\": \"Bridge Invoice Rebate\"\n    },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Invoice Customer\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Cost\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Current Order Customer\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Order Customer\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Delivery Location\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Current Invoice Customer\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Invoice Location\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Default Dimension\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Alternate Item\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Arkieva Customer\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Arkieva Subchannel\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Business Unit\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Commission Group\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Company\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Currency\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Customer Group\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Customer Markup Group\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Date\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Delivery Mode\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Delivery Term\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Intrastat Transaction Code\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Item Status\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Line Return Reason\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Package Shipping Carrier\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Payment Mode\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Payment Terms\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Picking Line Details\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Rebate\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Rebate Transaction Details\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Return Disposition\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Return Reason\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Category\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Details\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Group\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Line Discount Group\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Order Creator\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Order Line Creator\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Origin\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Pool\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Price Group\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Shipping Carrier\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Site\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Subsidies\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Tax Group\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Tax Item Group\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Trailers\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Unit of Measure\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Weekly WMAPE\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"RLS Curent Order Customer Accounts\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"RLS Current Invoice Customer Accounts\"\n  }\n  ],\n  \"applyRefreshPolicy\": \"false\"\n}'\n)",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "sp_fact_sales_invoices",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_SALES_INVOICES"
+					}
+				}
+			},
+			{
+				"name": "sp_fact_monthly_wmape",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_MONTHLY_WMAPE"
+					}
+				}
+			},
+			{
+				"name": "sp_fact_monthly_forecast",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_MONTHLY_FORECAST"
+					}
+				}
+			},
+			{
+				"name": "sp_fact_picking_line",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_PICKING_LINE"
+					}
+				}
+			},
+			{
+				"name": "sp_fact_rebate_transactions",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_REBATE_TRANSACTIONS"
+					}
+				}
+			},
+			{
+				"name": "sp_fact_sales_deliveries",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_SALES_DELIVERIES"
+					}
+				}
+			},
+			{
+				"name": "sp_fact_transportation_load",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_TRANSPORTATION_LOAD"
+					}
+				}
+			},
+			{
+				"name": "sp_fact_ledger_journal_transactions",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_LEDGER_JOURNAL_TRANSACTIONS"
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "pbi_dataset_refresh_pipelines"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-11-13T05:19:41Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

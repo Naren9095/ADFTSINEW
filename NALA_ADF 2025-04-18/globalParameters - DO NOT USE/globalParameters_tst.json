@@ -1,0 +1,86 @@
+{
+    "environment": {
+        "type": "string",
+        "value": "tst"
+    },
+    "teamsWebhookUrl": {
+        "type": "string",
+        "value": "https://tempursealyinc.webhook.office.com/webhookb2/2bc2054b-b9d7-421a-a9bb-2859e583aff6@7c6c07f6-1ef4-4368-8d5d-4686d15efd79/IncomingWebhook/f373484c671f48c29098a47969e9461a/d1d036fd-a6c3-446d-92b2-40a58b1e949b"
+    },
+    "resourceGroup": {
+        "type": "string",
+        "value": "rg-IT-NALA-MDW-Tst"
+    },
+    "subscriptionId": {
+        "type": "string",
+        "value": "859ea397-daff-4b9d-9481-78f311db0f7a"
+    },
+    "rootDir": {
+        "type": "string",
+        "value": "stage"
+    },
+    "nala_sql_serverName": {
+        "type": "string",
+        "value": "tri-sqlax02-uat"
+    },
+    "nala_sql_dbName": {
+        "type": "string",
+        "value": "S24_MSDAX"
+    },
+    "retail_sql_serverName": {
+        "type": "string",
+        "value": "TRI-ARSQL01"
+    },
+    "retail_sql_dbName": {
+        "type": "string",
+        "value": "RETAIL_MSDAX"
+    },
+    "sql_userName": {
+        "type": "string",
+        "value": "twi\\SCVSFETLTST"
+    },
+    "sql_password": {
+        "type": "string",
+        "value": "axsqlpassword"
+    },
+    "snow_rawDb": {
+        "type": "string",
+        "value": "raw"
+    },
+    "snow_curateDb": {
+        "type": "string",
+        "value": "curate"
+    },
+    "snow_auditDb": {
+        "type": "string",
+        "value": "audit"
+    },
+    "d365_dbName": {
+        "type": "string",
+        "value": "dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo"
+    },
+    "arkieva_sql_serverName": {
+        "type": "string",
+        "value": "TRI-ARKSQL-UAT"
+    },
+    "arkieva_sql_dbName": {
+        "type": "string",
+        "value": "ZemeterStaging"
+    },
+    "edw_sql_serverName": {
+        "type": "string",
+        "value": "tri-bisqldw-uat"
+    },
+    "edw_sql_dbName": {
+        "type": "string",
+        "value": "EDW_DWH"
+    },
+    "athena_sql_serverName": {
+        "type": "string",
+        "value": "TRI-SQL2-UAT"
+    },
+    "athena_sql_dbName": {
+        "type": "string",
+        "value": "SealyCDB"
+    }
+}

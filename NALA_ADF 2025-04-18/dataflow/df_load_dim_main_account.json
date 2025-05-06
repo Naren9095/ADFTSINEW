@@ -1,0 +1,139 @@
+{
+	"name": "df_load_dim_main_account",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_parquet",
+						"type": "DatasetReference"
+					},
+					"name": "SrcMainAccount"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_excel",
+						"type": "DatasetReference"
+					},
+					"name": "OpsFinanceMapping"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference"
+					},
+					"name": "MainAccount"
+				}
+			],
+			"transformations": [
+				{
+					"name": "JoinOpsFinanceColumns"
+				},
+				{
+					"name": "RederiveColumns"
+				},
+				{
+					"name": "FilterLastestRecords"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     df_prev_max_timestamp as string,",
+				"     df_last_mod_tmstmp_opsfinance as string",
+				"}",
+				"source(output(",
+				"          RECID as long,",
+				"          MAINACCOUNTID as string,",
+				"          NAME as string,",
+				"          ACCOUNTCATEGORYREF as integer,",
+				"          LEDGERCHARTOFACCOUNTS as long,",
+				"          TYPE as integer,",
+				"          POSTINGTYPE as integer,",
+				"          MONETARY as integer,",
+				"          MODIFIEDDATETIME as timestamp,",
+				"          MAINACCOUNTCATEGORY_ACCOUNTCATEGORY as string,",
+				"          MAINACCOUNTCATEGORY_DESCRIPTION as string,",
+				"          LEDGERCHARTOFACCOUNTS_NAME as string,",
+				"          LEDGERCHARTOFACCOUNTS_DESCRIPTION as string,",
+				"          TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_DIMENSIONLEDGERACCOUNTTYPE as string,",
+				"          TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_LEDGERPOSTINGTYPE as string,",
+				"          MAINACCOUNT2_LEVEL1 as string,",
+				"          MAINACCOUNT2_LEVEL2 as string,",
+				"          MAINACCOUNT2_LEVEL3 as string,",
+				"          MAINACCOUNT2_LEVEL4 as string,",
+				"          MAINACCOUNT2_LEVEL5 as string,",
+				"          MAINACCOUNT2_LEVEL6 as string,",
+				"          HK_JOB_RUN_ID as string,",
+				"          HK_SOURCE_NAME as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> SrcMainAccount",
+				"source(output(",
+				"          MainAccount as string,",
+				"          {HFM Account} as string,",
+				"          {HFM Description} as string,",
+				"          {Reporting Category} as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> OpsFinanceMapping",
+				"SrcMainAccount, OpsFinanceMapping join(MAINACCOUNTID == MainAccount,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> JoinOpsFinanceColumns",
+				"JoinOpsFinanceColumns derive(LATEST_MODIFIEDDATETIME = greatest(MODIFIEDDATETIME,toTimestamp($df_last_mod_tmstmp_opsfinance,'1950-01-01 00:00:00')),",
+				"          MAINACCOUNT_MAPPING_HFMACCOUNT = {HFM Account},",
+				"          MAINACCOUNT_MAPPING_HFMDESCRIPTION = {HFM Description},",
+				"          MAINACCOUNT_MAPPING_REPORTINGCATEGORY = {Reporting Category},",
+				"          MAINACCOUNT_MAPPING_MODIFIEDDATETIME = $df_last_mod_tmstmp_opsfinance) ~> RederiveColumns",
+				"RederiveColumns filter(LATEST_MODIFIEDDATETIME > toTimestamp($df_prev_max_timestamp, 'yyyy-MM-dd HH:mm:ss')) ~> FilterLastestRecords",
+				"FilterLastestRecords sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     stageInsert: true,",
+				"     mapColumn(",
+				"          RECID,",
+				"          MAINACCOUNTID,",
+				"          NAME,",
+				"          ACCOUNTCATEGORYREF,",
+				"          LEDGERCHARTOFACCOUNTS,",
+				"          TYPE,",
+				"          POSTINGTYPE,",
+				"          MONETARY,",
+				"          MODIFIEDDATETIME,",
+				"          MAINACCOUNTCATEGORY_ACCOUNTCATEGORY,",
+				"          MAINACCOUNTCATEGORY_DESCRIPTION,",
+				"          LEDGERCHARTOFACCOUNTS_NAME,",
+				"          LEDGERCHARTOFACCOUNTS_DESCRIPTION,",
+				"          TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_DIMENSIONLEDGERACCOUNTTYPE,",
+				"          TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_LEDGERPOSTINGTYPE,",
+				"          MAINACCOUNT2_LEVEL1,",
+				"          MAINACCOUNT2_LEVEL2,",
+				"          MAINACCOUNT2_LEVEL3,",
+				"          MAINACCOUNT2_LEVEL4,",
+				"          MAINACCOUNT2_LEVEL5,",
+				"          MAINACCOUNT2_LEVEL6,",
+				"          HK_JOB_RUN_ID,",
+				"          HK_SOURCE_NAME,",
+				"          LATEST_MODIFIEDDATETIME,",
+				"          MAINACCOUNT_MAPPING_HFMACCOUNT,",
+				"          MAINACCOUNT_MAPPING_HFMDESCRIPTION,",
+				"          MAINACCOUNT_MAPPING_REPORTINGCATEGORY,",
+				"          MAINACCOUNT_MAPPING_MODIFIEDDATETIME",
+				"     )) ~> MainAccount"
+			]
+		}
+	}
+}

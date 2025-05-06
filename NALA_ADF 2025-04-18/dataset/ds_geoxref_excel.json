@@ -1,0 +1,72 @@
+{
+	"name": "ds_geoxref_excel",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_blob_storage",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Excel",
+		"typeProperties": {
+			"sheetName": "GeoXref",
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": "GeoXref.xlsx",
+				"folderPath": "business_files",
+				"container": "stage"
+			},
+			"firstRowAsHeader": true
+		},
+		"schema": [
+			{
+				"name": "RegionLongName",
+				"type": "String"
+			},
+			{
+				"name": "RegionShortName",
+				"type": "String"
+			},
+			{
+				"name": "RegionCode",
+				"type": "String"
+			},
+			{
+				"name": "DistrictLongName",
+				"type": "String"
+			},
+			{
+				"name": "DistrictShortName",
+				"type": "String"
+			},
+			{
+				"name": "DistrictCode",
+				"type": "String"
+			},
+			{
+				"name": "SMACode",
+				"type": "String"
+			},
+			{
+				"name": "SMALongName",
+				"type": "String"
+			},
+			{
+				"name": "BTACode",
+				"type": "String"
+			},
+			{
+				"name": "BTALongName",
+				"type": "String"
+			},
+			{
+				"name": "FIPSCode",
+				"type": "String"
+			},
+			{
+				"name": "MsCntyLongName",
+				"type": "String"
+			}
+		]
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

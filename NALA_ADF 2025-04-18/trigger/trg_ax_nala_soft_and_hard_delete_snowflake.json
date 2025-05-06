@@ -1,0 +1,39 @@
+{
+	"name": "trg_ax_nala_soft_and_hard_delete_snowflake",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "pp_ax_soft_and_hard_delete",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"p_control_table_nm": "V_SOFT_HARD_DELETES_CONTROL",
+					"p_control_schema_nm": "CONTROL",
+					"p_src_schema_nm": "dbo",
+					"p_tgt_raw_schema_nm": "AX_NALA",
+					"p_src_code": "99"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2024-11-02T06:00:00",
+				"timeZone": "Eastern Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						6
+					]
+				}
+			}
+		}
+	}
+}

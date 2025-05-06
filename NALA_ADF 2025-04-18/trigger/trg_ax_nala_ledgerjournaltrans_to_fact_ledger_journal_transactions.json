@@ -1,0 +1,36 @@
+{
+	"name": "trg_ax_nala_ledgerjournaltrans_to_fact_ledger_journal_transactions",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "pp_ax_ledgerjournaltrans_to_fact_ledger_journal_transactions",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"p_src_nm": "AXNALA",
+					"p_tgt_curate_table_nm": "FACT_LEDGER_JOURNAL_TRANSACTIONS",
+					"p_tgt_raw_table_nm": "LEDGERJOURNALTRANS",
+					"p_tgt_raw_schema_nm": "AX_NALA",
+					"p_tgt_curate_schema_nm": "GLOBAL",
+					"p_src_table_nm": "LEDGERJOURNALTRANS",
+					"p_src_schema_nm": "dbo",
+					"p_src_code": "1",
+					"p_temp_directory": "temp_files",
+					"p_temp_file_nm": "ledgerjournaltrans_nala.parquet"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2024-08-09T06:00:00",
+				"timeZone": "Eastern Standard Time"
+			}
+		}
+	}
+}

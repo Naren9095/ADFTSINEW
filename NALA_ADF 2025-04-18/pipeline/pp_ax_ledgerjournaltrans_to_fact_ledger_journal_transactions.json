@@ -1,0 +1,1857 @@
+{
+	"name": "pp_ax_ledgerjournaltrans_to_fact_ledger_journal_transactions",
+	"properties": {
+		"activities": [
+			{
+				"name": "raw_to_curate_sp_call",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "df_load_fact_ledger_journal_transactions",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_auditDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('CALL ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_auditDb,'.CONTROL.SP_TASK_INITIALIZE(','''',pipeline().RunId,'''',',','''',pipeline().globalParameters.environment,'''',',','''',pipeline().parameters.p_tgt_curate_table_nm,'''',',',pipeline().parameters.p_src_code,')')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "stored_procedure_failure_notification",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_adf_pipeline_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"subscription": {
+							"value": "@pipeline().globalParameters.subscriptionId",
+							"type": "Expression"
+						},
+						"resourceGroup": {
+							"value": "@pipeline().globalParameters.resourceGroup",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@coalesce(pipeline().RunId, -1)",
+							"type": "Expression"
+						},
+						"name": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"triggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"status": {
+							"value": "@activity('raw_to_curate_sp_call').Status",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@activity('raw_to_curate_sp_call').Error['message']",
+							"type": "Expression"
+						},
+						"executionEndTime": {
+							"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+							"type": "Expression"
+						},
+						"runDuration": {
+							"value": "@activity('raw_to_curate_sp_call').Duration",
+							"type": "Expression"
+						},
+						"teamWebhookUrl": {
+							"value": "@pipeline().globalParameters.teamsWebhookUrl",
+							"type": "Expression"
+						},
+						"notificationTime": {
+							"value": "@utcNow()",
+							"type": "Expression"
+						},
+						"taskName": {
+							"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+							"type": "Expression"
+						},
+						"taskStepNumber": {
+							"value": "@pipeline().parameters.p_src_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "lkp_raw_last_modified_date",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SnowflakeSource",
+						"query": {
+							"value": "@concat('select max(to_varchar(LATEST_MODIFIEDDATETIME::timestamp, ''','yyyy-mm-dd hh24:mi:ss',''')) as max_date from ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_rawDb,'.',pipeline().parameters.p_tgt_raw_schema_nm, '.', pipeline().parameters.p_tgt_raw_table_nm)",
+							"type": "Expression"
+						},
+						"exportSettings": {
+							"type": "SnowflakeExportCopyCommand"
+						}
+					},
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_tgt_table_name": {
+								"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+								"type": "Expression"
+							},
+							"p_tgt_schema_name": {
+								"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_DbName": {
+								"value": "@pipeline().globalParameters.snow_rawDb",
+								"type": "Expression"
+							},
+							"p_ls_Env": {
+								"value": "@pipeline().globalParameters.environment",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "set_last_modified_date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkp_raw_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_prev_max_timestamp",
+					"value": {
+						"value": "@coalesce(activity('lkp_raw_last_modified_date').output.firstRow.max_date, '1950-01-01 00:00:00')\n\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "switch_nala_retail_d365",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "set_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.p_src_code",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "1",
+							"activities": [
+								{
+									"name": "sql_to_raw_nala",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": {
+												"value": "SELECT\nljt1.recid as RECID\n,ljt1.currencycode as CURRENCYCODE\n,ljt1.defaultdimension as DEFAULTDIMENSION\n,ljt1.offsetdefaultdimension as OFFSETDEFAULTDIMENSION\n,ljt1.ledgerdimension as LEDGERDIMENSION\n,ljt1.offsetledgerdimension as OFFSETLEDGERDIMENSION\n,ljt1.taxcode as TAXCODE\n,ljt1.taxgroup as TAXGROUP\n,ljt1.approver as APPROVER\n,ljt1.accounttype as ACCOUNTTYPE\n,ljt1.dxcmbintegrationtranstype as DXCMBINTEGRATIONTRANSTYPE\n,ljt1.offsetaccounttype as OFFSETACCOUNTTYPE\n,ljt1.transactiontype as TRANSACTIONTYPE\n,ljt1.approved as APPROVED\n,ljt1.reverseentry as REVERSEENTRY\n,ljt1.documentdate as DOCUMENTDATE\n,ljt1.transdate as TRANSDATE\n,ljt1.documentnum as DOCUMENTNUM\n,ljt1.invoice as INVOICE\n,ljt1.journalnum as JOURNALNUM\n,ljt1.txt as TXT\n,ljt1.voucher as VOUCHER\n,ljt1.dataareaid as DATAAREAID\n,ljt1.linenum as LINENUM\n,ljt1.qty as QTY\n,ljt1.amountcurcredit as AMOUNTCURCREDIT\n,ljt1.amountcurdebit as AMOUNTCURDEBIT\n,ljt1.modifieddatetime as MODIFIEDDATETIME\n,davc1.mainaccount as DIMENSIONATTRIBUTEVALUECOMBINATION_MAINACCOUNT\n,davc1.modifieddatetime as DIMENSIONATTRIBUTEVALUECOMBINATION_MODIFIEDDATETIME\n,def1.MAIN_ACCOUNT as DEFAULTDIMENSION_MAIN_ACCOUNT\n,def1.I_CUSTOMER as DEFAULTDIMENSION_I_CUSTOMER\n,def1.DEFAULTDIMENSION_MODIFIEDDATETIME\n,tet1.enumvaluelabel as TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_ACCOUNTTYPE\n,tet2.enumvaluelabel as TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_DXCMBINTEGRATIONTRANSTYPE\n,tet3.enumvaluelabel as TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_OFFSETACCOUNTTYPE\n,tet4.enumvaluelabel as TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_TRANSACTIONTYPE\n,ljt2.createddatetime as LEDGERJOURNALTABLE_CREATEDDATETIME\n,ljt2.reversedate as LEDGERJOURNALTABLE_REVERSEDATE\n,ljt2.createdby as LEDGERJOURNALTABLE_CREATEDBY\n,ljt2.name as LEDGERJOURNALTABLE_NAME\n,ljt2.journalname as LEDGERJOURNALTABLE_JOURNALNAME\n,ljt2.posted as LEDGERJOURNALTABLE_POSTED\n,ljt2.modifieddatetime as LEDGERJOURNALTABLE_MODIFIEDDATETIME\n,(SELECT MAX(LastUpdateDate) \n FROM (VALUES (ljt1.modifieddatetime),\n  (isnull(davc1.modifieddatetime, '1950-01-01'))\n  , (isnull(def1.DEFAULTDIMENSION_MODIFIEDDATETIME, '1950-01-01'))\n  , (isnull(ljt2.modifieddatetime, '1950-01-01'))\n ) AS UpdateDate(LastUpdateDate)) AS LATEST_MODIFIEDDATETIME\nFROM\ndbo.LEDGERJOURNALTRANS ljt1\nleft join dbo.DIMENSIONATTRIBUTEVALUECOMBINATION davc1 on\n\tljt1.LEDGERDIMENSION = davc1.RECID\nleft join (select distinct ljt1.LEDGERDIMENSION\n\t\t\t\t, max(\n\t\t\t\t\tcase when da1.NAME = 'MainAccount' then dalv1.DISPLAYVALUE\n\t\t\t\t\t\telse null\n\t\t\t\t\t\tend\n\t\t\t\t\t) over (partition by ljt1.LEDGERDIMENSION) as MAIN_ACCOUNT\n\t\t\t\t, max(\n\t\t\t\t\tcase when da1.NAME = 'I_Customer' then dalv1.DISPLAYVALUE\n\t\t\t\t\t\telse null\n\t\t\t\t\t\tend\n\t\t\t\t\t) over (partition by ljt1.LEDGERDIMENSION) as I_CUSTOMER\n\t\t\t\t, max(\n\t\t\t\t\t(select max(i) from (values (davgc1.MODIFIEDDATETIME), (dalv1.MODIFIEDDATETIME), (dav1.MODIFIEDDATETIME), (da1.MODIFIEDDATETIME)) AS T(i))\n\t\t\t\t\t) over (partition by ljt1.LEDGERDIMENSION) as DEFAULTDIMENSION_MODIFIEDDATETIME\n\t\t\tfrom (select distinct LEDGERDIMENSION from dbo.LEDGERJOURNALTRANS) ljt1\n\t\t\tleft join dbo.DIMENSIONATTRIBUTEVALUEGROUPCOMBINATION davgc1 on\n\t\t\t\tljt1.LEDGERDIMENSION = davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION\n\t\t\tleft join dbo.DIMENSIONATTRIBUTELEVELVALUE dalv1 on\n\t\t\t\tdavgc1.DIMENSIONATTRIBUTEVALUEGROUP = dalv1.DIMENSIONATTRIBUTEVALUEGROUP\n\t\t\tleft join dbo.DIMENSIONATTRIBUTEVALUE dav1 on\n\t\t\t\tdalv1.DIMENSIONATTRIBUTEVALUE = dav1.RECID\n\t\t\tleft join dbo.DIMENSIONATTRIBUTE da1 on\n\t\t\t\tdav1.DIMENSIONATTRIBUTE = da1.RECID\n\t\t\t) def1 on\n\tljt1.LEDGERDIMENSION = def1.LEDGERDIMENSION\nleft join (select ENUMNAME, ENUMVALUE\n\t\t\t, max(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom dbo.TIMEXTENDERENUMTABLE\n\t\twhere ENUMNAME = 'LedgerJournalACType'\n\t\tgroup by ENUMNAME, ENUMVALUE) tet1 on\n\tljt1.ACCOUNTTYPE = tet1.ENUMVALUE\nleft join (select ENUMNAME, ENUMVALUE\n\t\t\t, max(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom dbo.TIMEXTENDERENUMTABLE\n\t\twhere ENUMNAME = 'DXCMBIntegrationTransType'\n\t\tgroup by ENUMNAME, ENUMVALUE) tet2 on\n\tljt1.DXCMBINTEGRATIONTRANSTYPE = tet2.ENUMVALUE\nleft join (select ENUMNAME, ENUMVALUE\n\t\t\t, max(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom dbo.TIMEXTENDERENUMTABLE\n\t\twhere ENUMNAME = 'LedgerJournalACType'\n\t\tgroup by ENUMNAME, ENUMVALUE) tet3 on\n\tljt1.OFFSETACCOUNTTYPE = tet3.ENUMVALUE\nleft join (select ENUMNAME, ENUMVALUE\n\t\t\t, max(ENUMVALUELABEL) as ENUMVALUELABEL\n\t\tfrom dbo.TIMEXTENDERENUMTABLE\n\t\twhere ENUMNAME = 'LedgerTransType'\n\t\tgroup by ENUMNAME, ENUMVALUE) tet4 on\n\tljt1.TRANSACTIONTYPE = tet4.ENUMVALUE\nleft join dbo.LEDGERJOURNALTABLE ljt2 on\n\tljt1.DATAAREAID = ljt2.DATAAREAID and\n\tljt1.JOURNALNUM = ljt2.JOURNALNUM \n    where isnull(ljt2.POSTED, 0) = 1 and (SELECT MAX(LastUpdateDate) \n FROM (VALUES (ljt1.modifieddatetime),\n  (isnull(davc1.modifieddatetime, '1950-01-01'))\n  , (isnull(def1.DEFAULTDIMENSION_MODIFIEDDATETIME, '1950-01-01'))\n  , (isnull(ljt2.modifieddatetime, '1950-01-01'))\n ) AS UpdateDate(LastUpdateDate)) > '@{variables('v_prev_max_timestamp')}' ",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "RECID",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "RECID",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "CURRENCYCODE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "CURRENCYCODE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "OFFSETDEFAULTDIMENSION",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "OFFSETDEFAULTDIMENSION",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERDIMENSION",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "LEDGERDIMENSION",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "OFFSETLEDGERDIMENSION",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "OFFSETLEDGERDIMENSION",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "TAXCODE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TAXCODE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TAXGROUP",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TAXGROUP",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "APPROVER",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "APPROVER",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "ACCOUNTTYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "ACCOUNTTYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "DXCMBINTEGRATIONTRANSTYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "DXCMBINTEGRATIONTRANSTYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "OFFSETACCOUNTTYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "OFFSETACCOUNTTYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "TRANSACTIONTYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "TRANSACTIONTYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "APPROVED",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "APPROVED",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "REVERSEENTRY",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "REVERSEENTRY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "DOCUMENTDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "DOCUMENTDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "TRANSDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "TRANSDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "DOCUMENTNUM",
+														"type": "String"
+													},
+													"sink": {
+														"name": "DOCUMENTNUM",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVOICE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVOICE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "JOURNALNUM",
+														"type": "String"
+													},
+													"sink": {
+														"name": "JOURNALNUM",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TXT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TXT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "VOUCHER",
+														"type": "String"
+													},
+													"sink": {
+														"name": "VOUCHER",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DATAAREAID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "DATAAREAID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LINENUM",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "LINENUM",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "QTY",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "QTY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "AMOUNTCURCREDIT",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "AMOUNTCURCREDIT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "AMOUNTCURDEBIT",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "AMOUNTCURDEBIT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONATTRIBUTEVALUECOMBINATION_MAINACCOUNT",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "DIMENSIONATTRIBUTEVALUECOMBINATION_MAINACCOUNT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONATTRIBUTEVALUECOMBINATION_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "DIMENSIONATTRIBUTEVALUECOMBINATION_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION_MAIN_ACCOUNT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION_MAIN_ACCOUNT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION_I_CUSTOMER",
+														"type": "String"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION_I_CUSTOMER",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_ACCOUNTTYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_ACCOUNTTYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_DXCMBINTEGRATIONTRANSTYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_DXCMBINTEGRATIONTRANSTYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_OFFSETACCOUNTTYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_OFFSETACCOUNTTYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_TRANSACTIONTYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_TRANSACTIONTYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTABLE_CREATEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTABLE_CREATEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTABLE_REVERSEDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTABLE_REVERSEDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTABLE_CREATEDBY",
+														"type": "String"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTABLE_CREATEDBY",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTABLE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTABLE_NAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTABLE_JOURNALNAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTABLE_JOURNALNAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTABLE_POSTED",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTABLE_POSTED",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTABLE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTABLE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_sql_server",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_src_table_name": {
+													"value": "@pipeline().parameters.p_src_table_nm",
+													"type": "Expression"
+												},
+												"p_src_schema_name": {
+													"value": "@pipeline().parameters.p_src_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_serverName": {
+													"value": "@pipeline().globalParameters.nala_sql_serverName",
+													"type": "Expression"
+												},
+												"p_ls_dbName": {
+													"value": "@pipeline().globalParameters.nala_sql_dbName",
+													"type": "Expression"
+												},
+												"p_ls_sqlUsername": {
+													"value": "@pipeline().globalParameters.sql_userName",
+													"type": "Expression"
+												},
+												"p_ls_sqlPassword": {
+													"value": "@pipeline().globalParameters.sql_password",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_directory": {
+													"value": "@pipeline().parameters.p_temp_directory",
+													"type": "Expression"
+												},
+												"p_root_system": {
+													"value": "@pipeline().globalParameters.rootDir",
+													"type": "Expression"
+												},
+												"p_file_name": {
+													"value": "@pipeline().parameters.p_temp_file_nm",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "nala_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "sql_to_raw_nala",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('sql_to_raw_nala').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('sql_to_raw_nala').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('sql_to_raw_nala').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('sql_to_raw_nala').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											},
+											"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+											"taskStepNumber": {
+												"value": "@pipeline().parameters.p_src_code",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_nala_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "nala_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('sql_to_raw_nala').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						},
+						{
+							"value": "3",
+							"activities": [
+								{
+									"name": "sql_to_raw_d365",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "WarehouseSource",
+											"additionalColumns": [
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": {
+												"value": "@concat('select\nljt1.recid as RECID\n,ljt1.currencycode as CURRENCYCODE\n,ljt1.defaultdimension as DEFAULTDIMENSION\n,ljt1.offsetdefaultdimension as OFFSETDEFAULTDIMENSION\n,ljt1.ledgerdimension as LEDGERDIMENSION\n,ljt1.offsetledgerdimension as OFFSETLEDGERDIMENSION\n,ljt1.taxcode as TAXCODE\n,ljt1.taxgroup as TAXGROUP\n,ljt1.approver as APPROVER\n,ljt1.accounttype as ACCOUNTTYPE\n,ljt1.dxcmbintegrationtranstype as DXCMBINTEGRATIONTRANSTYPE\n,ljt1.offsetaccounttype as OFFSETACCOUNTTYPE\n,ljt1.transactiontype as TRANSACTIONTYPE\n,ljt1.approved as APPROVED\n,ljt1.reverseentry as REVERSEENTRY\n,ljt1.documentdate as DOCUMENTDATE\n,ljt1.transdate as TRANSDATE\n,ljt1.documentnum as DOCUMENTNUM\n,ljt1.invoice as INVOICE\n,ljt1.journalnum as JOURNALNUM\n,ljt1.txt as TXT\n,ljt1.voucher as VOUCHER\n,ljt1.dataareaid as DATAAREAID\n,ljt1.linenum as LINENUM\n,ljt1.qty as QTY\n,ljt1.amountcurcredit as AMOUNTCURCREDIT\n,ljt1.amountcurdebit as AMOUNTCURDEBIT\n,ljt1.modifieddatetime as MODIFIEDDATETIME\n,davc1.mainaccount as DIMENSIONATTRIBUTEVALUECOMBINATION_MAINACCOUNT\n,davc1.modifieddatetime as DIMENSIONATTRIBUTEVALUECOMBINATION_MODIFIEDDATETIME\n,def1.main_account as DEFAULTDIMENSION_MAIN_ACCOUNT\n,def1.i_customer as DEFAULTDIMENSION_I_CUSTOMER\n,def1.defaultdimension_modifieddatetime as DEFAULTDIMENSION_MODIFIEDDATETIME\n,tet1.enumvaluelabel as TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_ACCOUNTTYPE\n,tet2.enumvaluelabel as TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_DXCMBINTEGRATIONTRANSTYPE\n,tet3.enumvaluelabel as TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_OFFSETACCOUNTTYPE\n,tet4.enumvaluelabel as TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_TRANSACTIONTYPE\n,ljt2.createddatetime as LEDGERJOURNALTABLE_CREATEDDATETIME\n,ljt2.reversedate as LEDGERJOURNALTABLE_REVERSEDATE\n,ljt2.createdby as LEDGERJOURNALTABLE_CREATEDBY\n,ljt2.name as LEDGERJOURNALTABLE_NAME\n,ljt2.journalname as LEDGERJOURNALTABLE_JOURNALNAME\n,ljt2.posted as LEDGERJOURNALTABLE_POSTED\n,ljt2.modifieddatetime as LEDGERJOURNALTABLE_MODIFIEDDATETIME\n,(select max(lastupdatedate) \n from (values (ljt1.modifieddatetime),\n  (isnull(davc1.modifieddatetime, ''1950-01-01''))\n  , (isnull(def1.defaultdimension_modifieddatetime, ''1950-01-01''))\n  , (isnull(ljt2.modifieddatetime, ''1950-01-01''))\n ) as updatedate(lastupdatedate)) AS LATEST_MODIFIEDDATETIME\nfrom\n',pipeline().globalParameters.d365_dbName,'.','ledgerjournaltrans ljt1\nleft join ',pipeline().globalParameters.d365_dbName,'.','dimensionattributevaluecombination davc1 on\n\tljt1.ledgerdimension = davc1.recid\nleft join (select distinct ljt1.ledgerdimension\n\t\t\t\t, max(\n\t\t\t\t\tcase when da1.name = ''mainaccount'' then dalv1.displayvalue\n\t\t\t\t\t\telse null\n\t\t\t\t\t\tend\n\t\t\t\t\t) over (partition by ljt1.ledgerdimension) as main_account\n\t\t\t\t, max(\n\t\t\t\t\tcase when da1.name = ''i_customer'' then dalv1.displayvalue\n\t\t\t\t\t\telse null\n\t\t\t\t\t\tend\n\t\t\t\t\t) over (partition by ljt1.ledgerdimension) as i_customer\n\t\t\t\t, max(\n\t\t\t\t\t(select max(i) from (values (davgc1.modifieddatetime), (dalv1.modifieddatetime), (dav1.modifieddatetime), (da1.modifieddatetime)) as t(i))\n\t\t\t\t\t) over (partition by ljt1.ledgerdimension) as defaultdimension_modifieddatetime\n\t\t\tfrom (select distinct ledgerdimension from ',pipeline().globalParameters.d365_dbName,'.','ledgerjournaltrans) ljt1\n\t\t\tleft join ',pipeline().globalParameters.d365_dbName,'.','dimensionattributevaluegroupcombination davgc1 on\n\t\t\t\tljt1.ledgerdimension = davgc1.dimensionattributevaluecombination\n\t\t\tleft join ',pipeline().globalParameters.d365_dbName,'.','dimensionattributelevelvalue dalv1 on\n\t\t\t\tdavgc1.dimensionattributevaluegroup = dalv1.dimensionattributevaluegroup\n\t\t\tleft join ',pipeline().globalParameters.d365_dbName,'.','dimensionattributevalue dav1 on\n\t\t\t\tdalv1.dimensionattributevalue = dav1.recid\n\t\t\tleft join ',pipeline().globalParameters.d365_dbName,'.','dimensionattribute da1 on\n\t\t\t\tdav1.dimensionattribute = da1.recid\n\t\t\t) def1 on\n\tljt1.ledgerdimension = def1.ledgerdimension\nleft join (select enumname, enumvalue\n\t\t\t, max(enumvaluelabel) as enumvaluelabel\n\t\tfrom ',pipeline().globalParameters.d365_dbName,'.','timextenderenumtable\n\t\twhere enumname = ''ledgerjournalactype''\n\t\tgroup by enumname, enumvalue) tet1 on\n\tljt1.accounttype = tet1.enumvalue\nleft join (select enumname, enumvalue\n\t\t\t, max(enumvaluelabel) as enumvaluelabel\n\t\tfrom ',pipeline().globalParameters.d365_dbName,'.','timextenderenumtable\n\t\twhere enumname = ''dxcmbintegrationtranstype''\n\t\tgroup by enumname, enumvalue) tet2 on\n\tljt1.dxcmbintegrationtranstype = tet2.enumvalue\nleft join (select enumname, enumvalue\n\t\t\t, max(enumvaluelabel) as enumvaluelabel\n\t\tfrom ',pipeline().globalParameters.d365_dbName,'.','timextenderenumtable\n\t\twhere enumname = ''ledgerjournalactype''\n\t\tgroup by enumname, enumvalue) tet3 on\n\tljt1.offsetaccounttype = tet3.enumvalue\nleft join (select enumname, enumvalue\n\t\t\t, max(enumvaluelabel) as enumvaluelabel\n\t\tfrom ',pipeline().globalParameters.d365_dbName,'.','timextenderenumtable\n\t\twhere enumname = ''ledgertranstype''\n\t\tgroup by enumname, enumvalue) tet4 on\n\tljt1.transactiontype = tet4.enumvalue\nleft join ',pipeline().globalParameters.d365_dbName,'.','ledgerjournaltable ljt2 on\n\tljt1.dataareaid = ljt2.dataareaid and\n\tljt1.journalnum = ljt2.journalnum \n    where isnull(ljt2.posted, 0) = 1 and (select max(lastupdatedate) \n from (values (ljt1.modifieddatetime),\n  (isnull(davc1.modifieddatetime, ''1950-01-01''))\n  , (isnull(def1.defaultdimension_modifieddatetime, ''1950-01-01''))\n  , (isnull(ljt2.modifieddatetime, ''1950-01-01''))\n ) as updatedate(lastupdatedate)) \n  > ','''',variables('v_prev_max_timestamp'),'''')",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "RECID",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "RECID",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "CURRENCYCODE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "CURRENCYCODE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "OFFSETDEFAULTDIMENSION",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "OFFSETDEFAULTDIMENSION",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERDIMENSION",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "LEDGERDIMENSION",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "OFFSETLEDGERDIMENSION",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "OFFSETLEDGERDIMENSION",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "TAXCODE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TAXCODE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TAXGROUP",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TAXGROUP",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "APPROVER",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "APPROVER",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "ACCOUNTTYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "ACCOUNTTYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "DXCMBINTEGRATIONTRANSTYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "DXCMBINTEGRATIONTRANSTYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "OFFSETACCOUNTTYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "OFFSETACCOUNTTYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "TRANSACTIONTYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "TRANSACTIONTYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "APPROVED",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "APPROVED",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "REVERSEENTRY",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "REVERSEENTRY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "DOCUMENTDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "DOCUMENTDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "TRANSDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "TRANSDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "DOCUMENTNUM",
+														"type": "String"
+													},
+													"sink": {
+														"name": "DOCUMENTNUM",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVOICE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVOICE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "JOURNALNUM",
+														"type": "String"
+													},
+													"sink": {
+														"name": "JOURNALNUM",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TXT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TXT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "VOUCHER",
+														"type": "String"
+													},
+													"sink": {
+														"name": "VOUCHER",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DATAAREAID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "DATAAREAID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LINENUM",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "LINENUM",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "QTY",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "QTY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "AMOUNTCURCREDIT",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "AMOUNTCURCREDIT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "AMOUNTCURDEBIT",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "AMOUNTCURDEBIT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONATTRIBUTEVALUECOMBINATION_MAINACCOUNT",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "DIMENSIONATTRIBUTEVALUECOMBINATION_MAINACCOUNT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONATTRIBUTEVALUECOMBINATION_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "DIMENSIONATTRIBUTEVALUECOMBINATION_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION_MAIN_ACCOUNT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION_MAIN_ACCOUNT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION_I_CUSTOMER",
+														"type": "String"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION_I_CUSTOMER",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DEFAULTDIMENSION_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "DEFAULTDIMENSION_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_ACCOUNTTYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_ACCOUNTTYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_DXCMBINTEGRATIONTRANSTYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_DXCMBINTEGRATIONTRANSTYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_OFFSETACCOUNTTYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_OFFSETACCOUNTTYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_TRANSACTIONTYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE4_ENUMVALUELABEL_TRANSACTIONTYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTABLE_CREATEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTABLE_CREATEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTABLE_REVERSEDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTABLE_REVERSEDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTABLE_CREATEDBY",
+														"type": "String"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTABLE_CREATEDBY",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTABLE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTABLE_NAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTABLE_JOURNALNAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTABLE_JOURNALNAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTABLE_POSTED",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTABLE_POSTED",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTABLE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTABLE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_fabric_wh",
+											"type": "DatasetReference"
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_directory": {
+													"value": "@pipeline().parameters.p_temp_directory",
+													"type": "Expression"
+												},
+												"p_root_system": {
+													"value": "@pipeline().globalParameters.rootDir",
+													"type": "Expression"
+												},
+												"p_file_name": {
+													"value": "@pipeline().parameters.p_temp_file_nm",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "d365_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "sql_to_raw_d365",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('sql_to_raw_d365').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('sql_to_raw_d365').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('sql_to_raw_d365').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('sql_to_raw_d365').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											},
+											"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+											"taskStepNumber": {
+												"value": "@pipeline().parameters.p_src_code",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_d365_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "d365_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('sql_to_raw_d365').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "pipeline_execution_notification",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(equals(activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE'],'TRUE'),bool('TRUE'), bool('FALSE'))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "pp_stored_procedure_failure_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@toUpper('failed')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": {
+										"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+										"type": "Expression"
+									},
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "curate_load_failure",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "pp_stored_procedure_failure_notification",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": {
+									"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+									"type": "Expression"
+								},
+								"errorCode": "500"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "stored_procedure_success_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@activity('raw_to_curate_sp_call').Status",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat(pipeline().parameters.p_tgt_curate_table_nm, ' is successfully loaded')",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": {
+										"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+										"type": "Expression"
+									},
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "df_load_fact_ledger_journal_transactions",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "switch_nala_retail_d365",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 300,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_load_fact_ledger_journal_transactions",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"SrcLedgerJournalTrans": {
+								"p_directory": {
+									"value": "@pipeline().parameters.p_temp_directory",
+									"type": "Expression"
+								},
+								"p_root_system": {
+									"value": "@pipeline().globalParameters.rootDir",
+									"type": "Expression"
+								},
+								"p_file_name": {
+									"value": "@pipeline().parameters.p_temp_file_nm",
+									"type": "Expression"
+								}
+							},
+							"FactLedgerJournalTransaction": {
+								"p_tgt_table_name": {
+									"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+									"type": "Expression"
+								},
+								"p_tgt_schema_name": {
+									"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+									"type": "Expression"
+								},
+								"p_ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_rawDb",
+									"type": "Expression"
+								},
+								"p_ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"integrationRuntime": {
+						"referenceName": "IR-Snowflake-NALA",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			}
+		],
+		"parameters": {
+			"p_src_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA"
+			},
+			"p_tgt_curate_table_nm": {
+				"type": "string",
+				"defaultValue": "FACT_LEDGER_JOURNAL_TRANSACTIONS"
+			},
+			"p_tgt_raw_table_nm": {
+				"type": "string",
+				"defaultValue": "LEDGERJOURNALTRANS"
+			},
+			"p_tgt_raw_schema_nm": {
+				"type": "string",
+				"defaultValue": "AX_NALA"
+			},
+			"p_tgt_curate_schema_nm": {
+				"type": "string",
+				"defaultValue": "GLOBAL"
+			},
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "LEDGERJOURNALTRANS"
+			},
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_src_code": {
+				"type": "string",
+				"defaultValue": "1"
+			},
+			"p_temp_directory": {
+				"type": "string",
+				"defaultValue": "temp_files"
+			},
+			"p_temp_file_nm": {
+				"type": "string",
+				"defaultValue": "ledgerjournaltrans_nala.parquet"
+			}
+		},
+		"variables": {
+			"v_prev_max_timestamp": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-06-04T13:47:58Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

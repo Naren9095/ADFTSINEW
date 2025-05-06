@@ -1,0 +1,1171 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "mdw-df-nala-dev"
+		},
+		"ls_sql_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'ls_sql'",
+			"defaultValue": "Integrated Security=True;Data Source=@{linkedService().ls_serverName};Initial Catalog=@{linkedService().ls_dbName}"
+		},
+		"ls_sqledw_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'ls_sqledw'",
+			"defaultValue": "Integrated Security=True;Data Source=tri-bisqldw-uat;Initial Catalog=EDW_DWH"
+		},
+		"ls_key_vault_properties_typeProperties_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://KV-MDW-ADF-DEV.vault.azure.net/"
+		},
+		"ls_sql_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "@{linkedService().ls_sqlUsername}"
+		},
+		"ls_sqledw_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "twi\\SCVSFETLDEV"
+		},
+		"ts-mdw-NALA-adf-dev-pe_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/859ea397-daff-4b9d-9481-78f311db0f7a/resourceGroups/rg-IT-NALA-MDW-Dev/providers/Microsoft.Storage/storageAccounts/tsnalamdwsnowflakedev"
+		},
+		"ts-mdw-NALA-adf-dev-pe_properties_groupId": {
+			"type": "string",
+			"defaultValue": "blob"
+		},
+		"ts-mdw-NALA-adf-dev-pe_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"tsnalamdwsnowflakedev.blob.core.windows.net"
+			]
+		},
+		"ts-mdw-NALA-adf-snowflake-dev-pe_properties_privateLinkResourceId": {
+			"type": "string",
+			"defaultValue": "/subscriptions/4a884470-d925-4f22-bcf5-5810e957c526/resourceGroups/azeastus2prodshard2-privatelink/providers/Microsoft.Network/privateLinkServices/sf-pvlinksvc-azeastus2prodshard2"
+		},
+		"ts-mdw-NALA-adf-snowflake-dev-pe_properties_groupId": {
+			"type": "string",
+			"defaultValue": ""
+		},
+		"ts-mdw-NALA-adf-snowflake-dev-pe_properties_fqdns": {
+			"type": "array",
+			"defaultValue": [
+				"tempursealy-nala.privatelink.snowflakecomputing.com",
+				"ocsp.tempursealy-nala.privatelink.snowflakecomputing.com",
+				"pqa57966.east-us-2.privatelink.snowflakecomputing.com",
+				"ocsp.pqa57966.east-us-2.privatelink.snowflakecomputing.com",
+				"app-tempursealy-nala.privatelink.snowflakecomputing.com",
+				"app.east-us-2.privatelink.snowflakecomputing.com"
+			]
+		},
+		"ls_CA_AzureSqlDatabase_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "tsi-prod-srvrc.database.windows.net"
+		},
+		"ls_CA_AzureSqlDatabase_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "TempurSealyPEGA_EDW"
+		},
+		"ls_CA_AzureSqlDatabase_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "TempurPega_srvacc"
+		},
+		"ls_adls_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://tsnalamdwsnowflakedev.dfs.core.windows.net/"
+		},
+		"ls_blob_storage_sasUri": {
+			"type": "secureString",
+			"metadata": "Secure string for 'sasUri' of 'ls_blob_storage'"
+		},
+		"ls_blob_storage_properties_typeProperties_sasToken_secretName": {
+			"type": "string",
+			"defaultValue": "stsastoken"
+		},
+		"ls_fabricwh_properties_typeProperties_endpoint": {
+			"type": "string",
+			"defaultValue": "6ydwy7hudzuehdk5i2dncxx5pe-5w3ifmnuop3uzbshitgni5bmlu.datawarehouse.fabric.microsoft.com  "
+		},
+		"ls_fabricwh_properties_typeProperties_tenant": {
+			"type": "string",
+			"defaultValue": "7c6c07f6-1ef4-4368-8d5d-4686d15efd79"
+		},
+		"ls_fabricwh_properties_typeProperties_servicePrincipalId": {
+			"type": "string",
+			"defaultValue": "93e2cccd-796d-4534-8962-7755e0c60a44"
+		},
+		"ls_snowflake_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "@{concat(linkedService().ls_Env,'_',linkedService().ls_DbName)}"
+		},
+		"ls_snowflake_properties_typeProperties_role": {
+			"type": "string",
+			"defaultValue": "DEV_SERVICE_ETL_ROLE"
+		},
+		"ls_snowflake_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "tempursealy-nala.snowflakecomputing.com"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/NALA-CA-Pipeline')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Wait1",
+						"type": "Wait",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"waitTimeInSeconds": 1
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "NALA-CA-Pipeline"
+				},
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_key_vault')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureKeyVault",
+				"typeProperties": {
+					"baseUrl": "[parameters('ls_key_vault_properties_typeProperties_baseUrl')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Selfhosted-IR-NALA-dtu')]",
+			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "SelfHosted",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks",
+			"apiVersion": "2018-06-01",
+			"properties": {},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_sql')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"parameters": {
+					"ls_serverName": {
+						"type": "string"
+					},
+					"ls_dbName": {
+						"type": "string"
+					},
+					"ls_sqlUsername": {
+						"type": "string"
+					},
+					"ls_sqlPassword": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "SqlServer",
+				"typeProperties": {
+					"connectionString": "[parameters('ls_sql_connectionString')]",
+					"userName": "[parameters('ls_sql_properties_typeProperties_userName')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "ls_key_vault",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": {
+							"value": "@linkedService().ls_sqlPassword",
+							"type": "Expression"
+						}
+					}
+				},
+				"connectVia": {
+					"referenceName": "Selfhosted-IR-NALA-dtu",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/Selfhosted-IR-NALA-dtu')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_key_vault')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_sqledw')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "SqlServer",
+				"typeProperties": {
+					"connectionString": "[parameters('ls_sqledw_connectionString')]",
+					"userName": "[parameters('ls_sqledw_properties_typeProperties_userName')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "ls_key_vault",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "axsqlpassword"
+					}
+				},
+				"connectVia": {
+					"referenceName": "Selfhosted-IR-NALA-dtu",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/Selfhosted-IR-NALA-dtu')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_key_vault')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				},
+				"managedVirtualNetwork": {
+					"type": "ManagedVirtualNetworkReference",
+					"referenceName": "default"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/IR-Snowflake-NALA')]",
+			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "Managed",
+				"description": "cogsfifo mapping",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "East US 2",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 10,
+							"cleanup": false,
+							"customProperties": []
+						},
+						"pipelineExternalComputeScaleProperties": {
+							"timeToLive": 60,
+							"numberOfPipelineNodes": 1,
+							"numberOfExternalNodes": 1
+						}
+					}
+				},
+				"managedVirtualNetwork": {
+					"type": "ManagedVirtualNetworkReference",
+					"referenceName": "default"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default/ts-mdw-NALA-adf-dev-pe')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"privateLinkResourceId": "[parameters('ts-mdw-NALA-adf-dev-pe_properties_privateLinkResourceId')]",
+				"groupId": "[parameters('ts-mdw-NALA-adf-dev-pe_properties_groupId')]",
+				"fqdns": "[parameters('ts-mdw-NALA-adf-dev-pe_properties_fqdns')]"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default/ts-mdw-NALA-adf-snowflake-dev-pe')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks/managedPrivateEndpoints",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"privateLinkResourceId": "[parameters('ts-mdw-NALA-adf-snowflake-dev-pe_properties_privateLinkResourceId')]",
+				"groupId": "[parameters('ts-mdw-NALA-adf-snowflake-dev-pe_properties_groupId')]",
+				"fqdns": "[parameters('ts-mdw-NALA-adf-snowflake-dev-pe_properties_fqdns')]"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pp_pbi_notification')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "set_json_schema",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "messageCard",
+							"value": {
+								"value": "{\n   \"@type\": \"MessageCard\",\n   \"@context\": \"http://schema.org/extensions\",\n   \"themeColor\": \"@{pipeline().parameters.color}\",\n   \"summary\": \"Power BI status alert message\",\n   \"sections\": [\n       {\n           \"activityTitle\": \"Power BI @{pipeline().parameters.refreshType} Refresh Status\",\n            \"facts\": [\n               {\n                   \"name\": \"RunId:\",\n                   \"value\": \"@{pipeline().parameters.runId}\"\n               },\n               {\n                   \"name\": \"Dataset Name:\",\n                   \"value\": \"@{pipeline().parameters.name}\"\n               },\n               {\n                   \"name\": \"Run Status:\",\n                   \"value\": \"**@{toUpper(pipeline().parameters.status)}**\"\n               },\n               {\n                   \"name\": \"Extended Status:\",\n                   \"value\": \"**@{toUpper(pipeline().parameters.extendedStatus)}**\"\n               },\n               {\n                   \"name\": \"Execution Start Time (UTC):\",\n                   \"value\": \"@{pipeline().parameters.triggerTime}\"\n               },\n               {\n                   \"name\": \"Execution Finish Time (UTC):\",\n                   \"value\": \"@{pipeline().parameters.executionEndTime}\"\n               },\n                {\n                   \"name\": \"Message :\",\n                   \"value\": \"@{pipeline().parameters.message}\"\n               },\n               {\n                   \"name\": \"Notification Time (UTC):\",\n                   \"value\": \"@{pipeline().parameters.notificationTime}\"\n               },\n            ],\n           \"markdown\": true\n       }\n   ]\n}\n",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "invoke_teams_webhook",
+						"type": "WebActivity",
+						"dependsOn": [
+							{
+								"activity": "set_json_schema",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"method": "POST",
+							"headers": {},
+							"url": {
+								"value": "@pipeline().parameters.teamWebhookUrl",
+								"type": "Expression"
+							},
+							"connectVia": {
+								"referenceName": "IR-Snowflake-NALA",
+								"type": "IntegrationRuntimeReference"
+							},
+							"body": {
+								"value": "@json(variables('messageCard'))",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"runId": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"triggerTime": {
+						"type": "string"
+					},
+					"status": {
+						"type": "string"
+					},
+					"message": {
+						"type": "string"
+					},
+					"executionEndTime": {
+						"type": "string"
+					},
+					"teamWebhookUrl": {
+						"type": "string"
+					},
+					"notificationTime": {
+						"type": "string"
+					},
+					"extendedStatus": {
+						"type": "string"
+					},
+					"color": {
+						"type": "string"
+					},
+					"refreshType": {
+						"type": "string"
+					}
+				},
+				"variables": {
+					"messageCard": {
+						"type": "String"
+					},
+					"pipeline_start_time": {
+						"type": "String"
+					}
+				},
+				"folder": {
+					"name": "pbi_incremental_refresh/pbi_reusables"
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-10-21T13:36:39Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/IR-Snowflake-NALA')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_sql_server')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_sql",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_serverName": {
+							"value": "@dataset().p_ls_serverName",
+							"type": "Expression"
+						},
+						"ls_dbName": {
+							"value": "@dataset().p_ls_dbName",
+							"type": "Expression"
+						},
+						"ls_sqlUsername": {
+							"value": "@dataset().p_ls_sqlUsername",
+							"type": "Expression"
+						},
+						"ls_sqlPassword": {
+							"value": "@dataset().p_ls_sqlPassword",
+							"type": "Expression"
+						}
+					}
+				},
+				"parameters": {
+					"p_src_table_name": {
+						"type": "string"
+					},
+					"p_src_schema_name": {
+						"type": "string"
+					},
+					"p_ls_serverName": {
+						"type": "string"
+					},
+					"p_ls_dbName": {
+						"type": "string"
+					},
+					"p_ls_sqlUsername": {
+						"type": "string"
+					},
+					"p_ls_sqlPassword": {
+						"type": "string"
+					}
+				},
+				"folder": {
+					"name": "Reusable_Datasets"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().p_src_schema_name",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().p_src_table_name",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_sql')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_CA_AzureSqlDatabase')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"server": "[parameters('ls_CA_AzureSqlDatabase_properties_typeProperties_server')]",
+					"database": "[parameters('ls_CA_AzureSqlDatabase_properties_typeProperties_database')]",
+					"encrypt": "mandatory",
+					"trustServerCertificate": false,
+					"authenticationType": "SQL",
+					"userName": "[parameters('ls_CA_AzureSqlDatabase_properties_typeProperties_userName')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "ls_key_vault",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "ls-CA-AzureSQLDatabase"
+					}
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_key_vault')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_adls')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('ls_adls_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "IR-Snowflake-NALA",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/IR-Snowflake-NALA')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_blob_storage')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"sasUri": "[parameters('ls_blob_storage_sasUri')]",
+					"sasToken": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "ls_key_vault",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "[parameters('ls_blob_storage_properties_typeProperties_sasToken_secretName')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "IR-Snowflake-NALA",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/IR-Snowflake-NALA')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_key_vault')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_fabricwh')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "Warehouse",
+				"typeProperties": {
+					"endpoint": "[parameters('ls_fabricwh_properties_typeProperties_endpoint')]",
+					"artifactId": "1f013d98-412c-4c20-a191-9fdeb1963560",
+					"workspaceId": "b182b6ed-73b4-4cf7-8647-44ccd4742c5d",
+					"tenant": "[parameters('ls_fabricwh_properties_typeProperties_tenant')]",
+					"servicePrincipalCredentialType": "ServicePrincipalKey",
+					"servicePrincipalId": "[parameters('ls_fabricwh_properties_typeProperties_servicePrincipalId')]",
+					"servicePrincipalCredential": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "ls_key_vault",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "fabric-d365spntoken"
+					}
+				},
+				"connectVia": {
+					"referenceName": "IR-Snowflake-NALA",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/IR-Snowflake-NALA')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_key_vault')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_snowflake')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"parameters": {
+					"ls_DbName": {
+						"type": "string"
+					},
+					"ls_Env": {
+						"type": "string",
+						"defaultValue": "DEV"
+					}
+				},
+				"annotations": [],
+				"type": "SnowflakeV2",
+				"typeProperties": {
+					"authenticationType": "Basic",
+					"accountIdentifier": "tempursealy-nala.privatelink",
+					"user": "SVCDEVSNOWFLAKEETL",
+					"database": "[parameters('ls_snowflake_properties_typeProperties_database')]",
+					"warehouse": "DEV_SERVICE_ETL_WH",
+					"role": "[parameters('ls_snowflake_properties_typeProperties_role')]",
+					"host": "[parameters('ls_snowflake_properties_typeProperties_host')]",
+					"password": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "ls_key_vault",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "sfetlpassword"
+					}
+				},
+				"connectVia": {
+					"referenceName": "IR-Snowflake-NALA",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/IR-Snowflake-NALA')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_key_vault')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pp_adf_pipeline_notification')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "set_json_schema",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "messageCard",
+							"value": {
+								"value": "{\n    \"@type\": \"MessageCard\",\n    \"@context\": \"http://schema.org/extensions\",\n    \"themeColor\": \"0076D7\",\n    \"summary\": \"Pipeline status alert message​​​​\",\n    \"sections\": [\n        {\n            \"activityTitle\": \"Pipeline Notification​​​ Status​\",\n             \"facts\": [\n                {\n                    \"name\": \"Pipeline RunId:\",\n                    \"value\": \"@{pipeline().parameters.runId}\"\n                },\n                {\n                    \"name\": \"Pipline Name:\",\n                    \"value\": \"@{pipeline().parameters.name}\"\n                },\n                {\n                    \"name\": \"Pipeline Status:\",\n                    \"value\": \"@{toUpper(pipeline().parameters.status)}\"\n                },\n                {\n                    \"name\": \"Execution Start Time (UTC):\",\n                    \"value\": \"@{pipeline().parameters.triggerTime}\"\n                },\n                {\n                    \"name\": \"Execution Finish Time (UTC):\",\n                    \"value\": \"@{pipeline().parameters.executionEndTime}\"\n                },\n                {\n                    \"name\": \"Execution Duration (s):\",\n                    \"value\": \"@{pipeline().parameters.runDuration}\"\n                },\n                 {\n                    \"name\": \"Message :\",\n                    \"value\": \"@{pipeline().parameters.message}\"\n                },\n                {\n                    \"name\": \"Notification Time (UTC):\",\n                    \"value\": \"@{pipeline().parameters.notificationTime}\"\n                },\n             ],\n            \"markdown\": true\n        }\n    ],\n    \"potentialAction\": [\n        {\n            \"@type\": \"OpenUri\",\n            \"name\": \"View pipeline run\",\n            \"targets\": [\n                {\n                    \"os\": \"default\",\n                    \"uri\": \"@{concat('https://adf.azure.com/monitoring/pipelineruns/',pipeline().parameters.runId,'?factory=/subscriptions/',pipeline().parameters.subscription,'/resourceGroups/',pipeline().parameters.resourceGroup,'/providers/Microsoft.DataFactory/factories/',pipeline().DataFactory)}\"\n                }\n            ]\n        }\n    ]\n}",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "invoke_teams_webhook",
+						"type": "WebActivity",
+						"dependsOn": [
+							{
+								"activity": "set_json_schema",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"method": "POST",
+							"headers": {},
+							"url": {
+								"value": "@pipeline().parameters.teamWebhookUrl",
+								"type": "Expression"
+							},
+							"connectVia": {
+								"referenceName": "IR-Snowflake-NALA",
+								"type": "IntegrationRuntimeReference"
+							},
+							"body": {
+								"value": "@json(variables('messageCard'))",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Insert Log Entry",
+						"type": "Script",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "ls_snowflake",
+							"type": "LinkedServiceReference",
+							"parameters": {
+								"ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_auditDb",
+									"type": "Expression"
+								},
+								"ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							}
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "Query",
+									"text": {
+										"value": "@concat(\n'insert into ',pipeline().globalParameters.environment,'_', pipeline().globalParameters.snow_auditDb, '.control.ADF_PIPELINE_LOG (HK_SOURCE_NAME, HK_JOB_RUN_ID, TASK_NAME,TASK_STEP_NUMBER, NAME, STATUS, EXECUTION_START_TIMESTAMP,  EXECUTION_END_TIMESTAMP, NOTIFICATION_TIMESTAMP, EXECUTION_DURATION, MESSAGE) VALUES ('\n, '''', pipeline().globalParameters.environment, ''','\n, '''', pipeline().parameters.runId, ''','\n, '''', pipeline().parameters.taskName, ''','\n, '''', pipeline().parameters.taskStepNumber, ''','\n, '''', pipeline().parameters.name, ''','\n, '''', pipeline().parameters.status, ''','\n, '''', pipeline().parameters.triggerTime, ''','\n, '''', pipeline().parameters.executionEndTime, ''','\n, '''', pipeline().parameters.notificationTime, ''','\n, '''', pipeline().parameters.runDuration, ''','\n, '''', pipeline().parameters.message, ''''\n, ');'\n)",
+										"type": "Expression"
+									}
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"subscription": {
+						"type": "string"
+					},
+					"resourceGroup": {
+						"type": "string"
+					},
+					"runId": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"triggerTime": {
+						"type": "string"
+					},
+					"status": {
+						"type": "string"
+					},
+					"message": {
+						"type": "string"
+					},
+					"executionEndTime": {
+						"type": "string"
+					},
+					"runDuration": {
+						"type": "string"
+					},
+					"teamWebhookUrl": {
+						"type": "string"
+					},
+					"notificationTime": {
+						"type": "string"
+					},
+					"taskName": {
+						"type": "string",
+						"defaultValue": "<missing>"
+					},
+					"taskStepNumber": {
+						"type": "string",
+						"defaultValue": "<missing>"
+					}
+				},
+				"variables": {
+					"messageCard": {
+						"type": "String"
+					},
+					"pipeline_start_time": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-03-07T14:37:08Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/IR-Snowflake-NALA')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_snowflake')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pp_adf_pipeline_notification_DONOTDEPLOY')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "set_json_schema",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "messageCard",
+							"value": {
+								"value": "{\n    \"@type\": \"MessageCard\",\n    \"@context\": \"http://schema.org/extensions\",\n    \"themeColor\": \"0076D7\",\n    \"summary\": \"Pipeline status alert message​​​​\",\n    \"sections\": [\n        {\n            \"activityTitle\": \"Pipeline Notification​​​ Status​\",\n             \"facts\": [\n                {\n                    \"name\": \"Pipeline RunId:\",\n                    \"value\": \"@{pipeline().parameters.runId}\"\n                },\n                {\n                    \"name\": \"Pipline Name:\",\n                    \"value\": \"@{pipeline().parameters.name}\"\n                },\n                {\n                    \"name\": \"Pipeline Status:\",\n                    \"value\": \"@{toUpper(pipeline().parameters.status)}\"\n                },\n                {\n                    \"name\": \"Execution Start Time (UTC):\",\n                    \"value\": \"@{pipeline().parameters.triggerTime}\"\n                },\n                {\n                    \"name\": \"Execution Finish Time (UTC):\",\n                    \"value\": \"@{pipeline().parameters.executionEndTime}\"\n                },\n                {\n                    \"name\": \"Execution Duration (s):\",\n                    \"value\": \"@{pipeline().parameters.runDuration}\"\n                },\n                 {\n                    \"name\": \"Message :\",\n                    \"value\": \"@{pipeline().parameters.message}\"\n                },\n                {\n                    \"name\": \"Notification Time (UTC):\",\n                    \"value\": \"@{pipeline().parameters.notificationTime}\"\n                },\n             ],\n            \"markdown\": true\n        }\n    ],\n    \"potentialAction\": [\n        {\n            \"@type\": \"OpenUri\",\n            \"name\": \"View pipeline run\",\n            \"targets\": [\n                {\n                    \"os\": \"default\",\n                    \"uri\": \"@{concat('https://adf.azure.com/monitoring/pipelineruns/',pipeline().parameters.runId,'?factory=/subscriptions/',pipeline().parameters.subscription,'/resourceGroups/',pipeline().parameters.resourceGroup,'/providers/Microsoft.DataFactory/factories/',pipeline().DataFactory)}\"\n                }\n            ]\n        }\n    ]\n}",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "invoke_teams_webhook",
+						"type": "WebActivity",
+						"dependsOn": [
+							{
+								"activity": "set_json_schema",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"method": "POST",
+							"headers": {},
+							"url": {
+								"value": "@pipeline().parameters.teamWebhookUrl",
+								"type": "Expression"
+							},
+							"connectVia": {
+								"referenceName": "IR-Snowflake-NALA",
+								"type": "IntegrationRuntimeReference"
+							},
+							"body": {
+								"value": "@json(variables('messageCard'))",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Insert Log Entry",
+						"type": "Script",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "ls_snowflake",
+							"type": "LinkedServiceReference",
+							"parameters": {
+								"ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_auditDb",
+									"type": "Expression"
+								},
+								"ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							}
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "Query",
+									"text": {
+										"value": "@concat(\n'insert into ',pipeline().globalParameters.environment,'_', pipeline().globalParameters.snow_auditDb, '.control.ADF_PIPELINE_LOG (HK_SOURCE_NAME, HK_JOB_RUN_ID, TASK_NAME,TASK_STEP_NUMBER, NAME, STATUS, EXECUTION_START_TIMESTAMP,  EXECUTION_END_TIMESTAMP, NOTIFICATION_TIMESTAMP, EXECUTION_DURATION, MESSAGE) VALUES ('\n, '''', pipeline().globalParameters.environment, ''','\n, '''', pipeline().parameters.runId, ''','\n, '''', pipeline().parameters.taskName, ''','\n, '''', pipeline().parameters.taskStepNumber, ''','\n, '''', pipeline().parameters.name, ''','\n, '''', pipeline().parameters.status, ''','\n, '''', pipeline().parameters.triggerTime, ''','\n, '''', pipeline().parameters.executionEndTime, ''','\n, '''', pipeline().parameters.notificationTime, ''','\n, '''', pipeline().parameters.runDuration, ''','\n, '''', pipeline().parameters.message, ''''\n, ');'\n)",
+										"type": "Expression"
+									}
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"subscription": {
+						"type": "string"
+					},
+					"resourceGroup": {
+						"type": "string"
+					},
+					"runId": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"triggerTime": {
+						"type": "string"
+					},
+					"status": {
+						"type": "string"
+					},
+					"message": {
+						"type": "string"
+					},
+					"executionEndTime": {
+						"type": "string"
+					},
+					"runDuration": {
+						"type": "string"
+					},
+					"teamWebhookUrl": {
+						"type": "string"
+					},
+					"notificationTime": {
+						"type": "string"
+					},
+					"taskName": {
+						"type": "string",
+						"defaultValue": "<missing>"
+					},
+					"taskStepNumber": {
+						"type": "string",
+						"defaultValue": "<missing>"
+					}
+				},
+				"variables": {
+					"messageCard": {
+						"type": "String"
+					},
+					"pipeline_start_time": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-03-07T14:37:08Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/IR-Snowflake-NALA')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_snowflake')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pp_adf_pipeline_notification_logging')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "set_json_schema",
+						"type": "SetVariable",
+						"state": "Inactive",
+						"onInactiveMarkAs": "Succeeded",
+						"dependsOn": [],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "messageCard",
+							"value": {
+								"value": "{\n    \"@type\": \"MessageCard\",\n    \"@context\": \"http://schema.org/extensions\",\n    \"themeColor\": \"0076D7\",\n    \"summary\": \"Pipeline status alert message​​​​\",\n    \"sections\": [\n        {\n            \"activityTitle\": \"Pipeline Notification​​​ Status​\",\n             \"facts\": [\n                {\n                    \"name\": \"Pipeline RunId:\",\n                    \"value\": \"@{pipeline().parameters.runId}\"\n                },\n                {\n                    \"name\": \"Pipline Name:\",\n                    \"value\": \"@{pipeline().parameters.name}\"\n                },\n                {\n                    \"name\": \"Pipeline Status:\",\n                    \"value\": \"@{toUpper(pipeline().parameters.status)}\"\n                },\n                {\n                    \"name\": \"Execution Start Time (UTC):\",\n                    \"value\": \"@{pipeline().parameters.triggerTime}\"\n                },\n                {\n                    \"name\": \"Execution Finish Time (UTC):\",\n                    \"value\": \"@{pipeline().parameters.executionEndTime}\"\n                },\n                {\n                    \"name\": \"Execution Duration (s):\",\n                    \"value\": \"@{pipeline().parameters.runDuration}\"\n                },\n                 {\n                    \"name\": \"Message :\",\n                    \"value\": \"@{pipeline().parameters.message}\"\n                },\n                {\n                    \"name\": \"Notification Time (UTC):\",\n                    \"value\": \"@{pipeline().parameters.notificationTime}\"\n                },\n             ],\n            \"markdown\": true\n        }\n    ],\n    \"potentialAction\": [\n        {\n            \"@type\": \"OpenUri\",\n            \"name\": \"View pipeline run\",\n            \"targets\": [\n                {\n                    \"os\": \"default\",\n                    \"uri\": \"@{concat('https://adf.azure.com/monitoring/pipelineruns/',pipeline().parameters.runId,'?factory=/subscriptions/',pipeline().parameters.subscription,'/resourceGroups/',pipeline().parameters.resourceGroup,'/providers/Microsoft.DataFactory/factories/',pipeline().DataFactory)}\"\n                }\n            ]\n        }\n    ]\n}",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "invoke_teams_webhook",
+						"type": "WebActivity",
+						"state": "Inactive",
+						"onInactiveMarkAs": "Succeeded",
+						"dependsOn": [
+							{
+								"activity": "set_json_schema",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"method": "POST",
+							"headers": {},
+							"url": {
+								"value": "@pipeline().parameters.teamWebhookUrl",
+								"type": "Expression"
+							},
+							"connectVia": {
+								"referenceName": "IR-Snowflake-NALA",
+								"type": "IntegrationRuntimeReference"
+							},
+							"body": {
+								"value": "@json(variables('messageCard'))",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Insert Log Entry",
+						"type": "Script",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "ls_snowflake",
+							"type": "LinkedServiceReference",
+							"parameters": {
+								"ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_auditDb",
+									"type": "Expression"
+								},
+								"ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							}
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "Query",
+									"text": {
+										"value": "@concat(\n'insert into ',pipeline().globalParameters.environment,'_', pipeline().globalParameters.snow_auditDb, '.control.ADF_PIPELINE_LOG (HK_SOURCE_NAME, HK_JOB_RUN_ID, TASK_NAME,TASK_STEP_NUMBER, NAME, STATUS, EXECUTION_START_TIMESTAMP,  EXECUTION_END_TIMESTAMP, NOTIFICATION_TIMESTAMP, EXECUTION_DURATION, MESSAGE) VALUES ('\n, '''', pipeline().globalParameters.environment, ''','\n, '''', pipeline().parameters.runId, ''','\n, '''', 'TaskName', ''','\n, '''', 'TaskStepNumber', ''','\n, '''', pipeline().parameters.name, ''','\n, '''', pipeline().parameters.status, ''','\n, '''', pipeline().parameters.triggerTime, ''','\n, '''', pipeline().parameters.executionEndTime, ''','\n, '''', pipeline().parameters.notificationTime, ''','\n, '''', pipeline().parameters.runDuration, ''','\n, '''', pipeline().parameters.message, ''''\n, ');'\n)",
+										"type": "Expression"
+									}
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"subscription": {
+						"type": "string",
+						"defaultValue": "Test"
+					},
+					"resourceGroup": {
+						"type": "string",
+						"defaultValue": "Test"
+					},
+					"runId": {
+						"type": "string",
+						"defaultValue": "RunTest"
+					},
+					"name": {
+						"type": "string",
+						"defaultValue": "A New Test"
+					},
+					"triggerTime": {
+						"type": "string",
+						"defaultValue": "2025-03-05 19:39:58.334 +0000"
+					},
+					"status": {
+						"type": "string",
+						"defaultValue": "Pensive"
+					},
+					"message": {
+						"type": "string",
+						"defaultValue": "This is a test you want to ingore"
+					},
+					"executionEndTime": {
+						"type": "string",
+						"defaultValue": "2025-03-05 19:39:58.334 +0000"
+					},
+					"runDuration": {
+						"type": "string",
+						"defaultValue": "02:01:25.7095804"
+					},
+					"teamWebhookUrl": {
+						"type": "string"
+					},
+					"notificationTime": {
+						"type": "string",
+						"defaultValue": "2025-03-05 19:39:58.334 +0000"
+					},
+					"taskName": {
+						"type": "string",
+						"defaultValue": "<missing>"
+					},
+					"taskStepNumber": {
+						"type": "string",
+						"defaultValue": "<missing>"
+					}
+				},
+				"variables": {
+					"messageCard": {
+						"type": "String"
+					},
+					"pipeline_start_time": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-03-07T14:37:08Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/IR-Snowflake-NALA')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_snowflake')]"
+			]
+		}
+	]
+}

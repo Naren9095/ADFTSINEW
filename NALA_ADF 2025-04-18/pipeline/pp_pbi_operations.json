@@ -1,0 +1,38 @@
+{
+	"name": "pp_pbi_operations",
+	"properties": {
+		"activities": [
+			{
+				"name": "trigger_pbi_refresh_operations",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_partition_or_full",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_table_nm": "'FACT_PRODUCTION_JOURNAL'",
+						"p_tgt_audit_table_nm": "PBI_SNOWFLAKE_BRIDGE",
+						"p_tgt_audit_schema_nm": "CONTROL",
+						"p_webhook_url": "https://tempursealyinc.webhook.office.com/webhookb2/7aa89678-96e1-4bbf-a53a-a4ed05939336@7c6c07f6-1ef4-4368-8d5d-4686d15efd79/IncomingWebhook/d39f287600c84ebfb49e4c975ba096cd/e95a1626-b503-430d-ba0f-f165bcf3005f/V2Rfig1jFBdG1n07EewuJJKfoy19_jrMIFLo0Aa1oWdLQ1",
+						"p_dataset_nm": "Operations Gold Dataset",
+						"p_web_body_fullrefresh": {
+							"value": "@createArray('{\n  \"type\": \"full\",\n  \"commitMode\": \"transactional\",\n  \"applyRefreshPolicy\": \"true\"\n}')",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "pbi_maintenance"
+		},
+		"annotations": []
+	}
+}

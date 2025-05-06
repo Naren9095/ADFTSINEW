@@ -1,0 +1,37 @@
+{
+	"name": "trg_d365_salestable_to_dim_sales_order",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "pp_ax_salestable_to_dim_sales_order",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"p_src_table_nm": "SALESTABLE",
+					"p_src_schema_nm": "dbo",
+					"p_tgt_raw_table_nm": "SALESTABLE",
+					"p_tgt_raw_schema_nm": "D365",
+					"p_tgt_curate_table_nm": "DIM_SALES_ORDER",
+					"p_tgt_curate_schema_nm": "GLOBAL",
+					"p_src_nm": "D365",
+					"p_temp_directory": "temp_files",
+					"p_temp_file_nm": "dim_sales_order_d365.parquet",
+					"p_lkp_curate_table_nm": "LKP_TRUCK_VOLUME",
+					"p_src_code": "3"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2024-06-07T06:00:00",
+				"timeZone": "Eastern Standard Time"
+			}
+		}
+	}
+}

@@ -1,0 +1,166 @@
+{
+	"name": "pp_facts_finance",
+	"properties": {
+		"activities": [
+			{
+				"name": "sp_fact_tax_transactions",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_TAX_TRANSACTIONS"
+					}
+				}
+			},
+			{
+				"name": "sp_fact_general_ledger",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_GENERAL_LEDGER"
+					}
+				}
+			},
+			{
+				"name": "sp_fact_budget_transactions",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_BUDGET_TRANSACTIONS"
+					}
+				}
+			},
+			{
+				"name": "trigger_pbi_refresh_finance",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "sp_fact_tax_transactions",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "sp_fact_general_ledger",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "sp_fact_budget_transactions",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "sp_fact_ledger_journal_transactions",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "sp_dim_ledger_dimension",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_partition_or_full",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_table_nm": "'FACT_BUDGET_TRANSACTIONS', 'FACT_GENERAL_LEDGER', 'FACT_LEDGER_JOURNAL_TRANSACTIONS', 'FACT_TAX_TRANSACTIONS','DIM_LEDGER_DIMENSION'",
+						"p_tgt_audit_table_nm": "PBI_SNOWFLAKE_BRIDGE",
+						"p_tgt_audit_schema_nm": "CONTROL",
+						"p_webhook_url": "https://tempursealyinc.webhook.office.com/webhookb2/7aa89678-96e1-4bbf-a53a-a4ed05939336@7c6c07f6-1ef4-4368-8d5d-4686d15efd79/IncomingWebhook/655f7f4529e842778d78509333314831/4c6968dc-2ec8-4f99-b936-1206cdf30aeb/V2nHZu1l5IKfBJmdjzHNFQI2gjV8lMyTEEHoz7gowAlao1",
+						"p_dataset_nm": "Finance Gold Dataset",
+						"p_web_body_fullrefresh": {
+							"value": "@createArray('{\n  \"type\": \"full\",\n  \"commitMode\": \"transactional\",\n  \"applyRefreshPolicy\": \"true\"\n}')",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "sp_fact_ledger_journal_transactions",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "FACT_LEDGER_JOURNAL_TRANSACTIONS"
+					}
+				}
+			},
+			{
+				"name": "sp_dim_ledger_dimension",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_pbi_refresh_stored_procedure",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"p_tgt_curate_table_nm": "DIM_LEDGER_DIMENSION"
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "pbi_dataset_refresh_pipelines"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-11-13T05:19:41Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

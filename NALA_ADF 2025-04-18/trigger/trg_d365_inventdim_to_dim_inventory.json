@@ -1,0 +1,35 @@
+{
+	"name": "trg_d365_inventdim_to_dim_inventory",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "pp_ax_inventdim_to_dim_inventory",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"p_src_nm": "D365",
+					"p_tgt_curate_table_nm": "DIM_INVENTORY",
+					"p_tgt_raw_table_nm": "INVENTDIM",
+					"p_tgt_raw_schema_nm": "D365",
+					"p_tgt_curate_schema_nm": "GLOBAL",
+					"p_src_table_nm": "INVENTDIM",
+					"p_src_schema_nm": "dbo",
+					"p_src_code": "3",
+					"p_tgt_raw_arkieva_table_nm": "ARKIEVA_INVENTORY"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2024-06-07T05:00:00",
+				"timeZone": "Eastern Standard Time"
+			}
+		}
+	}
+}

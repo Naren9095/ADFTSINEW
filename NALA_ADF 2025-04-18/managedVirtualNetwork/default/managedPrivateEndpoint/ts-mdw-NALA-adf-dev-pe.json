@@ -1,0 +1,10 @@
+{
+	"name": "ts-mdw-NALA-adf-dev-pe",
+	"properties": {
+		"privateLinkResourceId": "/subscriptions/859ea397-daff-4b9d-9481-78f311db0f7a/resourceGroups/rg-IT-NALA-MDW-Dev/providers/Microsoft.Storage/storageAccounts/tsnalamdwsnowflakedev",
+		"groupId": "blob",
+		"fqdns": [
+			"tsnalamdwsnowflakedev.blob.core.windows.net"
+		]
+	}
+}

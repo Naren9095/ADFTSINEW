@@ -1,0 +1,41 @@
+{
+	"name": "ls_sql",
+	"properties": {
+		"parameters": {
+			"ls_serverName": {
+				"type": "string"
+			},
+			"ls_dbName": {
+				"type": "string"
+			},
+			"ls_sqlUsername": {
+				"type": "string"
+			},
+			"ls_sqlPassword": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "SqlServer",
+		"typeProperties": {
+			"connectionString": "Integrated Security=True;Data Source=@{linkedService().ls_serverName};Initial Catalog=@{linkedService().ls_dbName}",
+			"userName": "@{linkedService().ls_sqlUsername}",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "ls_key_vault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": {
+					"value": "@linkedService().ls_sqlPassword",
+					"type": "Expression"
+				}
+			}
+		},
+		"connectVia": {
+			"referenceName": "Selfhosted-IR-NALA-dtu",
+			"type": "IntegrationRuntimeReference"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/linkedservices"
+}

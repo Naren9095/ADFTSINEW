@@ -1,0 +1,1444 @@
+{
+	"name": "pp_ax_inventsum_to_fact_inventory_summary",
+	"properties": {
+		"activities": [
+			{
+				"name": "raw_to_curate_sp_call",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "switch_nala_d365",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_auditDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('CALL ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_auditDb,'.CONTROL.SP_TASK_INITIALIZE(','''',pipeline().RunId,'''',',','''',pipeline().globalParameters.environment,'''',',','''',pipeline().parameters.p_tgt_curate_table_nm,'''',',',pipeline().parameters.p_src_code,')')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "stored_procedure_failure_notification",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_adf_pipeline_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"subscription": {
+							"value": "@pipeline().globalParameters.subscriptionId",
+							"type": "Expression"
+						},
+						"resourceGroup": {
+							"value": "@pipeline().globalParameters.resourceGroup",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@coalesce(pipeline().RunId, -1)",
+							"type": "Expression"
+						},
+						"name": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"triggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"status": {
+							"value": "@activity('raw_to_curate_sp_call').Status",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@activity('raw_to_curate_sp_call').Error['message']",
+							"type": "Expression"
+						},
+						"executionEndTime": {
+							"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+							"type": "Expression"
+						},
+						"runDuration": {
+							"value": "@activity('raw_to_curate_sp_call').Duration",
+							"type": "Expression"
+						},
+						"teamWebhookUrl": {
+							"value": "@pipeline().globalParameters.teamsWebhookUrl",
+							"type": "Expression"
+						},
+						"notificationTime": {
+							"value": "@utcNow()",
+							"type": "Expression"
+						},
+						"taskName": {
+							"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+							"type": "Expression"
+						},
+						"taskStepNumber": {
+							"value": "@pipeline().parameters.p_src_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "lkp_raw_last_modified_date",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SnowflakeSource",
+						"query": {
+							"value": "@concat('select max(to_varchar(LATEST_MODIFIEDDATETIME::timestamp, ''','yyyy-mm-dd hh24:mi:ss',''')) as max_date from ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_rawDb,'.',pipeline().parameters.p_tgt_raw_schema_nm, '.', pipeline().parameters.p_tgt_raw_table_nm)",
+							"type": "Expression"
+						},
+						"exportSettings": {
+							"type": "SnowflakeExportCopyCommand"
+						}
+					},
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_tgt_table_name": {
+								"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+								"type": "Expression"
+							},
+							"p_tgt_schema_name": {
+								"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_DbName": {
+								"value": "@pipeline().globalParameters.snow_rawDb",
+								"type": "Expression"
+							},
+							"p_ls_Env": {
+								"value": "@pipeline().globalParameters.environment",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "set_last_modified_date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkp_raw_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_prev_max_timestamp",
+					"value": {
+						"value": "@coalesce(activity('lkp_raw_last_modified_date').output.firstRow.max_date, '1950-01-01 00:00:00')\n\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "switch_nala_d365",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "set_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.p_src_code",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "1",
+							"activities": [
+								{
+									"name": "sql_to_raw_nala",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": {
+												"value": "select\nis1.DATAAREAID,\nis1.INVENTDIMID,\nis1.ITEMID,\nis1.CLOSED,\nis1.CLOSEDQTY,\nis1.ARRIVED,\nis1.AVAILORDERED,\nis1.AVAILPHYSICAL,\nis1.DEDUCTED,\nis1.ONORDER,\nis1.ORDERED,\nis1.PICKED,\nis1.POSTEDQTY,\nis1.RECEIVED,\nis1.REGISTERED,\nis1.RESERVORDERED,\nis1.RESERVPHYSICAL,\nis1.MODIFIEDDATETIME,\nid1.CONFIGID as INVENTDIM_CONFIGID,\nid1.MODIFIEDDATETIME as INVENTDIM_MODIFIEDDATETIME,\nidc1.PDMSTATUS as INVENTDIMCOMBINATION_PDMSTATUS,\nidc1.MODIFIEDDATETIME as INVENTDIMCOMBINATION_MODIFIEDDATETIME,\nps1.NAME as PDMSTATUS_NAME,\n(SELECT MAX(LastUpdateDate) FROM ( VALUES\n                    (is1.MODIFIEDDATETIME),\n    \t\t\t\t(isnull(id1.MODIFIEDDATETIME,'1950-01-01')),\n                    (isnull(idc1.MODIFIEDDATETIME, '1950-01-01'))) AS UpdateDate(LastUpdateDate)) AS LATEST_MODIFIEDDATETIME\nfrom\ndbo.INVENTSUM is1\nleft join dbo.INVENTDIM id1 on\n\tis1.DATAAREAID = id1.DATAAREAID and\n\tis1.INVENTDIMID = id1.INVENTDIMID\nleft join (select idc10.DATAAREAID, idc10.ITEMID, id10.CONFIGID, idc10.PDMSTATUS\n\t\t\t, max(id10.MODIFIEDDATETIME) as MODIFIEDDATETIME\n\t\tfrom dbo.INVENTDIMCOMBINATION idc10\n\t\tleft join dbo.INVENTDIM id10 on\n\t\t\tidc10.DATAAREAID = id10.DATAAREAID and\n\t\t\tidc10.INVENTDIMID = id10.INVENTDIMID\n\t\tgroup by idc10.DATAAREAID, idc10.ITEMID, id10.CONFIGID, idc10.PDMSTATUS) idc1 on\n\tis1.DATAAREAID = idc1.DATAAREAID and\n\tid1.CONFIGID = idc1.CONFIGID and\n\tis1.ITEMID = idc1.ITEMID\nleft join dbo.PDMSTATUS ps1 on\n            idc1.PDMSTATUS = ps1.RECID\n\twhere isnull(is1.DATAAREAID, '') != ''\n\tand isnull(is1.INVENTDIMID, '') != ''\n\tand isnull(is1.ITEMID, '') != ''\n\tand (SELECT MAX(LastUpdateDate) FROM ( VALUES\n                    (is1.MODIFIEDDATETIME),\n    \t\t\t\t(isnull(id1.MODIFIEDDATETIME,'1950-01-01')),\n                    (isnull(idc1.MODIFIEDDATETIME, '1950-01-01'))) AS UpdateDate(LastUpdateDate)) > '@{variables('v_prev_max_timestamp')}'",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "SnowflakeSink",
+											"importSettings": {
+												"type": "SnowflakeImportCopyCommand"
+											}
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ls_blob_storage",
+												"type": "LinkedServiceReference"
+											},
+											"path": {
+												"value": "@pipeline().globalParameters.rootDir",
+												"type": "Expression"
+											},
+											"enableCompression": true
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "DATAAREAID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "DATAAREAID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIMID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTDIMID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "ITEMID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "ITEMID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "CLOSED",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "CLOSED",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "CLOSEDQTY",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "CLOSEDQTY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "ARRIVED",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "ARRIVED",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "AVAILORDERED",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "AVAILORDERED",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "AVAILPHYSICAL",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "AVAILPHYSICAL",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "DEDUCTED",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "DEDUCTED",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "ONORDER",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "ONORDER",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "ORDERED",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "ORDERED",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "PICKED",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "PICKED",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "POSTEDQTY",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "POSTEDQTY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "RECEIVED",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "RECEIVED",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "REGISTERED",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "REGISTERED",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "RESERVORDERED",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "RESERVORDERED",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "RESERVPHYSICAL",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "RESERVPHYSICAL",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM_CONFIGID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "INVENTDIM_CONFIGID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIM_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTDIM_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIMCOMBINATION_PDMSTATUS",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "INVENTDIMCOMBINATION_PDMSTATUS",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "INVENTDIMCOMBINATION_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "INVENTDIMCOMBINATION_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "PDMSTATUS_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "PDMSTATUS_NAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												}
+											]
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_sql_server",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_src_table_name": {
+													"value": "@pipeline().parameters.p_src_table_nm",
+													"type": "Expression"
+												},
+												"p_src_schema_name": {
+													"value": "@pipeline().parameters.p_src_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_serverName": {
+													"value": "@pipeline().globalParameters.nala_sql_serverName",
+													"type": "Expression"
+												},
+												"p_ls_dbName": {
+													"value": "@pipeline().globalParameters.nala_sql_dbName",
+													"type": "Expression"
+												},
+												"p_ls_sqlUsername": {
+													"value": "@pipeline().globalParameters.sql_userName",
+													"type": "Expression"
+												},
+												"p_ls_sqlPassword": {
+													"value": "@pipeline().globalParameters.sql_password",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_snowflake",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_tgt_table_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+													"type": "Expression"
+												},
+												"p_tgt_schema_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_DbName": {
+													"value": "@pipeline().globalParameters.snow_rawDb",
+													"type": "Expression"
+												},
+												"p_ls_Env": {
+													"value": "@pipeline().globalParameters.environment",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "nala_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "sql_to_raw_nala",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('sql_to_raw_nala').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('sql_to_raw_nala').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('sql_to_raw_nala').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('sql_to_raw_nala').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_nala_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "nala_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('sql_to_raw_nala').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						},
+						{
+							"value": "3",
+							"activities": [
+								{
+									"name": "sql_to_raw_d365",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "WarehouseSource",
+											"additionalColumns": [
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": {
+												"value": "@concat('SELECT is1.dataareaid\n     , is1.inventdimid\n     , is1.itemid\n     , is1.closed\n     , is1.closedqty\n     , is1.arrived\n     , is1.availordered\n     , is1.availphysical\n     , is1.deducted\n     , is1.onorder\n     , is1.ordered\n     , is1.picked\n     , is1.postedqty\n     , is1.received\n     , is1.registered\n     , is1.reservordered\n     , is1.reservphysical\n     , is1.modifieddatetime\n     , id1.configid          AS inventdim_configid\n     , id1.modifieddatetime  AS inventdim_modifieddatetime\n     --, idc1.pdmstatus        AS inventdimcombination_pdmstatus\n\t ,idp.productlifecyclestateid AS inventdimcombination_pdmstatus --renamed so Snowflake proc picks it up\n     , idc1.modifieddatetime AS inventdimcombination_modifieddatetime\n     ,idp.productlifecyclestateid AS pdmstatus_name\n     , (\n           SELECT MAX(lastupdatedate)\n           FROM\n           (\n               VALUES\n                   (is1.modifieddatetime)\n                 , (ISNULL(id1.modifieddatetime, ''1950-01-01''))\n                 , (ISNULL(idc1.modifieddatetime, ''1950-01-01''))\n           ) AS updatedate (lastupdatedate)\n       )                     AS latest_modifieddatetime\nFROM ',pipeline().globalParameters.d365_dbName,'.','inventsum      is1\nLEFT JOIN ',pipeline().globalParameters.d365_dbName,'.','inventdim id1\n          ON is1.dataareaid = id1.dataareaid\n              AND is1.inventdimid = id1.inventdimid\nLEFT JOIN\n(\n    SELECT idc10.dataareaid\n         , idc10.itemid\n         , id10.configid\n         --, idc10.pdmstatus\n         , MAX(id10.modifieddatetime) AS modifieddatetime\n    FROM ',pipeline().globalParameters.d365_dbName,'.','inventdimcombination idc10\n    LEFT JOIN ',pipeline().globalParameters.d365_dbName,'.','inventdim       id10\n              ON idc10.dataareaid = id10.dataareaid\n                  AND idc10.inventdimid = id10.inventdimid\n    GROUP BY idc10.dataareaid\n           , idc10.itemid\n           , id10.configid\n           --, idc10.pdmstatus\n)                       idc1\nON is1.dataareaid = idc1.dataareaid\n    AND id1.configid = idc1.configid\n    AND is1.itemid = idc1.itemid\nLEFT OUTER JOIN ',pipeline().globalParameters.d365_dbName,'.','inventdistinctproduct idp ON is1.dataareaid = idp.dataareaid\n\tAND id1.configid = idp.configid\n\tAND is1.itemid = idp.itemid\nWHERE ISNULL(is1.dataareaid, '''') != ''''\n    AND ISNULL(is1.inventdimid, '''') != ''''\n    AND ISNULL(is1.itemid, '''') != ''''\n    AND\n    (\n        SELECT MAX(lastupdatedate)\n        FROM\n        (\n            VALUES\n                (is1.modifieddatetime)\n              , (ISNULL(id1.modifieddatetime, ''1950-01-01''))\n              , (ISNULL(idc1.modifieddatetime, ''1950-01-01''))\n        ) AS updatedate (lastupdatedate)\n    ) > ','''',variables('v_prev_max_timestamp'),'''')",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "SnowflakeSink",
+											"importSettings": {
+												"type": "SnowflakeImportCopyCommand"
+											}
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ls_blob_storage",
+												"type": "LinkedServiceReference"
+											},
+											"path": {
+												"value": "@pipeline().globalParameters.rootDir",
+												"type": "Expression"
+											},
+											"enableCompression": true
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String",
+														"physicalType": "VARCHAR"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String",
+														"physicalType": "VARCHAR"
+													}
+												},
+												{
+													"source": {
+														"name": "dataareaid",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "DATAAREAID",
+														"type": "String",
+														"physicalType": "VARCHAR"
+													}
+												},
+												{
+													"source": {
+														"name": "inventdimid",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "INVENTDIMID",
+														"type": "String",
+														"physicalType": "VARCHAR"
+													}
+												},
+												{
+													"source": {
+														"name": "itemid",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "ITEMID",
+														"type": "String",
+														"physicalType": "VARCHAR"
+													}
+												},
+												{
+													"source": {
+														"name": "closed",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "CLOSED",
+														"type": "Int64",
+														"physicalType": "NUMBER"
+													}
+												},
+												{
+													"source": {
+														"name": "closedqty",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "CLOSEDQTY",
+														"type": "Int64",
+														"physicalType": "NUMBER"
+													}
+												},
+												{
+													"source": {
+														"name": "arrived",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 6,
+														"precision": 38
+													},
+													"sink": {
+														"name": "ARRIVED",
+														"type": "Int64",
+														"physicalType": "NUMBER"
+													}
+												},
+												{
+													"source": {
+														"name": "availordered",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 6,
+														"precision": 38
+													},
+													"sink": {
+														"name": "AVAILORDERED",
+														"type": "Int64",
+														"physicalType": "NUMBER"
+													}
+												},
+												{
+													"source": {
+														"name": "availphysical",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 6,
+														"precision": 38
+													},
+													"sink": {
+														"name": "AVAILPHYSICAL",
+														"type": "Int64",
+														"physicalType": "NUMBER"
+													}
+												},
+												{
+													"source": {
+														"name": "deducted",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 6,
+														"precision": 38
+													},
+													"sink": {
+														"name": "DEDUCTED",
+														"type": "Int64",
+														"physicalType": "NUMBER"
+													}
+												},
+												{
+													"source": {
+														"name": "onorder",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 6,
+														"precision": 38
+													},
+													"sink": {
+														"name": "ONORDER",
+														"type": "Int64",
+														"physicalType": "NUMBER"
+													}
+												},
+												{
+													"source": {
+														"name": "ordered",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 6,
+														"precision": 38
+													},
+													"sink": {
+														"name": "ORDERED",
+														"type": "Int64",
+														"physicalType": "NUMBER"
+													}
+												},
+												{
+													"source": {
+														"name": "picked",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 6,
+														"precision": 38
+													},
+													"sink": {
+														"name": "PICKED",
+														"type": "Int64",
+														"physicalType": "NUMBER"
+													}
+												},
+												{
+													"source": {
+														"name": "postedqty",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 6,
+														"precision": 38
+													},
+													"sink": {
+														"name": "POSTEDQTY",
+														"type": "Int64",
+														"physicalType": "NUMBER"
+													}
+												},
+												{
+													"source": {
+														"name": "received",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 6,
+														"precision": 38
+													},
+													"sink": {
+														"name": "RECEIVED",
+														"type": "Int64",
+														"physicalType": "NUMBER"
+													}
+												},
+												{
+													"source": {
+														"name": "registered",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 6,
+														"precision": 38
+													},
+													"sink": {
+														"name": "REGISTERED",
+														"type": "Int64",
+														"physicalType": "NUMBER"
+													}
+												},
+												{
+													"source": {
+														"name": "reservordered",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 6,
+														"precision": 38
+													},
+													"sink": {
+														"name": "RESERVORDERED",
+														"type": "Int64",
+														"physicalType": "NUMBER"
+													}
+												},
+												{
+													"source": {
+														"name": "reservphysical",
+														"type": "Decimal",
+														"physicalType": "decimal",
+														"scale": 6,
+														"precision": 38
+													},
+													"sink": {
+														"name": "RESERVPHYSICAL",
+														"type": "Int64",
+														"physicalType": "NUMBER"
+													}
+												},
+												{
+													"source": {
+														"name": "modifieddatetime",
+														"type": "DateTime",
+														"physicalType": "datetime2"
+													},
+													"sink": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "TIMESTAMP_TZ"
+													}
+												},
+												{
+													"source": {
+														"name": "inventdim_configid",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "INVENTDIM_CONFIGID",
+														"type": "String",
+														"physicalType": "VARCHAR"
+													}
+												},
+												{
+													"source": {
+														"name": "inventdim_modifieddatetime",
+														"type": "DateTime",
+														"physicalType": "datetime2"
+													},
+													"sink": {
+														"name": "INVENTDIM_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "TIMESTAMP_TZ"
+													}
+												},
+												{
+													"source": {
+														"name": "inventdimcombination_pdmstatus",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "INVENTDIMCOMBINATION_PDMSTATUS",
+														"type": "String",
+														"physicalType": "VARCHAR"
+													}
+												},
+												{
+													"source": {
+														"name": "inventdimcombination_modifieddatetime",
+														"type": "DateTime",
+														"physicalType": "datetime2"
+													},
+													"sink": {
+														"name": "INVENTDIMCOMBINATION_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "TIMESTAMP_TZ"
+													}
+												},
+												{
+													"source": {
+														"name": "pdmstatus_name",
+														"type": "String",
+														"physicalType": "varchar"
+													},
+													"sink": {
+														"name": "PDMSTATUS_NAME",
+														"type": "String",
+														"physicalType": "VARCHAR"
+													}
+												},
+												{
+													"source": {
+														"name": "latest_modifieddatetime",
+														"type": "DateTime",
+														"physicalType": "datetime2"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "TIMESTAMP_TZ"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_fabric_wh",
+											"type": "DatasetReference"
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_snowflake",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_tgt_table_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+													"type": "Expression"
+												},
+												"p_tgt_schema_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_DbName": {
+													"value": "@pipeline().globalParameters.snow_rawDb",
+													"type": "Expression"
+												},
+												"p_ls_Env": {
+													"value": "@pipeline().globalParameters.environment",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "d365_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "sql_to_raw_d365",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('sql_to_raw_d365').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('sql_to_raw_d365').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('sql_to_raw_d365').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('sql_to_raw_d365').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_d365_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "d365_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('sql_to_raw_d365').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "pipeline_execution_notification",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(equals(activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE'],'TRUE'),bool('TRUE'), bool('FALSE'))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "pp_stored_procedure_failure_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@toUpper('failed')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "curate_load_failure",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "pp_stored_procedure_failure_notification",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": {
+									"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+									"type": "Expression"
+								},
+								"errorCode": "500"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "stored_procedure_success_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@activity('raw_to_curate_sp_call').Status",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat(pipeline().parameters.p_tgt_curate_table_nm, ' is successfully loaded')",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": {
+										"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+										"type": "Expression"
+									},
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"p_src_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA"
+			},
+			"p_tgt_curate_table_nm": {
+				"type": "string",
+				"defaultValue": "FACT_INVENTORY_SUMMARY"
+			},
+			"p_tgt_raw_table_nm": {
+				"type": "string",
+				"defaultValue": "INVENTSUM"
+			},
+			"p_tgt_raw_schema_nm": {
+				"type": "string",
+				"defaultValue": "AX_NALA"
+			},
+			"p_tgt_curate_schema_nm": {
+				"type": "string",
+				"defaultValue": "GLOBAL"
+			},
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "INVENTSUM"
+			},
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_src_code": {
+				"type": "string",
+				"defaultValue": "1"
+			}
+		},
+		"variables": {
+			"v_prev_max_timestamp": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-06-04T13:47:58Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

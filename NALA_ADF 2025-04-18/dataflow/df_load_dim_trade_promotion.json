@@ -1,0 +1,145 @@
+{
+	"name": "df_load_dim_trade_promotion",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_parquet",
+						"type": "DatasetReference"
+					},
+					"name": "SrcTamTradePromotion"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_parquet",
+						"type": "DatasetReference"
+					},
+					"name": "SrcDeal"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference"
+					},
+					"name": "TamTradePromotion"
+				}
+			],
+			"transformations": [
+				{
+					"name": "JoinDealColumns"
+				},
+				{
+					"name": "FilterLastestRecords"
+				},
+				{
+					"name": "RederiveColumns"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     df_prev_max_timestamp as string",
+				"}",
+				"source(output(",
+				"          DATAAREAID as string,",
+				"          PROMOTIONID as string,",
+				"          PROMOTIONDESCRIPTION as string,",
+				"          ACTIVITY as integer,",
+				"          CURRENCY as string,",
+				"          HCMWORKERID as long,",
+				"          ORDERSENDDATE as timestamp,",
+				"          ORDERSSTARTDATE as timestamp,",
+				"          PROMOTIONSTATUS as integer,",
+				"          TPXDEALTYPE as integer,",
+				"          UNITID as string,",
+				"          TPXDEALID as integer,",
+				"          MCSTAMDEALSTATUS as string,",
+				"          MODIFIEDDATETIME as timestamp,",
+				"          CURRENCY_TXT as string,",
+				"          CURRENCY_MODIFIEDDATETIME as timestamp,",
+				"          HCMWORKER_PERSON as long,",
+				"          HCMWORKER_MODIFIEDDATETIME as timestamp,",
+				"          DIRPARTYTABLE_NAME as string,",
+				"          DIRPARTYTABLE_MODIFIEDDATETIME as timestamp,",
+				"          UNITOFMEASURE_SYMBOL as string,",
+				"          UNITOFMEASURE_MODIFIEDDATETIME as timestamp,",
+				"          UNITOFMEASURETRANSLATION_DESCRIPTION as string,",
+				"          UNITOFMEASURETRANSLATION_MODIFIEDDATETIME as timestamp,",
+				"          TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_PROMOTIONSTATUS as string,",
+				"          TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_TPXDEALTYPE as string,",
+				"          TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_TPXDEALTYPE as string,",
+				"          LATEST_MODIFIEDDATETIME as timestamp,",
+				"          HK_JOB_RUN_ID as string,",
+				"          HK_SOURCE_NAME as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> SrcTamTradePromotion",
+				"source(output(",
+				"          DEALID as integer,",
+				"          DEALDESC as string,",
+				"          LASTEDITDATE as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'parquet') ~> SrcDeal",
+				"SrcTamTradePromotion, SrcDeal join(TPXDEALID == DEALID,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> JoinDealColumns",
+				"RederiveColumns filter(LATEST_MODIFIEDDATETIME_NEW > toTimestamp($df_prev_max_timestamp, 'yyyy-MM-dd HH:mm:ss')) ~> FilterLastestRecords",
+				"JoinDealColumns derive(LATEST_MODIFIEDDATETIME_NEW = greatest(LATEST_MODIFIEDDATETIME,LASTEDITDATE)) ~> RederiveColumns",
+				"FilterLastestRecords sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     stageInsert: true,",
+				"     mapColumn(",
+				"          DATAAREAID,",
+				"          PROMOTIONID,",
+				"          PROMOTIONDESCRIPTION,",
+				"          ACTIVITY,",
+				"          CURRENCY,",
+				"          HCMWORKERID,",
+				"          ORDERSENDDATE,",
+				"          ORDERSSTARTDATE,",
+				"          PROMOTIONSTATUS,",
+				"          TPXDEALTYPE,",
+				"          UNITID,",
+				"          TPXDEALID,",
+				"          MCSTAMDEALSTATUS,",
+				"          MODIFIEDDATETIME,",
+				"          CURRENCY_TXT,",
+				"          CURRENCY_MODIFIEDDATETIME,",
+				"          HCMWORKER_PERSON,",
+				"          HCMWORKER_MODIFIEDDATETIME,",
+				"          DIRPARTYTABLE_NAME,",
+				"          DIRPARTYTABLE_MODIFIEDDATETIME,",
+				"          UNITOFMEASURE_SYMBOL,",
+				"          UNITOFMEASURE_MODIFIEDDATETIME,",
+				"          UNITOFMEASURETRANSLATION_DESCRIPTION,",
+				"          UNITOFMEASURETRANSLATION_MODIFIEDDATETIME,",
+				"          TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_PROMOTIONSTATUS,",
+				"          TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_TPXDEALTYPE,",
+				"          TIMEXTENDERENUMTABLE3_ENUMVALUELABEL_TPXDEALTYPE,",
+				"          LATEST_MODIFIEDDATETIME = LATEST_MODIFIEDDATETIME_NEW,",
+				"          HK_JOB_RUN_ID,",
+				"          HK_SOURCE_NAME,",
+				"          DEAL_DEAL_DESCRIPTION = DEALDESC,",
+				"          DEAL_LASTEDITDATE = LASTEDITDATE",
+				"     )) ~> TamTradePromotion"
+			]
+		}
+	}
+}

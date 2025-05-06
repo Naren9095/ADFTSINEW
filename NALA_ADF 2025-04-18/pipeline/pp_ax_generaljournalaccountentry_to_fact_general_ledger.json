@@ -1,0 +1,1664 @@
+{
+	"name": "pp_ax_generaljournalaccountentry_to_fact_general_ledger",
+	"properties": {
+		"activities": [
+			{
+				"name": "raw_to_curate_sp_call",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "switch_nala_d365",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_auditDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('CALL ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_auditDb,'.CONTROL.SP_TASK_INITIALIZE(','''',pipeline().RunId,'''',',','''',pipeline().globalParameters.environment,'''',',','''',pipeline().parameters.p_tgt_curate_table_nm,'''',',',pipeline().parameters.p_src_code,')')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "stored_procedure_failure_notification",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_adf_pipeline_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"subscription": {
+							"value": "@pipeline().globalParameters.subscriptionId",
+							"type": "Expression"
+						},
+						"resourceGroup": {
+							"value": "@pipeline().globalParameters.resourceGroup",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@coalesce(pipeline().RunId, -1)",
+							"type": "Expression"
+						},
+						"name": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"triggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"status": {
+							"value": "@activity('raw_to_curate_sp_call').Status",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@activity('raw_to_curate_sp_call').Error['message']",
+							"type": "Expression"
+						},
+						"executionEndTime": {
+							"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+							"type": "Expression"
+						},
+						"runDuration": {
+							"value": "@activity('raw_to_curate_sp_call').Duration",
+							"type": "Expression"
+						},
+						"teamWebhookUrl": {
+							"value": "@pipeline().globalParameters.teamsWebhookUrl",
+							"type": "Expression"
+						},
+						"notificationTime": {
+							"value": "@utcNow()",
+							"type": "Expression"
+						},
+						"taskName": {
+							"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+							"type": "Expression"
+						},
+						"taskStepNumber": {
+							"value": "@pipeline().parameters.p_src_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "lkp_raw_last_modified_date",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SnowflakeSource",
+						"query": {
+							"value": "@concat('select max(to_varchar(LATEST_MODIFIEDDATETIME::timestamp, ''','yyyy-mm-dd hh24:mi:ss',''')) as max_date from ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_rawDb,'.',pipeline().parameters.p_tgt_raw_schema_nm, '.', pipeline().parameters.p_tgt_raw_table_nm)",
+							"type": "Expression"
+						},
+						"exportSettings": {
+							"type": "SnowflakeExportCopyCommand"
+						}
+					},
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_tgt_table_name": {
+								"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+								"type": "Expression"
+							},
+							"p_tgt_schema_name": {
+								"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_DbName": {
+								"value": "@pipeline().globalParameters.snow_rawDb",
+								"type": "Expression"
+							},
+							"p_ls_Env": {
+								"value": "@pipeline().globalParameters.environment",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "set_last_modified_date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkp_raw_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_prev_max_timestamp",
+					"value": {
+						"value": "@coalesce(activity('lkp_raw_last_modified_date').output.firstRow.max_date, '1950-01-01 00:00:00')\n\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "switch_nala_d365",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "set_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.p_src_code",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "1",
+							"activities": [
+								{
+									"name": "sql_to_raw_nala",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "1.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": {
+												"value": "select\n    gjae1.RECID,\n    gjae1.TRANSACTIONCURRENCYCODE,\n    gjae1.GENERALJOURNALENTRY,\n    gjae1.LEDGERDIMENSION,\n    gjae1.MAINACCOUNT,\n    gjae1.REASONREF,\n    gjae1.POSTINGTYPE,\n    gjae1.ISCORRECTION,\n    gjae1.ISCREDIT,\n    gjae1.CREATEDDATETIME,\n    gjae1.LEDGERACCOUNT,\n    gjae1.QUANTITY,\n    gjae1.ACCOUNTINGCURRENCYAMOUNT,\n    gjae1.REPORTINGCURRENCYAMOUNT,\n    gjae1.TRANSACTIONCURRENCYAMOUNT,\n    gjae1.MODIFIEDDATETIME,\n    gje1.FISCALCALENDARPERIOD as GENERALJOURNALENTRY_FISCALCALENDARPERIOD,\n    gje1.LEDGER as GENERALJOURNALENTRY_LEDGER,\n    gje1.JOURNALCATEGORY as GENERALJOURNALENTRY_JOURNALCATEGORY,\n    gje1.ACCOUNTINGDATE as GENERALJOURNALENTRY_ACCOUNTINGDATE,\n    gje1.ACKNOWLEDGEMENTDATE as GENERALJOURNALENTRY_ACKNOWLEDGEMENTDATE,\n    gje1.DOCUMENTDATE as GENERALJOURNALENTRY_DOCUMENTDATE,\n    gje1.DOCUMENTNUMBER as GENERALJOURNALENTRY_DOCUMENTNUMBER,\n    gje1.SUBLEDGERVOUCHERDATAAREAID as GENERALJOURNALENTRY_SUBLEDGERVOUCHERDATAAREAID,\n    gje1.JOURNALNUMBER as GENERALJOURNALENTRY_JOURNALNUMBER,\n    gje1.SUBLEDGERVOUCHER as GENERALJOURNALENTRY_SUBLEDGERVOUCHER,\n    gje1.LEDGERENTRYJOURNAL as GENERALJOURNALENTRY_LEDGERENTRYJOURNAL,\n    gje1.MODIFIEDDATETIME as GENERALJOURNALENTRY_MODIFIEDDATETIME,\n    lej1.JOURNALNUMBER as LEDGERENTRYJOURNAL_JOURNALNUMBER,\n    lej1.MODIFIEDDATETIME as LEDGERENTRYJOURNAL_MODIFIEDDATETIME,\n    ljt1.JOURNALNAME as LEDGERJOURNALTABLE_JOURNALNAME,\n    ljt1.MODIFIEDDATETIME as LEDGERJOURNALTABLE_MODIFIEDDATETIME,\n    ljtr1.TXT as LEDGERJOURNALTRANS_TXT,\n    ljtr1.MODIFIEDDATETIME as LEDGERJOURNALTRANS_MODIFIEDDATETIME,\n    tet1.ENUMVALUELABEL as TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_JOURNALCATEGORY,\n    tet2.ENUMVALUELABEL as TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_POSTINGTYPE,\n    (\n        select\n            max(lastupdatedate)\n        from\n            (\n                values\n                    (gjae1.MODIFIEDDATETIME),\n                    (isnull (gje1.MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (lej1.MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (ljt1.MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (ljtr1.MODIFIEDDATETIME, '1950-01-01'))\n            ) as updatedate (lastupdatedate)\n    ) as LATEST_MODIFIEDDATETIME\nfrom\n    dbo.GENERALJOURNALACCOUNTENTRY gjae1\n    inner join dbo.GENERALJOURNALENTRY gje1 on gjae1.GENERALJOURNALENTRY = gje1.RECID\n    left join dbo.LEDGERENTRYJOURNAL lej1 on gje1.LEDGERENTRYJOURNAL = lej1.RECID\n    left join dbo.LEDGERJOURNALTABLE ljt1 on gje1.SUBLEDGERVOUCHERDATAAREAID = ljt1.DATAAREAID\n    and lej1.JOURNALNUMBER = ljt1.JOURNALNUM\n    left join (\n        select\n            DATAAREAID,\n            JOURNALNUM,\n            max(TXT) as TXT,\n            max(MODIFIEDDATETIME) as MODIFIEDDATETIME\n        from\n            dbo.LEDGERJOURNALTRANS\n        group by\n            DATAAREAID,\n            JOURNALNUM\n    ) ljtr1 on gje1.SUBLEDGERVOUCHERDATAAREAID = ljtr1.DATAAREAID\n    and lej1.JOURNALNUMBER = ljtr1.JOURNALNUM\n    left join (\n        select\n            ENUMNAME,\n            ENUMVALUE,\n            max(ENUMVALUELABEL) as ENUMVALUELABEL\n        from\n            dbo.TIMEXTENDERENUMTABLE\n        where\n            ENUMNAME = 'LedgerTransType'\n        group by\n            ENUMNAME,\n            ENUMVALUE\n    ) tet1 on gje1.JOURNALCATEGORY = tet1.ENUMVALUE\n    left join (\n        select\n            ENUMNAME,\n            ENUMVALUE,\n            max(ENUMVALUELABEL) as ENUMVALUELABEL\n        from\n            dbo.TIMEXTENDERENUMTABLE\n        where\n            ENUMNAME = 'LedgerPostingType'\n        group by\n            ENUMNAME,\n            ENUMVALUE\n    ) tet2 on gjae1.POSTINGTYPE = tet2.ENUMVALUE\nwhere\n    gje1.ACCOUNTINGDATE >= dateadd (DAY, -90, GETDATE ())\n    and (\n        select\n            max(lastupdatedate)\n        from\n            (\n                values\n                    (gjae1.MODIFIEDDATETIME),\n                    (isnull (gje1.MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (lej1.MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (ljt1.MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (ljtr1.MODIFIEDDATETIME, '1950-01-01'))\n            ) as updatedate (lastupdatedate)\n    ) > '@{variables('v_prev_max_timestamp')}'\n;",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "SnowflakeSink",
+											"importSettings": {
+												"type": "SnowflakeImportCopyCommand"
+											}
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ls_blob_storage",
+												"type": "LinkedServiceReference"
+											},
+											"path": {
+												"value": "@pipeline().globalParameters.rootDir",
+												"type": "Expression"
+											},
+											"enableCompression": true
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "RECID",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "RECID",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "TRANSACTIONCURRENCYCODE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TRANSACTIONCURRENCYCODE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERDIMENSION",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "LEDGERDIMENSION",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNT",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "MAINACCOUNT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "REASONREF",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "REASONREF",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "POSTINGTYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "POSTINGTYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "ISCORRECTION",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "ISCORRECTION",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "ISCREDIT",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "ISCREDIT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "CREATEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "CREATEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERACCOUNT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "LEDGERACCOUNT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "QUANTITY",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "QUANTITY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "ACCOUNTINGCURRENCYAMOUNT",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "ACCOUNTINGCURRENCYAMOUNT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "REPORTINGCURRENCYAMOUNT",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "REPORTINGCURRENCYAMOUNT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "TRANSACTIONCURRENCYAMOUNT",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "TRANSACTIONCURRENCYAMOUNT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_FISCALCALENDARPERIOD",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_FISCALCALENDARPERIOD",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_LEDGER",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_LEDGER",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_JOURNALCATEGORY",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_JOURNALCATEGORY",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_ACCOUNTINGDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_ACCOUNTINGDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_ACKNOWLEDGEMENTDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_ACKNOWLEDGEMENTDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_DOCUMENTDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_DOCUMENTDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_DOCUMENTNUMBER",
+														"type": "String"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_DOCUMENTNUMBER",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_SUBLEDGERVOUCHERDATAAREAID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_SUBLEDGERVOUCHERDATAAREAID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_JOURNALNUMBER",
+														"type": "String"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_JOURNALNUMBER",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_SUBLEDGERVOUCHER",
+														"type": "String"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_SUBLEDGERVOUCHER",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_LEDGERENTRYJOURNAL",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_LEDGERENTRYJOURNAL",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERENTRYJOURNAL_JOURNALNUMBER",
+														"type": "String"
+													},
+													"sink": {
+														"name": "LEDGERENTRYJOURNAL_JOURNALNUMBER",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERENTRYJOURNAL_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LEDGERENTRYJOURNAL_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTABLE_JOURNALNAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTABLE_JOURNALNAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTABLE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTABLE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTRANS_TXT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTRANS_TXT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTRANS_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTRANS_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_JOURNALCATEGORY",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_JOURNALCATEGORY",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_POSTINGTYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_POSTINGTYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												}
+											]
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_sql_server",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_src_table_name": {
+													"value": "@pipeline().parameters.p_src_table_nm",
+													"type": "Expression"
+												},
+												"p_src_schema_name": {
+													"value": "@pipeline().parameters.p_src_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_serverName": {
+													"value": "@pipeline().globalParameters.nala_sql_serverName",
+													"type": "Expression"
+												},
+												"p_ls_dbName": {
+													"value": "@pipeline().globalParameters.nala_sql_dbName",
+													"type": "Expression"
+												},
+												"p_ls_sqlUsername": {
+													"value": "@pipeline().globalParameters.sql_userName",
+													"type": "Expression"
+												},
+												"p_ls_sqlPassword": {
+													"value": "@pipeline().globalParameters.sql_password",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_snowflake",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_tgt_table_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+													"type": "Expression"
+												},
+												"p_tgt_schema_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_DbName": {
+													"value": "@pipeline().globalParameters.snow_rawDb",
+													"type": "Expression"
+												},
+												"p_ls_Env": {
+													"value": "@pipeline().globalParameters.environment",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "nala_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "sql_to_raw_nala",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('sql_to_raw_nala').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('sql_to_raw_nala').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('sql_to_raw_nala').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('sql_to_raw_nala').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											},
+											"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+											"taskStepNumber": {
+												"value": "@pipeline().parameters.p_src_code",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_nala_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "nala_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('sql_to_raw_nala').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						},
+						{
+							"value": "3",
+							"activities": [
+								{
+									"name": "sql_to_raw_d365",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "1.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": {
+												"value": "select\n    gjae1.RECID,\n    gjae1.TRANSACTIONCURRENCYCODE,\n    gjae1.GENERALJOURNALENTRY,\n    gjae1.LEDGERDIMENSION,\n    gjae1.MAINACCOUNT,\n    gjae1.REASONREF,\n    gjae1.POSTINGTYPE,\n    gjae1.ISCORRECTION,\n    gjae1.ISCREDIT,\n    gjae1.CREATEDDATETIME,\n    gjae1.LEDGERACCOUNT,\n    gjae1.QUANTITY,\n    gjae1.ACCOUNTINGCURRENCYAMOUNT,\n    gjae1.REPORTINGCURRENCYAMOUNT,\n    gjae1.TRANSACTIONCURRENCYAMOUNT,\n    gjae1.MODIFIEDDATETIME,\n    gje1.FISCALCALENDARPERIOD as GENERALJOURNALENTRY_FISCALCALENDARPERIOD,\n    gje1.LEDGER as GENERALJOURNALENTRY_LEDGER,\n    gje1.JOURNALCATEGORY as GENERALJOURNALENTRY_JOURNALCATEGORY,\n    gje1.ACCOUNTINGDATE as GENERALJOURNALENTRY_ACCOUNTINGDATE,\n    gje1.ACKNOWLEDGEMENTDATE as GENERALJOURNALENTRY_ACKNOWLEDGEMENTDATE,\n    gje1.DOCUMENTDATE as GENERALJOURNALENTRY_DOCUMENTDATE,\n    gje1.DOCUMENTNUMBER as GENERALJOURNALENTRY_DOCUMENTNUMBER,\n    gje1.SUBLEDGERVOUCHERDATAAREAID as GENERALJOURNALENTRY_SUBLEDGERVOUCHERDATAAREAID,\n    gje1.JOURNALNUMBER as GENERALJOURNALENTRY_JOURNALNUMBER,\n    gje1.SUBLEDGERVOUCHER as GENERALJOURNALENTRY_SUBLEDGERVOUCHER,\n    gje1.LEDGERENTRYJOURNAL as GENERALJOURNALENTRY_LEDGERENTRYJOURNAL,\n    gje1.MODIFIEDDATETIME as GENERALJOURNALENTRY_MODIFIEDDATETIME,\n    lej1.JOURNALNUMBER as LEDGERENTRYJOURNAL_JOURNALNUMBER,\n    lej1.MODIFIEDDATETIME as LEDGERENTRYJOURNAL_MODIFIEDDATETIME,\n    ljt1.JOURNALNAME as LEDGERJOURNALTABLE_JOURNALNAME,\n    ljt1.MODIFIEDDATETIME as LEDGERJOURNALTABLE_MODIFIEDDATETIME,\n    ljtr1.TXT as LEDGERJOURNALTRANS_TXT,\n    ljtr1.MODIFIEDDATETIME as LEDGERJOURNALTRANS_MODIFIEDDATETIME,\n    tet1.ENUMVALUELABEL as TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_JOURNALCATEGORY,\n    tet2.ENUMVALUELABEL as TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_POSTINGTYPE,\n    (\n        select\n            max(lastupdatedate)\n        from\n            (\n                values\n                    (gjae1.MODIFIEDDATETIME),\n                    (isnull (gje1.MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (lej1.MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (ljt1.MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (ljtr1.MODIFIEDDATETIME, '1950-01-01'))\n            ) as updatedate (lastupdatedate)\n    ) as LATEST_MODIFIEDDATETIME\nfrom\n    dbo.GENERALJOURNALACCOUNTENTRY gjae1\n    inner join dbo.GENERALJOURNALENTRY gje1 on gjae1.GENERALJOURNALENTRY = gje1.RECID\n    left join dbo.LEDGERENTRYJOURNAL lej1 on gje1.LEDGERENTRYJOURNAL = lej1.RECID\n    left join dbo.LEDGERJOURNALTABLE ljt1 on gje1.SUBLEDGERVOUCHERDATAAREAID = ljt1.DATAAREAID\n    and lej1.JOURNALNUMBER = ljt1.JOURNALNUM\n    left join (\n        select\n            DATAAREAID,\n            JOURNALNUM,\n            max(TXT) as TXT,\n            max(MODIFIEDDATETIME) as MODIFIEDDATETIME\n        from\n            dbo.LEDGERJOURNALTRANS\n        group by\n            DATAAREAID,\n            JOURNALNUM\n    ) ljtr1 on gje1.SUBLEDGERVOUCHERDATAAREAID = ljtr1.DATAAREAID\n    and lej1.JOURNALNUMBER = ljtr1.JOURNALNUM\n    left join (\n        select\n            ENUMNAME,\n            ENUMVALUE,\n            max(ENUMVALUELABEL) as ENUMVALUELABEL\n        from\n            dbo.TIMEXTENDERENUMTABLE\n        where\n            ENUMNAME = 'LedgerTransType'\n        group by\n            ENUMNAME,\n            ENUMVALUE\n    ) tet1 on gje1.JOURNALCATEGORY = tet1.ENUMVALUE\n    left join (\n        select\n            ENUMNAME,\n            ENUMVALUE,\n            max(ENUMVALUELABEL) as ENUMVALUELABEL\n        from\n            dbo.TIMEXTENDERENUMTABLE\n        where\n            ENUMNAME = 'LedgerPostingType'\n        group by\n            ENUMNAME,\n            ENUMVALUE\n    ) tet2 on gjae1.POSTINGTYPE = tet2.ENUMVALUE\nwhere\n    gje1.ACCOUNTINGDATE >= dateadd (DAY, -90, GETDATE ())\n    and (\n        select\n            max(lastupdatedate)\n        from\n            (\n                values\n                    (gjae1.MODIFIEDDATETIME),\n                    (isnull (gje1.MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (lej1.MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (ljt1.MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (ljtr1.MODIFIEDDATETIME, '1950-01-01'))\n            ) as updatedate (lastupdatedate)\n    ) > '@{variables('v_prev_max_timestamp')}'\n;",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "SnowflakeSink",
+											"importSettings": {
+												"type": "SnowflakeImportCopyCommand"
+											}
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "ls_blob_storage",
+												"type": "LinkedServiceReference"
+											},
+											"path": {
+												"value": "@pipeline().globalParameters.rootDir",
+												"type": "Expression"
+											},
+											"enableCompression": true
+										},
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "RECID",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "RECID",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "TRANSACTIONCURRENCYCODE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TRANSACTIONCURRENCYCODE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERDIMENSION",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "LEDGERDIMENSION",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "MAINACCOUNT",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "MAINACCOUNT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "REASONREF",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "REASONREF",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "POSTINGTYPE",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "POSTINGTYPE",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "ISCORRECTION",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "ISCORRECTION",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "ISCREDIT",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "ISCREDIT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "CREATEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "CREATEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERACCOUNT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "LEDGERACCOUNT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "QUANTITY",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "QUANTITY",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "ACCOUNTINGCURRENCYAMOUNT",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "ACCOUNTINGCURRENCYAMOUNT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "REPORTINGCURRENCYAMOUNT",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "REPORTINGCURRENCYAMOUNT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "TRANSACTIONCURRENCYAMOUNT",
+														"type": "Decimal"
+													},
+													"sink": {
+														"name": "TRANSACTIONCURRENCYAMOUNT",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_FISCALCALENDARPERIOD",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_FISCALCALENDARPERIOD",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_LEDGER",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_LEDGER",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_JOURNALCATEGORY",
+														"type": "Int32"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_JOURNALCATEGORY",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_ACCOUNTINGDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_ACCOUNTINGDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_ACKNOWLEDGEMENTDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_ACKNOWLEDGEMENTDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_DOCUMENTDATE",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_DOCUMENTDATE",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_DOCUMENTNUMBER",
+														"type": "String"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_DOCUMENTNUMBER",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_SUBLEDGERVOUCHERDATAAREAID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_SUBLEDGERVOUCHERDATAAREAID",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_JOURNALNUMBER",
+														"type": "String"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_JOURNALNUMBER",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_SUBLEDGERVOUCHER",
+														"type": "String"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_SUBLEDGERVOUCHER",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_LEDGERENTRYJOURNAL",
+														"type": "Int64"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_LEDGERENTRYJOURNAL",
+														"type": "Int64"
+													}
+												},
+												{
+													"source": {
+														"name": "GENERALJOURNALENTRY_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "GENERALJOURNALENTRY_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERENTRYJOURNAL_JOURNALNUMBER",
+														"type": "String"
+													},
+													"sink": {
+														"name": "LEDGERENTRYJOURNAL_JOURNALNUMBER",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERENTRYJOURNAL_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LEDGERENTRYJOURNAL_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTABLE_JOURNALNAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTABLE_JOURNALNAME",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTABLE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTABLE_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTRANS_TXT",
+														"type": "String"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTRANS_TXT",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERJOURNALTRANS_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LEDGERJOURNALTRANS_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_JOURNALCATEGORY",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE1_ENUMVALUELABEL_JOURNALCATEGORY",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_POSTINGTYPE",
+														"type": "String"
+													},
+													"sink": {
+														"name": "TIMEXTENDERENUMTABLE2_ENUMVALUELABEL_POSTINGTYPE",
+														"type": "String"
+													}
+												},
+												{
+													"source": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime"
+													}
+												}
+											]
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_sql_server",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_src_table_name": {
+													"value": "@pipeline().parameters.p_src_table_nm",
+													"type": "Expression"
+												},
+												"p_src_schema_name": {
+													"value": "@pipeline().parameters.p_src_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_serverName": {
+													"value": "@pipeline().globalParameters.nala_sql_serverName",
+													"type": "Expression"
+												},
+												"p_ls_dbName": {
+													"value": "@pipeline().globalParameters.nala_sql_dbName",
+													"type": "Expression"
+												},
+												"p_ls_sqlUsername": {
+													"value": "@pipeline().globalParameters.sql_userName",
+													"type": "Expression"
+												},
+												"p_ls_sqlPassword": {
+													"value": "@pipeline().globalParameters.sql_password",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_snowflake",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_tgt_table_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+													"type": "Expression"
+												},
+												"p_tgt_schema_name": {
+													"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_DbName": {
+													"value": "@pipeline().globalParameters.snow_rawDb",
+													"type": "Expression"
+												},
+												"p_ls_Env": {
+													"value": "@pipeline().globalParameters.environment",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "d365_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "sql_to_raw_d365",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('sql_to_raw_d365').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('sql_to_raw_d365').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('sql_to_raw_d365').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('sql_to_raw_d365').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											},
+											"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+											"taskStepNumber": {
+												"value": "@pipeline().parameters.p_src_code",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_d365_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "d365_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('sql_to_raw_d365').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "pipeline_execution_notification",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(equals(activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE'],'TRUE'),bool('TRUE'), bool('FALSE'))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "pp_stored_procedure_failure_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@toUpper('failed')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": {
+										"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+										"type": "Expression"
+									},
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "curate_load_failure",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "pp_stored_procedure_failure_notification",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": {
+									"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+									"type": "Expression"
+								},
+								"errorCode": "500"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "stored_procedure_success_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@activity('raw_to_curate_sp_call').Status",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat(pipeline().parameters.p_tgt_curate_table_nm, ' is successfully loaded')",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": {
+										"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+										"type": "Expression"
+									},
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"p_src_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA"
+			},
+			"p_tgt_curate_table_nm": {
+				"type": "string",
+				"defaultValue": "FACT_GENERAL_LEDGER"
+			},
+			"p_tgt_raw_table_nm": {
+				"type": "string",
+				"defaultValue": "GENERALJOURNALACCOUNTENTRY"
+			},
+			"p_tgt_raw_schema_nm": {
+				"type": "string",
+				"defaultValue": "AX_NALA"
+			},
+			"p_tgt_curate_schema_nm": {
+				"type": "string",
+				"defaultValue": "GLOBAL"
+			},
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "GENERALJOURNALACCOUNTENTRY"
+			},
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_src_code": {
+				"type": "string",
+				"defaultValue": "1"
+			}
+		},
+		"variables": {
+			"v_prev_max_timestamp": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-06-04T13:47:58Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,166 @@
+{
+	"name": "pp_adf_pipeline_notification_logging",
+	"properties": {
+		"activities": [
+			{
+				"name": "set_json_schema",
+				"type": "SetVariable",
+				"state": "Inactive",
+				"onInactiveMarkAs": "Succeeded",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "messageCard",
+					"value": {
+						"value": "{\n    \"@type\": \"MessageCard\",\n    \"@context\": \"http://schema.org/extensions\",\n    \"themeColor\": \"0076D7\",\n    \"summary\": \"Pipeline status alert message​​​​\",\n    \"sections\": [\n        {\n            \"activityTitle\": \"Pipeline Notification​​​ Status​\",\n             \"facts\": [\n                {\n                    \"name\": \"Pipeline RunId:\",\n                    \"value\": \"@{pipeline().parameters.runId}\"\n                },\n                {\n                    \"name\": \"Pipline Name:\",\n                    \"value\": \"@{pipeline().parameters.name}\"\n                },\n                {\n                    \"name\": \"Pipeline Status:\",\n                    \"value\": \"@{toUpper(pipeline().parameters.status)}\"\n                },\n                {\n                    \"name\": \"Execution Start Time (UTC):\",\n                    \"value\": \"@{pipeline().parameters.triggerTime}\"\n                },\n                {\n                    \"name\": \"Execution Finish Time (UTC):\",\n                    \"value\": \"@{pipeline().parameters.executionEndTime}\"\n                },\n                {\n                    \"name\": \"Execution Duration (s):\",\n                    \"value\": \"@{pipeline().parameters.runDuration}\"\n                },\n                 {\n                    \"name\": \"Message :\",\n                    \"value\": \"@{pipeline().parameters.message}\"\n                },\n                {\n                    \"name\": \"Notification Time (UTC):\",\n                    \"value\": \"@{pipeline().parameters.notificationTime}\"\n                },\n             ],\n            \"markdown\": true\n        }\n    ],\n    \"potentialAction\": [\n        {\n            \"@type\": \"OpenUri\",\n            \"name\": \"View pipeline run\",\n            \"targets\": [\n                {\n                    \"os\": \"default\",\n                    \"uri\": \"@{concat('https://adf.azure.com/monitoring/pipelineruns/',pipeline().parameters.runId,'?factory=/subscriptions/',pipeline().parameters.subscription,'/resourceGroups/',pipeline().parameters.resourceGroup,'/providers/Microsoft.DataFactory/factories/',pipeline().DataFactory)}\"\n                }\n            ]\n        }\n    ]\n}",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "invoke_teams_webhook",
+				"type": "WebActivity",
+				"state": "Inactive",
+				"onInactiveMarkAs": "Succeeded",
+				"dependsOn": [
+					{
+						"activity": "set_json_schema",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": {
+						"value": "@pipeline().parameters.teamWebhookUrl",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IR-Snowflake-NALA",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "@json(variables('messageCard'))",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Insert Log Entry",
+				"type": "Script",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_auditDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat(\n'insert into ',pipeline().globalParameters.environment,'_', pipeline().globalParameters.snow_auditDb, '.control.ADF_PIPELINE_LOG (HK_SOURCE_NAME, HK_JOB_RUN_ID, TASK_NAME,TASK_STEP_NUMBER, NAME, STATUS, EXECUTION_START_TIMESTAMP,  EXECUTION_END_TIMESTAMP, NOTIFICATION_TIMESTAMP, EXECUTION_DURATION, MESSAGE) VALUES ('\n, '''', pipeline().globalParameters.environment, ''','\n, '''', pipeline().parameters.runId, ''','\n, '''', 'TaskName', ''','\n, '''', 'TaskStepNumber', ''','\n, '''', pipeline().parameters.name, ''','\n, '''', pipeline().parameters.status, ''','\n, '''', pipeline().parameters.triggerTime, ''','\n, '''', pipeline().parameters.executionEndTime, ''','\n, '''', pipeline().parameters.notificationTime, ''','\n, '''', pipeline().parameters.runDuration, ''','\n, '''', pipeline().parameters.message, ''''\n, ');'\n)",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			}
+		],
+		"parameters": {
+			"subscription": {
+				"type": "string",
+				"defaultValue": "Test"
+			},
+			"resourceGroup": {
+				"type": "string",
+				"defaultValue": "Test"
+			},
+			"runId": {
+				"type": "string",
+				"defaultValue": "RunTest"
+			},
+			"name": {
+				"type": "string",
+				"defaultValue": "A New Test"
+			},
+			"triggerTime": {
+				"type": "string",
+				"defaultValue": "2025-03-05 19:39:58.334 +0000"
+			},
+			"status": {
+				"type": "string",
+				"defaultValue": "Pensive"
+			},
+			"message": {
+				"type": "string",
+				"defaultValue": "This is a test you want to ingore"
+			},
+			"executionEndTime": {
+				"type": "string",
+				"defaultValue": "2025-03-05 19:39:58.334 +0000"
+			},
+			"runDuration": {
+				"type": "string",
+				"defaultValue": "02:01:25.7095804"
+			},
+			"teamWebhookUrl": {
+				"type": "string"
+			},
+			"notificationTime": {
+				"type": "string",
+				"defaultValue": "2025-03-05 19:39:58.334 +0000"
+			},
+			"taskName": {
+				"type": "string",
+				"defaultValue": "<missing>"
+			},
+			"taskStepNumber": {
+				"type": "string",
+				"defaultValue": "<missing>"
+			}
+		},
+		"variables": {
+			"messageCard": {
+				"type": "String"
+			},
+			"pipeline_start_time": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-03-07T14:37:08Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,34 @@
+{
+	"name": "trg_ax_nala_pricediscgroup_to_dim_sales_line_discount_group",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "pp_ax_pricediscgroup_to_dim_sales_line_discount_group",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"p_src_table_nm": "PRICEDISCGROUP",
+					"p_src_schema_nm": "dbo",
+					"p_tgt_raw_table_nm": "PRICEDISCGROUP_SLDG",
+					"p_tgt_raw_schema_nm": "AX_NALA",
+					"p_tgt_curate_table_nm": "DIM_SALES_LINE_DISCOUNT_GROUP",
+					"p_tgt_curate_schema_nm": "GLOBAL",
+					"p_src_nm": "AXNALA",
+					"p_src_code": "1"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2024-07-02T10:00:00",
+				"timeZone": "Eastern Standard Time"
+			}
+		}
+	}
+}

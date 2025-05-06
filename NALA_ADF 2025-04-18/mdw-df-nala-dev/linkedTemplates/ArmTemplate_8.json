@@ -1,0 +1,2438 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "mdw-df-nala-dev"
+		},
+		"trg_ax_arkieva_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "AXNALA"
+		},
+		"trg_ax_arkieva_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_INVENTORY"
+		},
+		"trg_ax_arkieva_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "INVENTDIM"
+		},
+		"trg_ax_arkieva_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "AX_NALA"
+		},
+		"trg_ax_arkieva_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_ax_arkieva_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "INVENTDIM"
+		},
+		"trg_ax_arkieva_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_ax_arkieva_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "4"
+		},
+		"trg_ax_arkieva_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_raw_arkieva_table_nm": {
+			"type": "string",
+			"defaultValue": "ARKIEVA_INVENTORY"
+		},
+		"trg_ax_nala_budgetmodel_to_dim_budget_model_properties_pp_ax_budgetmodel_to_dim_budget_model_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "BUDGETMODEL"
+		},
+		"trg_ax_nala_budgetmodel_to_dim_budget_model_properties_pp_ax_budgetmodel_to_dim_budget_model_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_ax_nala_budgetmodel_to_dim_budget_model_properties_pp_ax_budgetmodel_to_dim_budget_model_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "BUDGETMODEL"
+		},
+		"trg_ax_nala_budgetmodel_to_dim_budget_model_properties_pp_ax_budgetmodel_to_dim_budget_model_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "AX_NALA"
+		},
+		"trg_ax_nala_budgetmodel_to_dim_budget_model_properties_pp_ax_budgetmodel_to_dim_budget_model_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_BUDGET_MODEL"
+		},
+		"trg_ax_nala_budgetmodel_to_dim_budget_model_properties_pp_ax_budgetmodel_to_dim_budget_model_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_ax_nala_budgetmodel_to_dim_budget_model_properties_pp_ax_budgetmodel_to_dim_budget_model_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "AXNALA"
+		},
+		"trg_ax_nala_budgetmodel_to_dim_budget_model_properties_pp_ax_budgetmodel_to_dim_budget_model_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "1"
+		},
+		"trg_ax_nala_budgettransactionline_to_fact_budget_transactions_properties_pp_ax_budgettransactionline_to_fact_budget_transactions_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "AXNALA"
+		},
+		"trg_ax_nala_budgettransactionline_to_fact_budget_transactions_properties_pp_ax_budgettransactionline_to_fact_budget_transactions_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "FACT_BUDGET_TRANSACTIONS"
+		},
+		"trg_ax_nala_budgettransactionline_to_fact_budget_transactions_properties_pp_ax_budgettransactionline_to_fact_budget_transactions_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "BUDGETTRANSACTIONLINE"
+		},
+		"trg_ax_nala_budgettransactionline_to_fact_budget_transactions_properties_pp_ax_budgettransactionline_to_fact_budget_transactions_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "AX_NALA"
+		},
+		"trg_ax_nala_budgettransactionline_to_fact_budget_transactions_properties_pp_ax_budgettransactionline_to_fact_budget_transactions_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_ax_nala_budgettransactionline_to_fact_budget_transactions_properties_pp_ax_budgettransactionline_to_fact_budget_transactions_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "BUDGETTRANSACTIONLINE"
+		},
+		"trg_ax_nala_budgettransactionline_to_fact_budget_transactions_properties_pp_ax_budgettransactionline_to_fact_budget_transactions_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_ax_nala_budgettransactionline_to_fact_budget_transactions_properties_pp_ax_budgettransactionline_to_fact_budget_transactions_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "1"
+		},
+		"trg_ax_nala_cashdisc_to_dim_cash_discount_properties_pp_ax_cashdisc_to_dim_cash_discount_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "AXNALA"
+		},
+		"trg_ax_nala_cashdisc_to_dim_cash_discount_properties_pp_ax_cashdisc_to_dim_cash_discount_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "CASHDISC"
+		},
+		"trg_ax_nala_cashdisc_to_dim_cash_discount_properties_pp_ax_cashdisc_to_dim_cash_discount_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "AX_NALA"
+		},
+		"trg_ax_nala_cashdisc_to_dim_cash_discount_properties_pp_ax_cashdisc_to_dim_cash_discount_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_CASH_DISCOUNT"
+		},
+		"trg_ax_nala_cashdisc_to_dim_cash_discount_properties_pp_ax_cashdisc_to_dim_cash_discount_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_ax_nala_cashdisc_to_dim_cash_discount_properties_pp_ax_cashdisc_to_dim_cash_discount_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_ax_nala_cashdisc_to_dim_cash_discount_properties_pp_ax_cashdisc_to_dim_cash_discount_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "CASHDISC"
+		},
+		"trg_ax_nala_cashdisc_to_dim_cash_discount_properties_pp_ax_cashdisc_to_dim_cash_discount_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "1"
+		},
+		"trg_ax_nala_commissioncustrgrp_to_dim_commission_group_properties_pp_ax_commissioncustrgrp_to_dim_commission_group_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "COMMISSIONCUSTOMERGROUP"
+		},
+		"trg_ax_nala_commissioncustrgrp_to_dim_commission_group_properties_pp_ax_commissioncustrgrp_to_dim_commission_group_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_ax_nala_commissioncustrgrp_to_dim_commission_group_properties_pp_ax_commissioncustrgrp_to_dim_commission_group_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "COMMISSIONCUSTOMERGROUP"
+		},
+		"trg_ax_nala_commissioncustrgrp_to_dim_commission_group_properties_pp_ax_commissioncustrgrp_to_dim_commission_group_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "AX_NALA"
+		},
+		"trg_ax_nala_commissioncustrgrp_to_dim_commission_group_properties_pp_ax_commissioncustrgrp_to_dim_commission_group_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_COMMISSION_GROUP"
+		},
+		"trg_ax_nala_commissioncustrgrp_to_dim_commission_group_properties_pp_ax_commissioncustrgrp_to_dim_commission_group_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_ax_nala_commissioncustrgrp_to_dim_commission_group_properties_pp_ax_commissioncustrgrp_to_dim_commission_group_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "AXNALA"
+		},
+		"trg_ax_nala_commissioncustrgrp_to_dim_commission_group_properties_pp_ax_commissioncustrgrp_to_dim_commission_group_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "1"
+		},
+		"trg_ax_nala_commissionsalesgroup_to_dim_sales_group_properties_pp_ax_commissionsalesgroup_to_dim_sales_group_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "COMMISSIONSALESGROUP"
+		},
+		"trg_ax_nala_commissionsalesgroup_to_dim_sales_group_properties_pp_ax_commissionsalesgroup_to_dim_sales_group_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_ax_nala_commissionsalesgroup_to_dim_sales_group_properties_pp_ax_commissionsalesgroup_to_dim_sales_group_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "COMMISSIONSALESGROUP"
+		},
+		"trg_ax_nala_commissionsalesgroup_to_dim_sales_group_properties_pp_ax_commissionsalesgroup_to_dim_sales_group_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "AX_NALA"
+		},
+		"trg_ax_nala_commissionsalesgroup_to_dim_sales_group_properties_pp_ax_commissionsalesgroup_to_dim_sales_group_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_SALES_GROUP"
+		},
+		"trg_ax_nala_commissionsalesgroup_to_dim_sales_group_properties_pp_ax_commissionsalesgroup_to_dim_sales_group_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_ax_nala_commissionsalesgroup_to_dim_sales_group_properties_pp_ax_commissionsalesgroup_to_dim_sales_group_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "AXNALA"
+		},
+		"trg_ax_nala_commissionsalesgroup_to_dim_sales_group_properties_pp_ax_commissionsalesgroup_to_dim_sales_group_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "1"
+		},
+		"trg_ax_nala_consensus_forecast_to_dim_arkieva_sub_channel_properties_pp_ax_consensus_forecast_to_dim_arkieva_sub_channel_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "Export_Consensus_Forecast_Monthly"
+		},
+		"trg_ax_nala_consensus_forecast_to_dim_arkieva_sub_channel_properties_pp_ax_consensus_forecast_to_dim_arkieva_sub_channel_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_ax_nala_consensus_forecast_to_dim_arkieva_sub_channel_properties_pp_ax_consensus_forecast_to_dim_arkieva_sub_channel_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "ARKIEVA_SUB_CHANNEL"
+		},
+		"trg_ax_nala_consensus_forecast_to_dim_arkieva_sub_channel_properties_pp_ax_consensus_forecast_to_dim_arkieva_sub_channel_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "AX_NALA"
+		},
+		"trg_ax_nala_consensus_forecast_to_dim_arkieva_sub_channel_properties_pp_ax_consensus_forecast_to_dim_arkieva_sub_channel_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_ARKIEVA_SUB_CHANNEL"
+		},
+		"trg_ax_nala_consensus_forecast_to_dim_arkieva_sub_channel_properties_pp_ax_consensus_forecast_to_dim_arkieva_sub_channel_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_ax_nala_consensus_forecast_to_dim_arkieva_sub_channel_properties_pp_ax_consensus_forecast_to_dim_arkieva_sub_channel_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "AXNALA"
+		},
+		"trg_ax_nala_consensus_forecast_to_dim_arkieva_sub_channel_properties_pp_ax_consensus_forecast_to_dim_arkieva_sub_channel_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "1"
+		},
+		"trg_ax_nala_currency_to_dim_currency_properties_pp_ax_currency_to_dim_currency_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "AXNALA"
+		},
+		"trg_ax_nala_currency_to_dim_currency_properties_pp_ax_currency_to_dim_currency_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_CURRENCY"
+		},
+		"trg_ax_nala_currency_to_dim_currency_properties_pp_ax_currency_to_dim_currency_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "CURRENCY"
+		},
+		"trg_ax_nala_currency_to_dim_currency_properties_pp_ax_currency_to_dim_currency_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "AX_NALA"
+		},
+		"trg_ax_nala_currency_to_dim_currency_properties_pp_ax_currency_to_dim_currency_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_ax_nala_currency_to_dim_currency_properties_pp_ax_currency_to_dim_currency_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "CURRENCY"
+		},
+		"trg_ax_nala_currency_to_dim_currency_properties_pp_ax_currency_to_dim_currency_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_ax_nala_currency_to_dim_currency_properties_pp_ax_currency_to_dim_currency_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "1"
+		},
+		"trg_ax_nala_custgroup_to_dim_customer_group_properties_pp_ax_custgroup_to_dim_customer_group_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "CUSTGROUP"
+		},
+		"trg_ax_nala_custgroup_to_dim_customer_group_properties_pp_ax_custgroup_to_dim_customer_group_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_ax_nala_custgroup_to_dim_customer_group_properties_pp_ax_custgroup_to_dim_customer_group_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "CUSTGROUP"
+		},
+		"trg_ax_nala_custgroup_to_dim_customer_group_properties_pp_ax_custgroup_to_dim_customer_group_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "AX_NALA"
+		},
+		"trg_ax_nala_custgroup_to_dim_customer_group_properties_pp_ax_custgroup_to_dim_customer_group_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_CUSTOMER_GROUP"
+		},
+		"trg_ax_nala_custgroup_to_dim_customer_group_properties_pp_ax_custgroup_to_dim_customer_group_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_ax_nala_custgroup_to_dim_customer_group_properties_pp_ax_custgroup_to_dim_customer_group_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "AXNALA"
+		},
+		"trg_ax_nala_custgroup_to_dim_customer_group_properties_pp_ax_custgroup_to_dim_customer_group_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "1"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/pp_facts_procurement')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "sp_fact_purchase_order",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_refresh_stored_procedure",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_tgt_curate_table_nm": "FACT_PURCHASE_ORDERS"
+							}
+						}
+					},
+					{
+						"name": "sp_fact_purchase_invoices",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_refresh_stored_procedure",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_tgt_curate_table_nm": "FACT_PURCHASE_INVOICES"
+							}
+						}
+					},
+					{
+						"name": "sp_fact_purchase_receipts",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_refresh_stored_procedure",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_tgt_curate_table_nm": "FACT_PURCHASE_RECEIPTS"
+							}
+						}
+					},
+					{
+						"name": "trigger_pbi_procurement",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "sp_fact_purchase_order",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "sp_fact_purchase_invoices",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "sp_fact_purchase_receipts",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_partition_or_full",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_table_nm": "'FACT_PURCHASE_INVOICES', 'FACT_PURCHASE_RECEIPTS', 'FACT_PURCHASE_ORDERS'",
+								"p_tgt_audit_table_nm": "PBI_SNOWFLAKE_BRIDGE",
+								"p_tgt_audit_schema_nm": "CONTROL",
+								"p_webhook_url": "https://tempursealyinc.webhook.office.com/webhookb2/7aa89678-96e1-4bbf-a53a-a4ed05939336@7c6c07f6-1ef4-4368-8d5d-4686d15efd79/IncomingWebhook/0daf9093215d4d2c8eb3556b3fab583a/4c6968dc-2ec8-4f99-b936-1206cdf30aeb/V2EWC7ZrIJlPeCNzW3QGgqmk93qr38uw86Qp59rZNHVjQ1",
+								"p_dataset_nm": "Procurement Gold Dataset",
+								"p_web_body_fullrefresh": {
+									"value": "@createArray('{\n  \"type\": \"full\",\n  \"commitMode\": \"transactional\",\n  \"applyRefreshPolicy\": \"true\"\n}')",
+									"type": "Expression"
+								}
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "pbi_dataset_refresh_pipelines"
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-10-21T13:36:40Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pp_facts_sales_marketing')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "sp_fact_sales_order",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_refresh_stored_procedure",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_tgt_curate_table_nm": "FACT_SALES_ORDERS"
+							}
+						}
+					},
+					{
+						"name": "trigger_pbi_refresh_sales_and_marketing",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "sp_fact_sales_order",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "sp_fact_sales_invoices",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "sp_fact_monthly_forecast",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "sp_fact_monthly_wmape",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "sp_fact_picking_line",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "sp_fact_rebate_transactions",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "sp_fact_sales_deliveries",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "sp_fact_transportation_load",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "sp_fact_ledger_journal_transactions",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_partition_or_full",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_table_nm": "'FACT_SALES_INVOICES','FACT_SALES_ORDERS','FACT_LEDGER_JOURNAL_TRANSACTIONS','FACT_MONTHLY_WMAPE','FACT_MONTHLY_FORECAST','FACT_PICKING_LINE','FACT_REBATE_TRANSACTIONS','FACT_SALES_DELIVERIES','FACT_TRANSPORTATION_LOAD'",
+								"p_tgt_audit_table_nm": "PBI_SNOWFLAKE_BRIDGE",
+								"p_tgt_audit_schema_nm": "CONTROL",
+								"p_webhook_url": "https://tempursealyinc.webhook.office.com/webhookb2/7aa89678-96e1-4bbf-a53a-a4ed05939336@7c6c07f6-1ef4-4368-8d5d-4686d15efd79/IncomingWebhook/d916d4c4051f4d71906694bcb9f82fcc/4c6968dc-2ec8-4f99-b936-1206cdf30aeb/V2F9jTBrJgcOsJviMqjdKWgsO_3u6_BGg1d9ZcDgAFI3M1",
+								"p_dataset_nm": "Sales & Marketing Gold Dataset",
+								"p_web_body_fullrefresh": {
+									"value": "@createArray('{\n  \"type\": \"full\",\n  \"objects\":[\n    {\n      \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n      \"table\": \"Sales Invoices\"\n    },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Order Lines\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Picking Lines\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Rebate Transactions\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Transportation Load\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Monthly WMAPE\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Ledger Journal Transactions\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Deliveries\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Monthly Forecast\"\n  }\n  ],\n  \"applyRefreshPolicy\": \"true\"\n}',\n'{\n  \"type\": \"full\",\n  \"objects\":[\n    {\n      \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n      \"table\": \"Inventory\"\n    },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Bridge Invoice\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Order\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Inventory Summary\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Trade Promotion\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Campaign\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"General Ledger Non Invoice\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Global Trade Item Number\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Weekly Forecast\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Item\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Operator Worker\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Responsible\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Taker\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"RLS Invoice Customer Accounts\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"RLS Order Customer Accounts\"\n  }\n  ],\n  \"applyRefreshPolicy\": \"false\"\n}',\n'{\n  \"type\": \"full\",\n  \"objects\":[\n    {\n      \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n      \"table\": \"Bridge Invoice Rebate\"\n    },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Invoice Customer\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Cost\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Current Order Customer\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Order Customer\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Delivery Location\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Current Invoice Customer\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Invoice Location\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Default Dimension\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Alternate Item\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Arkieva Customer\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Arkieva Subchannel\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Business Unit\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Commission Group\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Company\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Currency\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Customer Group\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Customer Markup Group\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Date\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Delivery Mode\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Delivery Term\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Intrastat Transaction Code\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Item Status\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Line Return Reason\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Package Shipping Carrier\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Payment Mode\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Payment Terms\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Picking Line Details\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Rebate\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Rebate Transaction Details\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Return Disposition\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Return Reason\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Category\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Details\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Group\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Line Discount Group\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Order Creator\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Order Line Creator\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Origin\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Pool\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Price Group\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Shipping Carrier\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Site\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Subsidies\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Tax Group\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Tax Item Group\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Trailers\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Unit of Measure\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Weekly WMAPE\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"RLS Curent Order Customer Accounts\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"RLS Current Invoice Customer Accounts\"\n  }\n  ],\n  \"applyRefreshPolicy\": \"false\"\n}'\n)",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					{
+						"name": "sp_fact_sales_invoices",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_refresh_stored_procedure",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_tgt_curate_table_nm": "FACT_SALES_INVOICES"
+							}
+						}
+					},
+					{
+						"name": "sp_fact_monthly_wmape",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_refresh_stored_procedure",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_tgt_curate_table_nm": "FACT_MONTHLY_WMAPE"
+							}
+						}
+					},
+					{
+						"name": "sp_fact_monthly_forecast",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_refresh_stored_procedure",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_tgt_curate_table_nm": "FACT_MONTHLY_FORECAST"
+							}
+						}
+					},
+					{
+						"name": "sp_fact_picking_line",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_refresh_stored_procedure",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_tgt_curate_table_nm": "FACT_PICKING_LINE"
+							}
+						}
+					},
+					{
+						"name": "sp_fact_rebate_transactions",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_refresh_stored_procedure",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_tgt_curate_table_nm": "FACT_REBATE_TRANSACTIONS"
+							}
+						}
+					},
+					{
+						"name": "sp_fact_sales_deliveries",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_refresh_stored_procedure",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_tgt_curate_table_nm": "FACT_SALES_DELIVERIES"
+							}
+						}
+					},
+					{
+						"name": "sp_fact_transportation_load",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_refresh_stored_procedure",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_tgt_curate_table_nm": "FACT_TRANSPORTATION_LOAD"
+							}
+						}
+					},
+					{
+						"name": "sp_fact_ledger_journal_transactions",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_refresh_stored_procedure",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_tgt_curate_table_nm": "FACT_LEDGER_JOURNAL_TRANSACTIONS"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "pbi_dataset_refresh_pipelines"
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-11-13T05:19:41Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pp_generic_dim_sql_edw_to_dim_snowflake_curate')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy from sql_edw to adls",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderQuery": {
+									"value": "@pipeline().parameters.p_src_query",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "ParquetSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "ParquetWriteSettings"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": false,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "ds_sql_server",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_src_table_name": {
+										"value": "@pipeline().parameters.p_src_table_nm",
+										"type": "Expression"
+									},
+									"p_src_schema_name": {
+										"value": "@pipeline().parameters.p_src_schema_nm",
+										"type": "Expression"
+									},
+									"p_ls_serverName": {
+										"value": "@pipeline().globalParameters.edw_sql_serverName",
+										"type": "Expression"
+									},
+									"p_ls_dbName": {
+										"value": "@pipeline().globalParameters.edw_sql_dbName",
+										"type": "Expression"
+									},
+									"p_ls_sqlUsername": {
+										"value": "@pipeline().globalParameters.sql_userName",
+										"type": "Expression"
+									},
+									"p_ls_sqlPassword": {
+										"value": "@pipeline().globalParameters.sql_password",
+										"type": "Expression"
+									}
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "ds_parq_edw",
+								"type": "DatasetReference",
+								"parameters": {
+									"p_root_system": {
+										"value": "@pipeline().globalParameters.rootDir",
+										"type": "Expression"
+									},
+									"p_directory": {
+										"value": "@pipeline().parameters.p_temp_directory",
+										"type": "Expression"
+									},
+									"p_file_name": {
+										"value": "@concat(toUpper(pipeline().parameters.p_src_table_nm),'_HIST_',substring(string(utcNow()),0,4),'_',substring(string(utcNow()),5,2),'_',substring(string(utcNow()),8,2),'.snappy.parquet')",
+										"type": "Expression"
+									}
+								}
+							}
+						]
+					},
+					{
+						"name": "Copy from adls to snowflake raw_edw_dwh",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "Copy from sql_edw to adls",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "df_load_edw_history",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"adlsSource": {
+										"p_root_system": {
+											"value": "@pipeline().globalParameters.rootDir",
+											"type": "Expression"
+										},
+										"p_directory": {
+											"value": "@pipeline().parameters.p_temp_directory",
+											"type": "Expression"
+										},
+										"p_file_name": {
+											"value": "@concat(toUpper(pipeline().parameters.p_src_table_nm),'_HIST_',substring(string(utcNow()),0,4),'_',substring(string(utcNow()),5,2),'_',substring(string(utcNow()),8,2),'.snappy.parquet')",
+											"type": "Expression"
+										}
+									},
+									"snowflakeRawTarget": {
+										"p_tgt_table_name": {
+											"value": "@pipeline().parameters.p_src_table_nm",
+											"type": "Expression"
+										},
+										"p_tgt_schema_name": {
+											"value": "@pipeline().parameters.p_tgt_schema_nm",
+											"type": "Expression"
+										},
+										"p_ls_DbName": {
+											"value": "@pipeline().globalParameters.snow_rawDb",
+											"type": "Expression"
+										},
+										"p_ls_Env": {
+											"value": "@pipeline().globalParameters.environment",
+											"type": "Expression"
+										}
+									}
+								}
+							},
+							"staging": {},
+							"integrationRuntime": {
+								"referenceName": "IR-Snowflake-NALA",
+								"type": "IntegrationRuntimeReference"
+							},
+							"traceLevel": "Fine"
+						}
+					},
+					{
+						"name": "SCD type check",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "Copy from adls to snowflake raw_edw_dwh",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@equals(pipeline().parameters.p_scd_type,1)",
+								"type": "Expression"
+							},
+							"ifFalseActivities": [
+								{
+									"name": "sp_scd_2",
+									"type": "Script",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"linkedServiceName": {
+										"referenceName": "ls_snowflake",
+										"type": "LinkedServiceReference",
+										"parameters": {
+											"ls_DbName": {
+												"value": "@pipeline().globalParameters.snow_auditDb",
+												"type": "Expression"
+											},
+											"ls_Env": {
+												"value": "@pipeline().globalParameters.environment",
+												"type": "Expression"
+											}
+										}
+									},
+									"typeProperties": {
+										"scripts": [
+											{
+												"type": "Query",
+												"text": {
+													"value": "@concat('truncate table ',pipeline().globalParameters.environment,'_CURATE.GLOBAL.',pipeline().parameters.p_curate_table_name,';')",
+													"type": "Expression"
+												}
+											},
+											{
+												"type": "Query",
+												"text": {
+													"value": "@concat('CALL ',pipeline().globalParameters.environment,'_CURATE.GLOBAL.SP_GENERIC_EDW_HISTORY_DIM_SCD2(','''',coalesce(pipeline().RunId,'-1'),'''',',', '''',pipeline().globalParameters.environment,'''',',','''',pipeline().parameters.p_src_table_nm,'''',',', '''',pipeline().parameters.p_curate_table_name,'''', ',',pipeline().parameters.p_key_columns,',','''',pipeline().parameters.p_raw_key,'''',');')",
+													"type": "Expression"
+												}
+											}
+										],
+										"scriptBlockExecutionTimeout": "02:00:00"
+									}
+								}
+							],
+							"ifTrueActivities": [
+								{
+									"name": "sp_scd_1",
+									"type": "Script",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"linkedServiceName": {
+										"referenceName": "ls_snowflake",
+										"type": "LinkedServiceReference",
+										"parameters": {
+											"ls_DbName": {
+												"value": "@pipeline().globalParameters.snow_auditDb",
+												"type": "Expression"
+											},
+											"ls_Env": {
+												"value": "@pipeline().globalParameters.environment",
+												"type": "Expression"
+											}
+										}
+									},
+									"typeProperties": {
+										"scripts": [
+											{
+												"type": "Query",
+												"text": {
+													"value": "@concat('truncate table ',pipeline().globalParameters.environment,'_CURATE.GLOBAL.',pipeline().parameters.p_curate_table_name,';')",
+													"type": "Expression"
+												}
+											},
+											{
+												"type": "Query",
+												"text": {
+													"value": "@concat('CALL ',pipeline().globalParameters.environment,'_CURATE.GLOBAL.SP_GENERIC_EDW_HISTORY_DIM_SCD1(','''',coalesce(pipeline().RunId,'-1'),'''',',', '''',pipeline().globalParameters.environment,'''',',','''',pipeline().parameters.p_src_table_nm,'''',',', '''',pipeline().parameters.p_curate_table_name,'''', ',',pipeline().parameters.p_key_columns,');')",
+													"type": "Expression"
+												}
+											}
+										],
+										"scriptBlockExecutionTimeout": "02:00:00"
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"p_src_schema_nm": {
+						"type": "string",
+						"defaultValue": "dbo"
+					},
+					"p_src_table_nm": {
+						"type": "string",
+						"defaultValue": "DIMVENDOR"
+					},
+					"p_temp_directory": {
+						"type": "string",
+						"defaultValue": "temp_files"
+					},
+					"p_tgt_schema_nm": {
+						"type": "string",
+						"defaultValue": "EDW_DWH"
+					},
+					"p_key_columns": {
+						"type": "string",
+						"defaultValue": "'SOURCE_NAME,LEGAL_ENTITY,VENDOR_ACCOUNT_ID'"
+					},
+					"p_curate_table_name": {
+						"type": "string",
+						"defaultValue": "DIM_VENDOR"
+					},
+					"p_raw_key": {
+						"type": "string",
+						"defaultValue": "VENDORKEY"
+					},
+					"p_scd_type": {
+						"type": "int",
+						"defaultValue": 2
+					},
+					"p_src_query": {
+						"type": "string",
+						"defaultValue": "select * from dimvendor;"
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pp_pbi_accounts_payable')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "trigger_pbi_refresh_accounts_payable",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_partition_or_full",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_table_nm": "'FACT_VENDOR_TRANSACTIONS'",
+								"p_tgt_audit_table_nm": "PBI_SNOWFLAKE_BRIDGE",
+								"p_tgt_audit_schema_nm": "CONTROL",
+								"p_webhook_url": "https://tempursealyinc.webhook.office.com/webhookb2/7aa89678-96e1-4bbf-a53a-a4ed05939336@7c6c07f6-1ef4-4368-8d5d-4686d15efd79/IncomingWebhook/1f396bf192aa4302972d1f5c14725f25/4c6968dc-2ec8-4f99-b936-1206cdf30aeb/V2vDldglQPzQI47CZ3209z8qtSZGI1r-cu5HdjDC-h_dk1",
+								"p_dataset_nm": "Accounts Payable Gold Dataset",
+								"p_web_body_fullrefresh": {
+									"value": "@createArray('{\n  \"type\": \"full\",\n  \"commitMode\": \"transactional\",\n  \"applyRefreshPolicy\": \"true\"\n}')",
+									"type": "Expression"
+								}
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "pbi_maintenance"
+				},
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pp_pbi_accounts_receivable')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "trigger_pbi_refresh_accounts_receivable",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_partition_or_full",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_table_nm": "'FACT_CUSTOMER_TRANSACTIONS', 'FACT_CUSTOMER_SETTLEMENTS'",
+								"p_tgt_audit_table_nm": "PBI_SNOWFLAKE_BRIDGE",
+								"p_tgt_audit_schema_nm": "CONTROL",
+								"p_webhook_url": "https://tempursealyinc.webhook.office.com/webhookb2/7aa89678-96e1-4bbf-a53a-a4ed05939336@7c6c07f6-1ef4-4368-8d5d-4686d15efd79/IncomingWebhook/835a8d2fb0884fc1b8a32f5e5fb298a1/e95a1626-b503-430d-ba0f-f165bcf3005f",
+								"p_dataset_nm": "Accounts Receivable Gold Dataset",
+								"p_web_body_fullrefresh": {
+									"value": "@createArray('{\n  \"type\": \"full\",\n  \"commitMode\": \"transactional\",\n  \"applyRefreshPolicy\": \"true\"\n}')",
+									"type": "Expression"
+								}
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "pbi_maintenance"
+				},
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pp_pbi_finance')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "trigger_pbi_refresh_finance",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_partition_or_full",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_table_nm": "'FACT_BUDGET_TRANSACTIONS', 'FACT_GENERAL_LEDGER', 'FACT_LEDGER_JOURNAL_TRANSACTIONS', 'FACT_TAX_TRANSACTIONS','DIM_LEDGER_DIMENSION'",
+								"p_tgt_audit_table_nm": "PBI_SNOWFLAKE_BRIDGE",
+								"p_tgt_audit_schema_nm": "CONTROL",
+								"p_webhook_url": "https://tempursealyinc.webhook.office.com/webhookb2/7aa89678-96e1-4bbf-a53a-a4ed05939336@7c6c07f6-1ef4-4368-8d5d-4686d15efd79/IncomingWebhook/fa198a2a84c14ce4a1e89e8e73850238/e95a1626-b503-430d-ba0f-f165bcf3005f",
+								"p_dataset_nm": "Finance Gold Dataset",
+								"p_web_body_fullrefresh": {
+									"value": "@createArray('{\n  \"type\": \"full\",\n  \"commitMode\": \"transactional\",\n  \"applyRefreshPolicy\": \"true\"\n}')",
+									"type": "Expression"
+								}
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "pbi_maintenance"
+				},
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pp_pbi_inventory')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "trigger_pbi_inventory",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_partitions_inventory",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_table_nm": "'FACT_INVENTORY_JOURNAL', 'FACT_INVENTORY_TRANSACTIONS','DIM_INVENTORY','DIM_LEDGER_DIMENSION'",
+								"p_tgt_audit_table_nm": "PBI_SNOWFLAKE_BRIDGE",
+								"p_tgt_audit_schema_nm": "CONTROL",
+								"p_dataset_nm": "Inventory Gold Dataset",
+								"p_webhook_url": "https://tempursealyinc.webhook.office.com/webhookb2/7aa89678-96e1-4bbf-a53a-a4ed05939336@7c6c07f6-1ef4-4368-8d5d-4686d15efd79/IncomingWebhook/406bc7dcdcc5420abaf3dd32d8e6fb11/e95a1626-b503-430d-ba0f-f165bcf3005f",
+								"p_web_body_fullrefresh": {
+									"value": "@createArray('{\n    \"type\": \"full\",\n    \"objects\": [\n        {\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Inventory Journal\"\n        }\n        ,{\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Company\"\n        }\n        ,{\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Date\"\n        }\n        ,{\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Items\"\n        }\n        ,{\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Inventory Transaction Details\"\n        }\n        ,{\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Currency\"\n        }\n        ,{\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Default Dimension\"\n        }\n        \n        ,{\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"User Info\"\n        }\n        ,{\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Inventory Journal Details\"\n        }\n\t\t,{\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Inventory Journal Transactions\"\n        }\n    ],\n    \"applyRefreshPolicy\": \"true\"\n}',\n'{\n    \"type\": \"full\",\n    \"objects\": [\n        {\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Ledger Dimension\"\n        },\n        {\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Inventory\"\n        },\n        {\n            \"database\": \"Inventory Gold Dataset\",\n            \"table\": \"Receiving Inventory\"\n        }\n    ],\n    \"applyRefreshPolicy\": \"true\"\n}')",
+									"type": "Expression"
+								},
+								"p_fn_app_url": "https://invpartitiondtu.azurewebsites.net/api/Dailyrun?code=quleFU4VQP1uHREYa2CwQAAyappqD2FfbY3r-IUiD-Z-AzFuh82B1w%3D%3D",
+								"p_server_nm": "powerbi://api.powerbi.com/v1.0/myorg/MDW%20Inventory%20Dev"
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "pbi_maintenance"
+				},
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pp_pbi_operations')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "trigger_pbi_refresh_operations",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_partition_or_full",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_table_nm": "'FACT_PRODUCTION_JOURNAL'",
+								"p_tgt_audit_table_nm": "PBI_SNOWFLAKE_BRIDGE",
+								"p_tgt_audit_schema_nm": "CONTROL",
+								"p_webhook_url": "https://tempursealyinc.webhook.office.com/webhookb2/7aa89678-96e1-4bbf-a53a-a4ed05939336@7c6c07f6-1ef4-4368-8d5d-4686d15efd79/IncomingWebhook/d39f287600c84ebfb49e4c975ba096cd/e95a1626-b503-430d-ba0f-f165bcf3005f/V2Rfig1jFBdG1n07EewuJJKfoy19_jrMIFLo0Aa1oWdLQ1",
+								"p_dataset_nm": "Operations Gold Dataset",
+								"p_web_body_fullrefresh": {
+									"value": "@createArray('{\n  \"type\": \"full\",\n  \"commitMode\": \"transactional\",\n  \"applyRefreshPolicy\": \"true\"\n}')",
+									"type": "Expression"
+								}
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "pbi_maintenance"
+				},
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pp_pbi_procurement')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "trigger_pbi_procurement",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_partition_or_full",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_table_nm": "'FACT_PURCHASE_INVOICES', 'FACT_PURCHASE_RECEIPTS', 'FACT_PURCHASE_ORDERS'",
+								"p_tgt_audit_table_nm": "PBI_SNOWFLAKE_BRIDGE",
+								"p_tgt_audit_schema_nm": "CONTROL",
+								"p_webhook_url": "https://tempursealyinc.webhook.office.com/webhookb2/7aa89678-96e1-4bbf-a53a-a4ed05939336@7c6c07f6-1ef4-4368-8d5d-4686d15efd79/IncomingWebhook/aa1d52785376421cad616d5e7e2de31c/e95a1626-b503-430d-ba0f-f165bcf3005f",
+								"p_dataset_nm": "Procurement Gold Dataset",
+								"p_web_body_fullrefresh": {
+									"value": "@createArray('{\n  \"type\": \"full\",\n  \"commitMode\": \"transactional\",\n  \"applyRefreshPolicy\": \"true\"\n}')",
+									"type": "Expression"
+								}
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "pbi_maintenance"
+				},
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pp_pbi_sales_and_marketing')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "trigger_pbi_refresh_sales_and_marketing",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_pbi_partition_or_full",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"p_table_nm": "'FACT_SALES_INVOICES','FACT_SALES_ORDERS','FACT_LEDGER_JOURNAL_TRANSACTIONS','FACT_MONTHLY_WMAPE','FACT_MONTHLY_FORECAST','FACT_PICKING_LINE','FACT_REBATE_TRANSACTIONS','FACT_SALES_DELIVERIES','FACT_TRANSPORTATION_LOAD'",
+								"p_tgt_audit_table_nm": "PBI_SNOWFLAKE_BRIDGE",
+								"p_tgt_audit_schema_nm": "CONTROL",
+								"p_webhook_url": "https://tempursealyinc.webhook.office.com/webhookb2/7aa89678-96e1-4bbf-a53a-a4ed05939336@7c6c07f6-1ef4-4368-8d5d-4686d15efd79/IncomingWebhook/0ef59f50e98c4a489683b601eee026e6/e95a1626-b503-430d-ba0f-f165bcf3005f",
+								"p_dataset_nm": "Sales & Marketing Gold Dataset",
+								"p_web_body_fullrefresh": {
+									"value": "@createArray('{\n  \"type\": \"full\",\n  \"objects\":[\n    {\n      \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n      \"table\": \"Sales Invoices\"\n    },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Order Lines\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Picking Lines\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Rebate Transactions\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Transportation Load\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Monthly WMAPE\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Ledger Journal Transactions\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Deliveries\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Monthly Forecast\"\n  }\n  ],\n  \"applyRefreshPolicy\": \"true\"\n}',\n'{\n  \"type\": \"full\",\n  \"objects\":[\n    {\n      \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n      \"table\": \"Inventory\"\n    },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Bridge Invoice\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Order\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Inventory Summary\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Trade Promotion\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Campaign\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"General Ledger Non Invoice\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Global Trade Item Number\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Weekly Forecast\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Item\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Operator Worker\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Responsible\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Taker\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"RLS Invoice Customer Accounts\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"RLS Order Customer Accounts\"\n  }\n  ],\n  \"applyRefreshPolicy\": \"false\"\n}',\n'{\n  \"type\": \"full\",\n  \"objects\":[\n    {\n      \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n      \"table\": \"Bridge Invoice Rebate\"\n    },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Invoice Customer\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Cost\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Current Order Customer\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Order Customer\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Delivery Location\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Current Invoice Customer\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Invoice Location\"\n  },\n    {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Default Dimension\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Alternate Item\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Arkieva Customer\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Arkieva Subchannel\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Business Unit\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Commission Group\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Company\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Currency\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Customer Group\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Customer Markup Group\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Date\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Delivery Mode\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Delivery Term\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Intrastat Transaction Code\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Item Status\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Line Return Reason\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Package Shipping Carrier\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Payment Mode\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Payment Terms\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Picking Line Details\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Rebate\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Rebate Transaction Details\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Return Disposition\"\n  },\n  {\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Return Reason\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Category\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Details\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Group\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Line Discount Group\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Order Creator\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Order Line Creator\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Origin\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Pool\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Sales Price Group\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Shipping Carrier\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Site\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Subsidies\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Tax Group\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Tax Item Group\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Trailers\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Unit of Measure\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"Weekly WMAPE\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"RLS Curent Order Customer Accounts\"\n  },{\n    \"database\": \"Snowflake - Sales and Marketing Gold Dataset\",\n    \"table\": \"RLS Current Invoice Customer Accounts\"\n  }\n  ],\n  \"applyRefreshPolicy\": \"false\"\n}'\n)",
+									"type": "Expression"
+								}
+							}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "pbi_maintenance"
+				},
+				"annotations": []
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pp_weekly_ax_salesline_checks')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "raw_to_curate_sp_call",
+						"type": "Script",
+						"state": "Inactive",
+						"onInactiveMarkAs": "Failed",
+						"dependsOn": [
+							{
+								"activity": "load_to_raw",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"linkedServiceName": {
+							"referenceName": "ls_snowflake",
+							"type": "LinkedServiceReference",
+							"parameters": {
+								"ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_rawDb",
+									"type": "Expression"
+								},
+								"ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							}
+						},
+						"typeProperties": {
+							"scripts": [
+								{
+									"type": "Query",
+									"text": {
+										"value": "@concat('CALL ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_auditDb,'.CONTROL.SP_TASK_INITIALIZE(','''',pipeline().RunId,'''',',','''',pipeline().globalParameters.environment,'''',',','''',pipeline().parameters.p_tgt_curate_table_nm,'''',',',pipeline().parameters.p_src_code,')')",
+										"type": "Expression"
+									}
+								}
+							],
+							"scriptBlockExecutionTimeout": "02:00:00"
+						}
+					},
+					{
+						"name": "stored_procedure_failure_notification",
+						"type": "ExecutePipeline",
+						"state": "Inactive",
+						"onInactiveMarkAs": "Succeeded",
+						"dependsOn": [
+							{
+								"activity": "raw_to_curate_sp_call",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_adf_pipeline_notification",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"subscription": {
+									"value": "@pipeline().globalParameters.subscriptionId",
+									"type": "Expression"
+								},
+								"resourceGroup": {
+									"value": "@pipeline().globalParameters.resourceGroup",
+									"type": "Expression"
+								},
+								"runId": {
+									"value": "@coalesce(pipeline().RunId, -1)",
+									"type": "Expression"
+								},
+								"name": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								},
+								"triggerTime": {
+									"value": "@pipeline().TriggerTime",
+									"type": "Expression"
+								},
+								"status": {
+									"value": "@activity('raw_to_curate_sp_call').Status",
+									"type": "Expression"
+								},
+								"message": {
+									"value": "@activity('raw_to_curate_sp_call').Error['message']",
+									"type": "Expression"
+								},
+								"executionEndTime": {
+									"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+									"type": "Expression"
+								},
+								"runDuration": {
+									"value": "@activity('raw_to_curate_sp_call').Duration",
+									"type": "Expression"
+								},
+								"teamWebhookUrl": {
+									"value": "@pipeline().globalParameters.teamsWebhookUrl",
+									"type": "Expression"
+								},
+								"notificationTime": {
+									"value": "@utcNow()",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					{
+						"name": "load_to_raw",
+						"type": "ExecuteDataFlow",
+						"state": "Inactive",
+						"onInactiveMarkAs": "Succeeded",
+						"dependsOn": [
+							{
+								"activity": "switch_nala_retail_d365",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "df_load_fact_sales_order",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"salesLineParquet": {
+										"p_directory": {
+											"value": "@pipeline().parameters.p_temp_directory",
+											"type": "Expression"
+										},
+										"p_root_system": {
+											"value": "@pipeline().globalParameters.rootDir",
+											"type": "Expression"
+										},
+										"p_file_name": {
+											"value": "@pipeline().parameters.p_temp_file_nm",
+											"type": "Expression"
+										}
+									},
+									"salesLine": {
+										"p_tgt_table_name": {
+											"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+											"type": "Expression"
+										},
+										"p_tgt_schema_name": {
+											"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+											"type": "Expression"
+										},
+										"p_ls_DbName": {
+											"value": "@pipeline().globalParameters.snow_rawDb",
+											"type": "Expression"
+										},
+										"p_ls_Env": {
+											"value": "@pipeline().globalParameters.environment",
+											"type": "Expression"
+										}
+									}
+								}
+							},
+							"staging": {},
+							"integrationRuntime": {
+								"referenceName": "IR-Snowflake-NALA",
+								"type": "IntegrationRuntimeReference"
+							},
+							"traceLevel": "Fine"
+						}
+					},
+					{
+						"name": "load_raw_failure_notification",
+						"type": "ExecutePipeline",
+						"state": "Inactive",
+						"onInactiveMarkAs": "Succeeded",
+						"dependsOn": [
+							{
+								"activity": "load_to_raw",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pp_adf_pipeline_notification",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {
+								"subscription": {
+									"value": "@pipeline().globalParameters.subscriptionId",
+									"type": "Expression"
+								},
+								"resourceGroup": {
+									"value": "@pipeline().globalParameters.resourceGroup",
+									"type": "Expression"
+								},
+								"runId": {
+									"value": "@coalesce(pipeline().RunId, -1)",
+									"type": "Expression"
+								},
+								"name": {
+									"value": "@pipeline().Pipeline",
+									"type": "Expression"
+								},
+								"triggerTime": {
+									"value": "@pipeline().TriggerTime",
+									"type": "Expression"
+								},
+								"status": {
+									"value": "@activity('load_to_raw').Status",
+									"type": "Expression"
+								},
+								"message": {
+									"value": "@activity('load_to_raw').Error['message']",
+									"type": "Expression"
+								},
+								"executionEndTime": {
+									"value": "@activity('load_to_raw').ExecutionEndTime",
+									"type": "Expression"
+								},
+								"runDuration": {
+									"value": "@activity('load_to_raw').Duration",
+									"type": "Expression"
+								},
+								"teamWebhookUrl": {
+									"value": "@pipeline().globalParameters.teamsWebhookUrl",
+									"type": "Expression"
+								},
+								"notificationTime": {
+									"value": "@utcNow()",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					{
+						"name": "switch_nala_retail_d365",
+						"type": "Switch",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"on": {
+								"value": "@pipeline().parameters.p_src_code",
+								"type": "Expression"
+							},
+							"cases": [
+								{
+									"value": "1",
+									"activities": [
+										{
+											"name": "sql_nala_to_adls",
+											"type": "Copy",
+											"dependsOn": [],
+											"policy": {
+												"timeout": "0.12:00:00",
+												"retry": 0,
+												"retryIntervalInSeconds": 30,
+												"secureOutput": false,
+												"secureInput": false
+											},
+											"userProperties": [],
+											"typeProperties": {
+												"source": {
+													"type": "SqlServerSource",
+													"additionalColumns": [
+														{
+															"name": "HK_SOURCE_NAME",
+															"value": {
+																"value": "@pipeline().parameters.p_src_nm",
+																"type": "Expression"
+															}
+														},
+														{
+															"name": "HK_JOB_RUN_ID",
+															"value": {
+																"value": "@coalesce(pipeline().RunId, -1)",
+																"type": "Expression"
+															}
+														}
+													],
+													"sqlReaderQuery": {
+														"value": "select \n    ltrim(rtrim(sl1.DATAAREAID)) as DATAAREAID,\n    ltrim(rtrim(sl1.INVENTTRANSID)) as INVENTTRANSID\n from\n    dbo.SALESLINE sl1\nwhere sl1.MODIFIEDDATETIME > dateadd(dd ,-120, getdate())",
+														"type": "Expression"
+													},
+													"queryTimeout": "23:19:00",
+													"partitionOption": "None"
+												},
+												"sink": {
+													"type": "ParquetSink",
+													"storeSettings": {
+														"type": "AzureBlobFSWriteSettings"
+													},
+													"formatSettings": {
+														"type": "ParquetWriteSettings"
+													}
+												},
+												"enableStaging": true,
+												"stagingSettings": {
+													"linkedServiceName": {
+														"referenceName": "ls_blob_storage",
+														"type": "LinkedServiceReference"
+													},
+													"path": {
+														"value": "@pipeline().globalParameters.rootDir",
+														"type": "Expression"
+													},
+													"enableCompression": true
+												},
+												"parallelCopies": 32,
+												"translator": {
+													"type": "TabularTranslator",
+													"mappings": [
+														{
+															"source": {
+																"name": "DATAAREAID",
+																"type": "String",
+																"physicalType": "nvarchar"
+															},
+															"sink": {
+																"name": "DATAAREAID",
+																"type": "String",
+																"physicalType": "UTF8"
+															}
+														},
+														{
+															"source": {
+																"name": "INVENTTRANSID",
+																"type": "String",
+																"physicalType": "nvarchar"
+															},
+															"sink": {
+																"name": "INVENTTRANSID",
+																"type": "String",
+																"physicalType": "UTF8"
+															}
+														},
+														{
+															"source": {
+																"name": "HK_SOURCE_NAME",
+																"type": "String"
+															},
+															"sink": {
+																"name": "HK_SOURCE_NAME",
+																"type": "String",
+																"physicalType": "UTF8"
+															}
+														},
+														{
+															"source": {
+																"name": "HK_JOB_RUN_ID",
+																"type": "String"
+															},
+															"sink": {
+																"name": "HK_JOB_RUN_ID",
+																"type": "String",
+																"physicalType": "UTF8"
+															}
+														}
+													],
+													"typeConversion": true,
+													"typeConversionSettings": {
+														"allowDataTruncation": true,
+														"treatBooleanAsNumber": false
+													}
+												}
+											},
+											"inputs": [
+												{
+													"referenceName": "ds_sql_server",
+													"type": "DatasetReference",
+													"parameters": {
+														"p_src_table_name": {
+															"value": "@pipeline().parameters.p_src_table_nm",
+															"type": "Expression"
+														},
+														"p_src_schema_name": {
+															"value": "@pipeline().parameters.p_src_schema_nm",
+															"type": "Expression"
+														},
+														"p_ls_serverName": {
+															"value": "@pipeline().globalParameters.nala_sql_serverName",
+															"type": "Expression"
+														},
+														"p_ls_dbName": {
+															"value": "@pipeline().globalParameters.nala_sql_dbName",
+															"type": "Expression"
+														},
+														"p_ls_sqlUsername": {
+															"value": "@pipeline().globalParameters.sql_userName",
+															"type": "Expression"
+														},
+														"p_ls_sqlPassword": {
+															"value": "@pipeline().globalParameters.sql_password",
+															"type": "Expression"
+														}
+													}
+												}
+											],
+											"outputs": [
+												{
+													"referenceName": "ds_parquet",
+													"type": "DatasetReference",
+													"parameters": {
+														"p_directory": {
+															"value": "@pipeline().parameters.p_temp_directory",
+															"type": "Expression"
+														},
+														"p_root_system": {
+															"value": "@pipeline().globalParameters.rootDir",
+															"type": "Expression"
+														},
+														"p_file_name": {
+															"value": "@pipeline().parameters.p_temp_file_nm",
+															"type": "Expression"
+														}
+													}
+												}
+											]
+										},
+										{
+											"name": "nala_raw_load_failure_notification",
+											"type": "ExecutePipeline",
+											"dependsOn": [
+												{
+													"activity": "sql_nala_to_adls",
+													"dependencyConditions": [
+														"Failed"
+													]
+												}
+											],
+											"policy": {
+												"secureInput": false
+											},
+											"userProperties": [],
+											"typeProperties": {
+												"pipeline": {
+													"referenceName": "pp_adf_pipeline_notification",
+													"type": "PipelineReference"
+												},
+												"waitOnCompletion": true,
+												"parameters": {
+													"subscription": {
+														"value": "@pipeline().globalParameters.subscriptionId",
+														"type": "Expression"
+													},
+													"resourceGroup": {
+														"value": "@pipeline().globalParameters.resourceGroup",
+														"type": "Expression"
+													},
+													"runId": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													},
+													"name": {
+														"value": "@pipeline().Pipeline",
+														"type": "Expression"
+													},
+													"triggerTime": {
+														"value": "@pipeline().TriggerTime",
+														"type": "Expression"
+													},
+													"status": {
+														"value": "@activity('sql_nala_to_adls').Status",
+														"type": "Expression"
+													},
+													"message": {
+														"value": "@replace(replace(replace(activity('sql_nala_to_adls').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+														"type": "Expression"
+													},
+													"executionEndTime": {
+														"value": "@activity('sql_nala_to_adls').ExecutionEndTime",
+														"type": "Expression"
+													},
+													"runDuration": {
+														"value": "@activity('sql_nala_to_adls').Duration",
+														"type": "Expression"
+													},
+													"teamWebhookUrl": {
+														"value": "@pipeline().globalParameters.teamsWebhookUrl",
+														"type": "Expression"
+													},
+													"notificationTime": {
+														"value": "@utcNow()",
+														"type": "Expression"
+													}
+												}
+											}
+										},
+										{
+											"name": "sql_nala_load_to_raw_fail",
+											"type": "Fail",
+											"dependsOn": [
+												{
+													"activity": "nala_raw_load_failure_notification",
+													"dependencyConditions": [
+														"Succeeded"
+													]
+												}
+											],
+											"userProperties": [],
+											"typeProperties": {
+												"message": {
+													"value": "@activity('sql_nala_to_adls').Error['message']",
+													"type": "Expression"
+												},
+												"errorCode": "500"
+											}
+										}
+									]
+								}
+							]
+						}
+					},
+					{
+						"name": "pipeline_execution_notification",
+						"type": "IfCondition",
+						"state": "Inactive",
+						"onInactiveMarkAs": "Succeeded",
+						"dependsOn": [
+							{
+								"activity": "raw_to_curate_sp_call",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@if(equals(activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE'],'TRUE'),bool('TRUE'), bool('FALSE'))",
+								"type": "Expression"
+							},
+							"ifFalseActivities": [
+								{
+									"name": "pp_stored_procedure_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@toUpper('failed')",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('raw_to_curate_sp_call').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "curate_load_failure",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "pp_stored_procedure_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							],
+							"ifTrueActivities": [
+								{
+									"name": "stored_procedure_success_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('raw_to_curate_sp_call').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@concat(pipeline().parameters.p_tgt_curate_table_nm, ' is successfully loaded')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('raw_to_curate_sp_call').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"p_src_nm": {
+						"type": "string",
+						"defaultValue": "AXNALA"
+					},
+					"p_tgt_curate_table_nm": {
+						"type": "string",
+						"defaultValue": "FACT_SALES_ORDERS"
+					},
+					"p_tgt_raw_table_nm": {
+						"type": "string",
+						"defaultValue": "WEEKLY_SALESLINE"
+					},
+					"p_tgt_raw_schema_nm": {
+						"type": "string",
+						"defaultValue": "AX_NALA"
+					},
+					"p_tgt_curate_schema_nm": {
+						"type": "string",
+						"defaultValue": "GLOBAL"
+					},
+					"p_src_table_nm": {
+						"type": "string",
+						"defaultValue": "SALESLINE"
+					},
+					"p_src_schema_nm": {
+						"type": "string",
+						"defaultValue": "dbo"
+					},
+					"p_temp_directory": {
+						"type": "string",
+						"defaultValue": "temp_files"
+					},
+					"p_temp_file_nm": {
+						"type": "string",
+						"defaultValue": "fact_sales_order_nala.parquet"
+					},
+					"p_src_code": {
+						"type": "string",
+						"defaultValue": "1"
+					}
+				},
+				"folder": {
+					"name": "True_up"
+				},
+				"annotations": [],
+				"lastPublishTime": "2024-03-12T01:28:30Z"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_ax_arkieva_inventdim_to_dim_inventory')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_inventdim_to_dim_inventory",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_nm": "[parameters('trg_ax_arkieva_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_src_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_ax_arkieva_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_ax_arkieva_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_ax_arkieva_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_ax_arkieva_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_table_nm": "[parameters('trg_ax_arkieva_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_ax_arkieva_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_src_schema_nm')]",
+							"p_src_code": "[parameters('trg_ax_arkieva_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_src_code')]",
+							"p_tgt_raw_arkieva_table_nm": "[parameters('trg_ax_arkieva_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_raw_arkieva_table_nm')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-06-07T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_ax_nala_budgetmodel_to_dim_budget_model')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_budgetmodel_to_dim_budget_model",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_table_nm": "[parameters('trg_ax_nala_budgetmodel_to_dim_budget_model_properties_pp_ax_budgetmodel_to_dim_budget_model_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_ax_nala_budgetmodel_to_dim_budget_model_properties_pp_ax_budgetmodel_to_dim_budget_model_parameters_p_src_schema_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_ax_nala_budgetmodel_to_dim_budget_model_properties_pp_ax_budgetmodel_to_dim_budget_model_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_ax_nala_budgetmodel_to_dim_budget_model_properties_pp_ax_budgetmodel_to_dim_budget_model_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_ax_nala_budgetmodel_to_dim_budget_model_properties_pp_ax_budgetmodel_to_dim_budget_model_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_ax_nala_budgetmodel_to_dim_budget_model_properties_pp_ax_budgetmodel_to_dim_budget_model_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_nm": "[parameters('trg_ax_nala_budgetmodel_to_dim_budget_model_properties_pp_ax_budgetmodel_to_dim_budget_model_parameters_p_src_nm')]",
+							"p_src_code": "[parameters('trg_ax_nala_budgetmodel_to_dim_budget_model_properties_pp_ax_budgetmodel_to_dim_budget_model_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-08-27T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_ax_nala_budgettransactionline_to_fact_budget_transactions')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_budgettransactionline_to_fact_budget_transactions",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_nm": "[parameters('trg_ax_nala_budgettransactionline_to_fact_budget_transactions_properties_pp_ax_budgettransactionline_to_fact_budget_transactions_parameters_p_src_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_ax_nala_budgettransactionline_to_fact_budget_transactions_properties_pp_ax_budgettransactionline_to_fact_budget_transactions_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_ax_nala_budgettransactionline_to_fact_budget_transactions_properties_pp_ax_budgettransactionline_to_fact_budget_transactions_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_ax_nala_budgettransactionline_to_fact_budget_transactions_properties_pp_ax_budgettransactionline_to_fact_budget_transactions_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_ax_nala_budgettransactionline_to_fact_budget_transactions_properties_pp_ax_budgettransactionline_to_fact_budget_transactions_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_table_nm": "[parameters('trg_ax_nala_budgettransactionline_to_fact_budget_transactions_properties_pp_ax_budgettransactionline_to_fact_budget_transactions_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_ax_nala_budgettransactionline_to_fact_budget_transactions_properties_pp_ax_budgettransactionline_to_fact_budget_transactions_parameters_p_src_schema_nm')]",
+							"p_src_code": "[parameters('trg_ax_nala_budgettransactionline_to_fact_budget_transactions_properties_pp_ax_budgettransactionline_to_fact_budget_transactions_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-09-03T06:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_ax_nala_cashdisc_to_dim_cash_discount')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_cashdisc_to_dim_cash_discount",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_nm": "[parameters('trg_ax_nala_cashdisc_to_dim_cash_discount_properties_pp_ax_cashdisc_to_dim_cash_discount_parameters_p_src_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_ax_nala_cashdisc_to_dim_cash_discount_properties_pp_ax_cashdisc_to_dim_cash_discount_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_ax_nala_cashdisc_to_dim_cash_discount_properties_pp_ax_cashdisc_to_dim_cash_discount_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_ax_nala_cashdisc_to_dim_cash_discount_properties_pp_ax_cashdisc_to_dim_cash_discount_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_ax_nala_cashdisc_to_dim_cash_discount_properties_pp_ax_cashdisc_to_dim_cash_discount_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_schema_nm": "[parameters('trg_ax_nala_cashdisc_to_dim_cash_discount_properties_pp_ax_cashdisc_to_dim_cash_discount_parameters_p_src_schema_nm')]",
+							"p_src_table_nm": "[parameters('trg_ax_nala_cashdisc_to_dim_cash_discount_properties_pp_ax_cashdisc_to_dim_cash_discount_parameters_p_src_table_nm')]",
+							"p_src_code": "[parameters('trg_ax_nala_cashdisc_to_dim_cash_discount_properties_pp_ax_cashdisc_to_dim_cash_discount_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-09-18T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_ax_nala_commissioncustrgrp_to_dim_commission_group')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_commissioncustrgrp_to_dim_commission_group",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_table_nm": "[parameters('trg_ax_nala_commissioncustrgrp_to_dim_commission_group_properties_pp_ax_commissioncustrgrp_to_dim_commission_group_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_ax_nala_commissioncustrgrp_to_dim_commission_group_properties_pp_ax_commissioncustrgrp_to_dim_commission_group_parameters_p_src_schema_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_ax_nala_commissioncustrgrp_to_dim_commission_group_properties_pp_ax_commissioncustrgrp_to_dim_commission_group_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_ax_nala_commissioncustrgrp_to_dim_commission_group_properties_pp_ax_commissioncustrgrp_to_dim_commission_group_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_ax_nala_commissioncustrgrp_to_dim_commission_group_properties_pp_ax_commissioncustrgrp_to_dim_commission_group_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_ax_nala_commissioncustrgrp_to_dim_commission_group_properties_pp_ax_commissioncustrgrp_to_dim_commission_group_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_nm": "[parameters('trg_ax_nala_commissioncustrgrp_to_dim_commission_group_properties_pp_ax_commissioncustrgrp_to_dim_commission_group_parameters_p_src_nm')]",
+							"p_src_code": "[parameters('trg_ax_nala_commissioncustrgrp_to_dim_commission_group_properties_pp_ax_commissioncustrgrp_to_dim_commission_group_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-06-07T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_ax_nala_commissionsalesgroup_to_dim_sales_group')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_commissionsalesgroup_to_dim_sales_group",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_table_nm": "[parameters('trg_ax_nala_commissionsalesgroup_to_dim_sales_group_properties_pp_ax_commissionsalesgroup_to_dim_sales_group_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_ax_nala_commissionsalesgroup_to_dim_sales_group_properties_pp_ax_commissionsalesgroup_to_dim_sales_group_parameters_p_src_schema_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_ax_nala_commissionsalesgroup_to_dim_sales_group_properties_pp_ax_commissionsalesgroup_to_dim_sales_group_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_ax_nala_commissionsalesgroup_to_dim_sales_group_properties_pp_ax_commissionsalesgroup_to_dim_sales_group_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_ax_nala_commissionsalesgroup_to_dim_sales_group_properties_pp_ax_commissionsalesgroup_to_dim_sales_group_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_ax_nala_commissionsalesgroup_to_dim_sales_group_properties_pp_ax_commissionsalesgroup_to_dim_sales_group_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_nm": "[parameters('trg_ax_nala_commissionsalesgroup_to_dim_sales_group_properties_pp_ax_commissionsalesgroup_to_dim_sales_group_parameters_p_src_nm')]",
+							"p_src_code": "[parameters('trg_ax_nala_commissionsalesgroup_to_dim_sales_group_properties_pp_ax_commissionsalesgroup_to_dim_sales_group_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-07-02T10:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_ax_nala_consensus_forecast_to_dim_arkieva_sub_channel')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_consensus_forecast_to_dim_arkieva_sub_channel",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_table_nm": "[parameters('trg_ax_nala_consensus_forecast_to_dim_arkieva_sub_channel_properties_pp_ax_consensus_forecast_to_dim_arkieva_sub_channel_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_ax_nala_consensus_forecast_to_dim_arkieva_sub_channel_properties_pp_ax_consensus_forecast_to_dim_arkieva_sub_channel_parameters_p_src_schema_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_ax_nala_consensus_forecast_to_dim_arkieva_sub_channel_properties_pp_ax_consensus_forecast_to_dim_arkieva_sub_channel_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_ax_nala_consensus_forecast_to_dim_arkieva_sub_channel_properties_pp_ax_consensus_forecast_to_dim_arkieva_sub_channel_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_ax_nala_consensus_forecast_to_dim_arkieva_sub_channel_properties_pp_ax_consensus_forecast_to_dim_arkieva_sub_channel_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_ax_nala_consensus_forecast_to_dim_arkieva_sub_channel_properties_pp_ax_consensus_forecast_to_dim_arkieva_sub_channel_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_nm": "[parameters('trg_ax_nala_consensus_forecast_to_dim_arkieva_sub_channel_properties_pp_ax_consensus_forecast_to_dim_arkieva_sub_channel_parameters_p_src_nm')]",
+							"p_src_code": "[parameters('trg_ax_nala_consensus_forecast_to_dim_arkieva_sub_channel_properties_pp_ax_consensus_forecast_to_dim_arkieva_sub_channel_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-06-07T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_ax_nala_currency_to_dim_currency')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_currency_to_dim_currency",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_nm": "[parameters('trg_ax_nala_currency_to_dim_currency_properties_pp_ax_currency_to_dim_currency_parameters_p_src_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_ax_nala_currency_to_dim_currency_properties_pp_ax_currency_to_dim_currency_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_ax_nala_currency_to_dim_currency_properties_pp_ax_currency_to_dim_currency_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_ax_nala_currency_to_dim_currency_properties_pp_ax_currency_to_dim_currency_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_ax_nala_currency_to_dim_currency_properties_pp_ax_currency_to_dim_currency_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_table_nm": "[parameters('trg_ax_nala_currency_to_dim_currency_properties_pp_ax_currency_to_dim_currency_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_ax_nala_currency_to_dim_currency_properties_pp_ax_currency_to_dim_currency_parameters_p_src_schema_nm')]",
+							"p_src_code": "[parameters('trg_ax_nala_currency_to_dim_currency_properties_pp_ax_currency_to_dim_currency_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-06-07T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_ax_nala_custgroup_to_dim_customer_group')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_custgroup_to_dim_customer_group",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_table_nm": "[parameters('trg_ax_nala_custgroup_to_dim_customer_group_properties_pp_ax_custgroup_to_dim_customer_group_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_ax_nala_custgroup_to_dim_customer_group_properties_pp_ax_custgroup_to_dim_customer_group_parameters_p_src_schema_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_ax_nala_custgroup_to_dim_customer_group_properties_pp_ax_custgroup_to_dim_customer_group_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_ax_nala_custgroup_to_dim_customer_group_properties_pp_ax_custgroup_to_dim_customer_group_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_ax_nala_custgroup_to_dim_customer_group_properties_pp_ax_custgroup_to_dim_customer_group_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_ax_nala_custgroup_to_dim_customer_group_properties_pp_ax_custgroup_to_dim_customer_group_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_nm": "[parameters('trg_ax_nala_custgroup_to_dim_customer_group_properties_pp_ax_custgroup_to_dim_customer_group_parameters_p_src_nm')]",
+							"p_src_code": "[parameters('trg_ax_nala_custgroup_to_dim_customer_group_properties_pp_ax_custgroup_to_dim_customer_group_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-06-28T10:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}

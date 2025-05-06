@@ -1,0 +1,108 @@
+{
+	"name": "pp_pbi_notification",
+	"properties": {
+		"activities": [
+			{
+				"name": "set_json_schema",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "messageCard",
+					"value": {
+						"value": "{\n   \"@type\": \"MessageCard\",\n   \"@context\": \"http://schema.org/extensions\",\n   \"themeColor\": \"@{pipeline().parameters.color}\",\n   \"summary\": \"Power BI status alert message\",\n   \"sections\": [\n       {\n           \"activityTitle\": \"Power BI @{pipeline().parameters.refreshType} Refresh Status\",\n            \"facts\": [\n               {\n                   \"name\": \"RunId:\",\n                   \"value\": \"@{pipeline().parameters.runId}\"\n               },\n               {\n                   \"name\": \"Dataset Name:\",\n                   \"value\": \"@{pipeline().parameters.name}\"\n               },\n               {\n                   \"name\": \"Run Status:\",\n                   \"value\": \"**@{toUpper(pipeline().parameters.status)}**\"\n               },\n               {\n                   \"name\": \"Extended Status:\",\n                   \"value\": \"**@{toUpper(pipeline().parameters.extendedStatus)}**\"\n               },\n               {\n                   \"name\": \"Execution Start Time (UTC):\",\n                   \"value\": \"@{pipeline().parameters.triggerTime}\"\n               },\n               {\n                   \"name\": \"Execution Finish Time (UTC):\",\n                   \"value\": \"@{pipeline().parameters.executionEndTime}\"\n               },\n                {\n                   \"name\": \"Message :\",\n                   \"value\": \"@{pipeline().parameters.message}\"\n               },\n               {\n                   \"name\": \"Notification Time (UTC):\",\n                   \"value\": \"@{pipeline().parameters.notificationTime}\"\n               },\n            ],\n           \"markdown\": true\n       }\n   ]\n}\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "invoke_teams_webhook",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "set_json_schema",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": {
+						"value": "@pipeline().parameters.teamWebhookUrl",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IR-Snowflake-NALA",
+						"type": "IntegrationRuntimeReference"
+					},
+					"body": {
+						"value": "@json(variables('messageCard'))",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"runId": {
+				"type": "string"
+			},
+			"name": {
+				"type": "string"
+			},
+			"triggerTime": {
+				"type": "string"
+			},
+			"status": {
+				"type": "string"
+			},
+			"message": {
+				"type": "string"
+			},
+			"executionEndTime": {
+				"type": "string"
+			},
+			"teamWebhookUrl": {
+				"type": "string"
+			},
+			"notificationTime": {
+				"type": "string"
+			},
+			"extendedStatus": {
+				"type": "string"
+			},
+			"color": {
+				"type": "string"
+			},
+			"refreshType": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"messageCard": {
+				"type": "String"
+			},
+			"pipeline_start_time": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "pbi_incremental_refresh/pbi_reusables"
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-10-21T13:36:39Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

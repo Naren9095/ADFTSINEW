@@ -1,0 +1,17 @@
+{
+	"name": "TEST_trg_ax_Staging_Orders",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Minute",
+				"interval": 15,
+				"startTime": "2025-04-09T08:20:00",
+				"timeZone": "Eastern Standard Time"
+			}
+		}
+	}
+}

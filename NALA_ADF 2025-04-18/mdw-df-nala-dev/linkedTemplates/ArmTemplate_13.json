@@ -1,0 +1,1401 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "mdw-df-nala-dev"
+		},
+		"trg_d365_custledger_to_dim_customer_posting_profile_properties_pp_ax_custledger_to_dim_customer_posting_profile_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_custledger_to_dim_customer_posting_profile_properties_pp_ax_custledger_to_dim_customer_posting_profile_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "CUSTLEDGER"
+		},
+		"trg_d365_custledger_to_dim_customer_posting_profile_properties_pp_ax_custledger_to_dim_customer_posting_profile_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_custledger_to_dim_customer_posting_profile_properties_pp_ax_custledger_to_dim_customer_posting_profile_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_CUSTOMER_POSTING_PROFILE"
+		},
+		"trg_d365_custledger_to_dim_customer_posting_profile_properties_pp_ax_custledger_to_dim_customer_posting_profile_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_custledger_to_dim_customer_posting_profile_properties_pp_ax_custledger_to_dim_customer_posting_profile_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_custledger_to_dim_customer_posting_profile_properties_pp_ax_custledger_to_dim_customer_posting_profile_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "CUSTLEDGER"
+		},
+		"trg_d365_custledger_to_dim_customer_posting_profile_properties_pp_ax_custledger_to_dim_customer_posting_profile_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_custpaymmodetable_to_dim_payment_mode_properties_pp_ax_custpaymmodetable_to_dim_payment_mode_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "CUSTPAYMMODETABLE"
+		},
+		"trg_d365_custpaymmodetable_to_dim_payment_mode_properties_pp_ax_custpaymmodetable_to_dim_payment_mode_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_custpaymmodetable_to_dim_payment_mode_properties_pp_ax_custpaymmodetable_to_dim_payment_mode_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "CUSTPAYMMODETABLE"
+		},
+		"trg_d365_custpaymmodetable_to_dim_payment_mode_properties_pp_ax_custpaymmodetable_to_dim_payment_mode_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_custpaymmodetable_to_dim_payment_mode_properties_pp_ax_custpaymmodetable_to_dim_payment_mode_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_PAYMENT_MODE"
+		},
+		"trg_d365_custpaymmodetable_to_dim_payment_mode_properties_pp_ax_custpaymmodetable_to_dim_payment_mode_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_custpaymmodetable_to_dim_payment_mode_properties_pp_ax_custpaymmodetable_to_dim_payment_mode_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_custpaymmodetable_to_dim_payment_mode_properties_pp_ax_custpaymmodetable_to_dim_payment_mode_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_custsettlement_to_fact_customer_settlements_properties_pp_ax_custsettlement_to_fact_customer_settlements_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_custsettlement_to_fact_customer_settlements_properties_pp_ax_custsettlement_to_fact_customer_settlements_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "CUSTSETTLEMENT"
+		},
+		"trg_d365_custsettlement_to_fact_customer_settlements_properties_pp_ax_custsettlement_to_fact_customer_settlements_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_custsettlement_to_fact_customer_settlements_properties_pp_ax_custsettlement_to_fact_customer_settlements_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "FACT_CUSTOMER_SETTLEMENTS"
+		},
+		"trg_d365_custsettlement_to_fact_customer_settlements_properties_pp_ax_custsettlement_to_fact_customer_settlements_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_custsettlement_to_fact_customer_settlements_properties_pp_ax_custsettlement_to_fact_customer_settlements_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_custsettlement_to_fact_customer_settlements_properties_pp_ax_custsettlement_to_fact_customer_settlements_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "CUSTSETTLEMENT"
+		},
+		"trg_d365_custsettlement_to_fact_customer_settlements_properties_pp_ax_custsettlement_to_fact_customer_settlements_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_dataarea_to_dim_legal_entity_properties_pp_ax_dataarea_to_dim_legal_entity_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "DATAAREA"
+		},
+		"trg_d365_dataarea_to_dim_legal_entity_properties_pp_ax_dataarea_to_dim_legal_entity_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_dataarea_to_dim_legal_entity_properties_pp_ax_dataarea_to_dim_legal_entity_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "DATAAREA"
+		},
+		"trg_d365_dataarea_to_dim_legal_entity_properties_pp_ax_dataarea_to_dim_legal_entity_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_dataarea_to_dim_legal_entity_properties_pp_ax_dataarea_to_dim_legal_entity_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_LEGAL_ENTITY"
+		},
+		"trg_d365_dataarea_to_dim_legal_entity_properties_pp_ax_dataarea_to_dim_legal_entity_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_dataarea_to_dim_legal_entity_properties_pp_ax_dataarea_to_dim_legal_entity_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_dataarea_to_dim_legal_entity_properties_pp_ax_dataarea_to_dim_legal_entity_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_dimattr_to_dim_default_dimension_properties_pp_ax_dimattr_to_dim_default_dimension_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_dimattr_to_dim_default_dimension_properties_pp_ax_dimattr_to_dim_default_dimension_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_DEFAULT_DIMENSION"
+		},
+		"trg_d365_dimattr_to_dim_default_dimension_properties_pp_ax_dimattr_to_dim_default_dimension_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "DEFAULTDIMENSION"
+		},
+		"trg_d365_dimattr_to_dim_default_dimension_properties_pp_ax_dimattr_to_dim_default_dimension_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_dimattr_to_dim_default_dimension_properties_pp_ax_dimattr_to_dim_default_dimension_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_dimattr_to_dim_default_dimension_properties_pp_ax_dimattr_to_dim_default_dimension_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "DIMENSIONATTRIBUTEVALUESETITEM"
+		},
+		"trg_d365_dimattr_to_dim_default_dimension_properties_pp_ax_dimattr_to_dim_default_dimension_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_dimattr_to_dim_default_dimension_properties_pp_ax_dimattr_to_dim_default_dimension_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_dirpartytable_to_dim_business_unit_properties_pp_ax_dirpartytable_to_dim_business_unit_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "DIRPARTYTABLE"
+		},
+		"trg_d365_dirpartytable_to_dim_business_unit_properties_pp_ax_dirpartytable_to_dim_business_unit_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_dirpartytable_to_dim_business_unit_properties_pp_ax_dirpartytable_to_dim_business_unit_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "DIRPARTYTABLE"
+		},
+		"trg_d365_dirpartytable_to_dim_business_unit_properties_pp_ax_dirpartytable_to_dim_business_unit_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_dirpartytable_to_dim_business_unit_properties_pp_ax_dirpartytable_to_dim_business_unit_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_BUSINESS_UNIT"
+		},
+		"trg_d365_dirpartytable_to_dim_business_unit_properties_pp_ax_dirpartytable_to_dim_business_unit_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_dirpartytable_to_dim_business_unit_properties_pp_ax_dirpartytable_to_dim_business_unit_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_dirpartytable_to_dim_business_unit_properties_pp_ax_dirpartytable_to_dim_business_unit_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_dlvmode_to_dim_delivery_mode_properties_pp_ax_dlvmode_to_dim_delivery_mode_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "DLVMODE"
+		},
+		"trg_d365_dlvmode_to_dim_delivery_mode_properties_pp_ax_dlvmode_to_dim_delivery_mode_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_dlvmode_to_dim_delivery_mode_properties_pp_ax_dlvmode_to_dim_delivery_mode_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "DLVMODE"
+		},
+		"trg_d365_dlvmode_to_dim_delivery_mode_properties_pp_ax_dlvmode_to_dim_delivery_mode_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_dlvmode_to_dim_delivery_mode_properties_pp_ax_dlvmode_to_dim_delivery_mode_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_DELIVERY_MODE"
+		},
+		"trg_d365_dlvmode_to_dim_delivery_mode_properties_pp_ax_dlvmode_to_dim_delivery_mode_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_dlvmode_to_dim_delivery_mode_properties_pp_ax_dlvmode_to_dim_delivery_mode_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_dlvmode_to_dim_delivery_mode_properties_pp_ax_dlvmode_to_dim_delivery_mode_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_dlvterm_to_dim_delivery_term_properties_pp_ax_dlvterm_to_dim_delivery_term_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "DLVTERM"
+		},
+		"trg_d365_dlvterm_to_dim_delivery_term_properties_pp_ax_dlvterm_to_dim_delivery_term_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_dlvterm_to_dim_delivery_term_properties_pp_ax_dlvterm_to_dim_delivery_term_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "DLVTERM"
+		},
+		"trg_d365_dlvterm_to_dim_delivery_term_properties_pp_ax_dlvterm_to_dim_delivery_term_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_dlvterm_to_dim_delivery_term_properties_pp_ax_dlvterm_to_dim_delivery_term_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_DELIVERY_TERM"
+		},
+		"trg_d365_dlvterm_to_dim_delivery_term_properties_pp_ax_dlvterm_to_dim_delivery_term_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_dlvterm_to_dim_delivery_term_properties_pp_ax_dlvterm_to_dim_delivery_term_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_dlvterm_to_dim_delivery_term_properties_pp_ax_dlvterm_to_dim_delivery_term_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_ecorescategory_to_dim_sales_procurement_category_properties_pp_ax_ecorescategory_to_dim_sales_procurement_category_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_ecorescategory_to_dim_sales_procurement_category_properties_pp_ax_ecorescategory_to_dim_sales_procurement_category_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_SALES_PROCUREMENT_CATEGORY"
+		},
+		"trg_d365_ecorescategory_to_dim_sales_procurement_category_properties_pp_ax_ecorescategory_to_dim_sales_procurement_category_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "ECORESCATEGORY"
+		},
+		"trg_d365_ecorescategory_to_dim_sales_procurement_category_properties_pp_ax_ecorescategory_to_dim_sales_procurement_category_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_ecorescategory_to_dim_sales_procurement_category_properties_pp_ax_ecorescategory_to_dim_sales_procurement_category_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_ecorescategory_to_dim_sales_procurement_category_properties_pp_ax_ecorescategory_to_dim_sales_procurement_category_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "ECORESCATEGORY"
+		},
+		"trg_d365_ecorescategory_to_dim_sales_procurement_category_properties_pp_ax_ecorescategory_to_dim_sales_procurement_category_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_ecorescategory_to_dim_sales_procurement_category_properties_pp_ax_ecorescategory_to_dim_sales_procurement_category_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_fiscalcalendarperiod_to_dim_financial_calendar_period_properties_pp_ax_fiscalcalendarperiod_to_dim_financial_calendar_period_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_fiscalcalendarperiod_to_dim_financial_calendar_period_properties_pp_ax_fiscalcalendarperiod_to_dim_financial_calendar_period_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_fiscalcalendarperiod_to_dim_financial_calendar_period_properties_pp_ax_fiscalcalendarperiod_to_dim_financial_calendar_period_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_fiscalcalendarperiod_to_dim_financial_calendar_period_properties_pp_ax_fiscalcalendarperiod_to_dim_financial_calendar_period_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "FISCALCALENDARPERIOD"
+		},
+		"trg_d365_fiscalcalendarperiod_to_dim_financial_calendar_period_properties_pp_ax_fiscalcalendarperiod_to_dim_financial_calendar_period_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_fiscalcalendarperiod_to_dim_financial_calendar_period_properties_pp_ax_fiscalcalendarperiod_to_dim_financial_calendar_period_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "FISCALCALENDARPERIOD"
+		},
+		"trg_d365_fiscalcalendarperiod_to_dim_financial_calendar_period_properties_pp_ax_fiscalcalendarperiod_to_dim_financial_calendar_period_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_fiscalcalendarperiod_to_dim_financial_calendar_period_properties_pp_ax_fiscalcalendarperiod_to_dim_financial_calendar_period_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_FINANCIAL_CALENDAR_PERIOD"
+		},
+		"trg_d365_generaljournalaccountentry_to_fact_general_ledger_properties_pp_ax_generaljournalaccountentry_to_fact_general_ledger_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_generaljournalaccountentry_to_fact_general_ledger_properties_pp_ax_generaljournalaccountentry_to_fact_general_ledger_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "FACT_GENERAL_LEDGER"
+		},
+		"trg_d365_generaljournalaccountentry_to_fact_general_ledger_properties_pp_ax_generaljournalaccountentry_to_fact_general_ledger_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "GENERALJOURNALACCOUNTENTRY"
+		},
+		"trg_d365_generaljournalaccountentry_to_fact_general_ledger_properties_pp_ax_generaljournalaccountentry_to_fact_general_ledger_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_generaljournalaccountentry_to_fact_general_ledger_properties_pp_ax_generaljournalaccountentry_to_fact_general_ledger_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_generaljournalaccountentry_to_fact_general_ledger_properties_pp_ax_generaljournalaccountentry_to_fact_general_ledger_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "GENERALJOURNALACCOUNTENTRY"
+		},
+		"trg_d365_generaljournalaccountentry_to_fact_general_ledger_properties_pp_ax_generaljournalaccountentry_to_fact_general_ledger_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_generaljournalaccountentry_to_fact_general_ledger_properties_pp_ax_generaljournalaccountentry_to_fact_general_ledger_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_hcmworker_to_dim_worker_properties_pp_ax_hcmworker_to_dim_worker_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_hcmworker_to_dim_worker_properties_pp_ax_hcmworker_to_dim_worker_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_WORKER"
+		},
+		"trg_d365_hcmworker_to_dim_worker_properties_pp_ax_hcmworker_to_dim_worker_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "HCMWORKER"
+		},
+		"trg_d365_hcmworker_to_dim_worker_properties_pp_ax_hcmworker_to_dim_worker_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_hcmworker_to_dim_worker_properties_pp_ax_hcmworker_to_dim_worker_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_hcmworker_to_dim_worker_properties_pp_ax_hcmworker_to_dim_worker_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "HCMWORKER"
+		},
+		"trg_d365_hcmworker_to_dim_worker_properties_pp_ax_hcmworker_to_dim_worker_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_hcmworker_to_dim_worker_properties_pp_ax_hcmworker_to_dim_worker_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_intrastattransactioncode_to_dim_intra_stat_transaction_code_properties_pp_ax_intrastattransactioncode_to_dim_intra_stat_transaction_code_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "INTRASTATTRANSACTIONCODE"
+		},
+		"trg_d365_intrastattransactioncode_to_dim_intra_stat_transaction_code_properties_pp_ax_intrastattransactioncode_to_dim_intra_stat_transaction_code_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_intrastattransactioncode_to_dim_intra_stat_transaction_code_properties_pp_ax_intrastattransactioncode_to_dim_intra_stat_transaction_code_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "INTRASTATTRANSACTIONCODE"
+		},
+		"trg_d365_intrastattransactioncode_to_dim_intra_stat_transaction_code_properties_pp_ax_intrastattransactioncode_to_dim_intra_stat_transaction_code_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_intrastattransactioncode_to_dim_intra_stat_transaction_code_properties_pp_ax_intrastattransactioncode_to_dim_intra_stat_transaction_code_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_INTRA_STAT_TRANSACTION_CODE"
+		},
+		"trg_d365_intrastattransactioncode_to_dim_intra_stat_transaction_code_properties_pp_ax_intrastattransactioncode_to_dim_intra_stat_transaction_code_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_intrastattransactioncode_to_dim_intra_stat_transaction_code_properties_pp_ax_intrastattransactioncode_to_dim_intra_stat_transaction_code_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_intrastattransactioncode_to_dim_intra_stat_transaction_code_properties_pp_ax_intrastattransactioncode_to_dim_intra_stat_transaction_code_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_INVENTORY"
+		},
+		"trg_d365_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "INVENTDIM"
+		},
+		"trg_d365_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "INVENTDIM"
+		},
+		"trg_d365_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_raw_arkieva_table_nm": {
+			"type": "string",
+			"defaultValue": "ARKIEVA_INVENTORY"
+		},
+		"trg_d365_inventitemgtin_to_dim_global_trade_item_number_properties_pp_ax_inventitemgtin_to_dim_global_trade_item_number_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_inventitemgtin_to_dim_global_trade_item_number_properties_pp_ax_inventitemgtin_to_dim_global_trade_item_number_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_GLOBAL_TRADE_ITEM_NUMBER"
+		},
+		"trg_d365_inventitemgtin_to_dim_global_trade_item_number_properties_pp_ax_inventitemgtin_to_dim_global_trade_item_number_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "INVENTITEMGTIN"
+		},
+		"trg_d365_inventitemgtin_to_dim_global_trade_item_number_properties_pp_ax_inventitemgtin_to_dim_global_trade_item_number_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_inventitemgtin_to_dim_global_trade_item_number_properties_pp_ax_inventitemgtin_to_dim_global_trade_item_number_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_inventitemgtin_to_dim_global_trade_item_number_properties_pp_ax_inventitemgtin_to_dim_global_trade_item_number_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "INVENTITEMGTIN"
+		},
+		"trg_d365_inventitemgtin_to_dim_global_trade_item_number_properties_pp_ax_inventitemgtin_to_dim_global_trade_item_number_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_inventitemgtin_to_dim_global_trade_item_number_properties_pp_ax_inventitemgtin_to_dim_global_trade_item_number_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_inventitemprice_to_dim_cost_properties_pp_ax_inventitemprice_to_dim_cost_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_inventitemprice_to_dim_cost_properties_pp_ax_inventitemprice_to_dim_cost_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_COST"
+		},
+		"trg_d365_inventitemprice_to_dim_cost_properties_pp_ax_inventitemprice_to_dim_cost_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "INVENTITEMPRICE"
+		},
+		"trg_d365_inventitemprice_to_dim_cost_properties_pp_ax_inventitemprice_to_dim_cost_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_inventitemprice_to_dim_cost_properties_pp_ax_inventitemprice_to_dim_cost_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_inventitemprice_to_dim_cost_properties_pp_ax_inventitemprice_to_dim_cost_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "INVENTITEMPRICE"
+		},
+		"trg_d365_inventitemprice_to_dim_cost_properties_pp_ax_inventitemprice_to_dim_cost_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_inventitemprice_to_dim_cost_properties_pp_ax_inventitemprice_to_dim_cost_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_inventjournalname_to_dim_inventory_journal_properties_pp_ax_inventjournalname_to_dim_inventory_journal_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_inventjournalname_to_dim_inventory_journal_properties_pp_ax_inventjournalname_to_dim_inventory_journal_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "INVENTJOURNALNAME"
+		},
+		"trg_d365_inventjournalname_to_dim_inventory_journal_properties_pp_ax_inventjournalname_to_dim_inventory_journal_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_inventjournalname_to_dim_inventory_journal_properties_pp_ax_inventjournalname_to_dim_inventory_journal_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_INVENTORY_JOURNAL"
+		},
+		"trg_d365_inventjournalname_to_dim_inventory_journal_properties_pp_ax_inventjournalname_to_dim_inventory_journal_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_inventjournalname_to_dim_inventory_journal_properties_pp_ax_inventjournalname_to_dim_inventory_journal_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_inventjournalname_to_dim_inventory_journal_properties_pp_ax_inventjournalname_to_dim_inventory_journal_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "INVENTJOURNALNAME"
+		},
+		"trg_d365_inventjournalname_to_dim_inventory_journal_properties_pp_ax_inventjournalname_to_dim_inventory_journal_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_inventjournaltrans_to_fact_inventory_journal_properties_pp_ax_inventjournaltrans_to_fact_inventory_journal_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_inventjournaltrans_to_fact_inventory_journal_properties_pp_ax_inventjournaltrans_to_fact_inventory_journal_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "INVENTJOURNALTRANS"
+		},
+		"trg_d365_inventjournaltrans_to_fact_inventory_journal_properties_pp_ax_inventjournaltrans_to_fact_inventory_journal_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_inventjournaltrans_to_fact_inventory_journal_properties_pp_ax_inventjournaltrans_to_fact_inventory_journal_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "FACT_INVENTORY_JOURNAL"
+		},
+		"trg_d365_inventjournaltrans_to_fact_inventory_journal_properties_pp_ax_inventjournaltrans_to_fact_inventory_journal_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_inventjournaltrans_to_fact_inventory_journal_properties_pp_ax_inventjournaltrans_to_fact_inventory_journal_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_inventjournaltrans_to_fact_inventory_journal_properties_pp_ax_inventjournaltrans_to_fact_inventory_journal_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "INVENTJOURNALTRANS"
+		},
+		"trg_d365_inventjournaltrans_to_fact_inventory_journal_properties_pp_ax_inventjournaltrans_to_fact_inventory_journal_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_inventlocation_to_dim_warehouse_properties_pp_ax_inventlocation_to_dim_warehouse_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_inventlocation_to_dim_warehouse_properties_pp_ax_inventlocation_to_dim_warehouse_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_WAREHOUSE"
+		},
+		"trg_d365_inventlocation_to_dim_warehouse_properties_pp_ax_inventlocation_to_dim_warehouse_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "INVENTLOCATION"
+		},
+		"trg_d365_inventlocation_to_dim_warehouse_properties_pp_ax_inventlocation_to_dim_warehouse_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_inventlocation_to_dim_warehouse_properties_pp_ax_inventlocation_to_dim_warehouse_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_inventlocation_to_dim_warehouse_properties_pp_ax_inventlocation_to_dim_warehouse_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "INVENTLOCATION"
+		},
+		"trg_d365_inventlocation_to_dim_warehouse_properties_pp_ax_inventlocation_to_dim_warehouse_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		},
+		"trg_d365_inventlocation_to_dim_warehouse_properties_pp_ax_inventlocation_to_dim_warehouse_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_inventsite_to_dim_site_properties_pp_ax_inventsite_to_dim_site_parameters_p_src_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_inventsite_to_dim_site_properties_pp_ax_inventsite_to_dim_site_parameters_p_tgt_curate_table_nm": {
+			"type": "string",
+			"defaultValue": "DIM_SITE"
+		},
+		"trg_d365_inventsite_to_dim_site_properties_pp_ax_inventsite_to_dim_site_parameters_p_tgt_raw_table_nm": {
+			"type": "string",
+			"defaultValue": "INVENTSITE"
+		},
+		"trg_d365_inventsite_to_dim_site_properties_pp_ax_inventsite_to_dim_site_parameters_p_tgt_raw_schema_nm": {
+			"type": "string",
+			"defaultValue": "D365"
+		},
+		"trg_d365_inventsite_to_dim_site_properties_pp_ax_inventsite_to_dim_site_parameters_p_tgt_curate_schema_nm": {
+			"type": "string",
+			"defaultValue": "GLOBAL"
+		},
+		"trg_d365_inventsite_to_dim_site_properties_pp_ax_inventsite_to_dim_site_parameters_p_src_table_nm": {
+			"type": "string",
+			"defaultValue": "INVENTSITE"
+		},
+		"trg_d365_inventsite_to_dim_site_properties_pp_ax_inventsite_to_dim_site_parameters_p_src_schema_nm": {
+			"type": "string",
+			"defaultValue": "dbo"
+		},
+		"trg_d365_inventsite_to_dim_site_properties_pp_ax_inventsite_to_dim_site_parameters_p_src_code": {
+			"type": "string",
+			"defaultValue": "3"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_custledger_to_dim_customer_posting_profile')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_custledger_to_dim_customer_posting_profile",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_nm": "[parameters('trg_d365_custledger_to_dim_customer_posting_profile_properties_pp_ax_custledger_to_dim_customer_posting_profile_parameters_p_src_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_custledger_to_dim_customer_posting_profile_properties_pp_ax_custledger_to_dim_customer_posting_profile_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_custledger_to_dim_customer_posting_profile_properties_pp_ax_custledger_to_dim_customer_posting_profile_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_custledger_to_dim_customer_posting_profile_properties_pp_ax_custledger_to_dim_customer_posting_profile_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_custledger_to_dim_customer_posting_profile_properties_pp_ax_custledger_to_dim_customer_posting_profile_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_schema_nm": "[parameters('trg_d365_custledger_to_dim_customer_posting_profile_properties_pp_ax_custledger_to_dim_customer_posting_profile_parameters_p_src_schema_nm')]",
+							"p_src_table_nm": "[parameters('trg_d365_custledger_to_dim_customer_posting_profile_properties_pp_ax_custledger_to_dim_customer_posting_profile_parameters_p_src_table_nm')]",
+							"p_src_code": "[parameters('trg_d365_custledger_to_dim_customer_posting_profile_properties_pp_ax_custledger_to_dim_customer_posting_profile_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-09-24T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_custpaymmodetable_to_dim_payment_mode')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_custpaymmodetable_to_dim_payment_mode",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_table_nm": "[parameters('trg_d365_custpaymmodetable_to_dim_payment_mode_properties_pp_ax_custpaymmodetable_to_dim_payment_mode_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_d365_custpaymmodetable_to_dim_payment_mode_properties_pp_ax_custpaymmodetable_to_dim_payment_mode_parameters_p_src_schema_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_custpaymmodetable_to_dim_payment_mode_properties_pp_ax_custpaymmodetable_to_dim_payment_mode_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_custpaymmodetable_to_dim_payment_mode_properties_pp_ax_custpaymmodetable_to_dim_payment_mode_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_custpaymmodetable_to_dim_payment_mode_properties_pp_ax_custpaymmodetable_to_dim_payment_mode_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_custpaymmodetable_to_dim_payment_mode_properties_pp_ax_custpaymmodetable_to_dim_payment_mode_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_nm": "[parameters('trg_d365_custpaymmodetable_to_dim_payment_mode_properties_pp_ax_custpaymmodetable_to_dim_payment_mode_parameters_p_src_nm')]",
+							"p_src_code": "[parameters('trg_d365_custpaymmodetable_to_dim_payment_mode_properties_pp_ax_custpaymmodetable_to_dim_payment_mode_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-07-12T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_custsettlement_to_fact_customer_settlements')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_custsettlement_to_fact_customer_settlements",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_nm": "[parameters('trg_d365_custsettlement_to_fact_customer_settlements_properties_pp_ax_custsettlement_to_fact_customer_settlements_parameters_p_src_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_custsettlement_to_fact_customer_settlements_properties_pp_ax_custsettlement_to_fact_customer_settlements_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_custsettlement_to_fact_customer_settlements_properties_pp_ax_custsettlement_to_fact_customer_settlements_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_custsettlement_to_fact_customer_settlements_properties_pp_ax_custsettlement_to_fact_customer_settlements_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_custsettlement_to_fact_customer_settlements_properties_pp_ax_custsettlement_to_fact_customer_settlements_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_schema_nm": "[parameters('trg_d365_custsettlement_to_fact_customer_settlements_properties_pp_ax_custsettlement_to_fact_customer_settlements_parameters_p_src_schema_nm')]",
+							"p_src_table_nm": "[parameters('trg_d365_custsettlement_to_fact_customer_settlements_properties_pp_ax_custsettlement_to_fact_customer_settlements_parameters_p_src_table_nm')]",
+							"p_src_code": "[parameters('trg_d365_custsettlement_to_fact_customer_settlements_properties_pp_ax_custsettlement_to_fact_customer_settlements_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-09-24T06:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_dataarea_to_dim_legal_entity')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_dataarea_to_dim_legal_entity",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_table_nm": "[parameters('trg_d365_dataarea_to_dim_legal_entity_properties_pp_ax_dataarea_to_dim_legal_entity_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_d365_dataarea_to_dim_legal_entity_properties_pp_ax_dataarea_to_dim_legal_entity_parameters_p_src_schema_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_dataarea_to_dim_legal_entity_properties_pp_ax_dataarea_to_dim_legal_entity_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_dataarea_to_dim_legal_entity_properties_pp_ax_dataarea_to_dim_legal_entity_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_dataarea_to_dim_legal_entity_properties_pp_ax_dataarea_to_dim_legal_entity_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_dataarea_to_dim_legal_entity_properties_pp_ax_dataarea_to_dim_legal_entity_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_nm": "[parameters('trg_d365_dataarea_to_dim_legal_entity_properties_pp_ax_dataarea_to_dim_legal_entity_parameters_p_src_nm')]",
+							"p_src_code": "[parameters('trg_d365_dataarea_to_dim_legal_entity_properties_pp_ax_dataarea_to_dim_legal_entity_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-06-07T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_dimattr_to_dim_default_dimension')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_dimattr_to_dim_default_dimension",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_nm": "[parameters('trg_d365_dimattr_to_dim_default_dimension_properties_pp_ax_dimattr_to_dim_default_dimension_parameters_p_src_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_dimattr_to_dim_default_dimension_properties_pp_ax_dimattr_to_dim_default_dimension_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_dimattr_to_dim_default_dimension_properties_pp_ax_dimattr_to_dim_default_dimension_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_dimattr_to_dim_default_dimension_properties_pp_ax_dimattr_to_dim_default_dimension_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_dimattr_to_dim_default_dimension_properties_pp_ax_dimattr_to_dim_default_dimension_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_table_nm": "[parameters('trg_d365_dimattr_to_dim_default_dimension_properties_pp_ax_dimattr_to_dim_default_dimension_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_d365_dimattr_to_dim_default_dimension_properties_pp_ax_dimattr_to_dim_default_dimension_parameters_p_src_schema_nm')]",
+							"p_src_code": "[parameters('trg_d365_dimattr_to_dim_default_dimension_properties_pp_ax_dimattr_to_dim_default_dimension_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-06-07T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_dirpartytable_to_dim_business_unit')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_dirpartytable_to_dim_business_unit",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_table_nm": "[parameters('trg_d365_dirpartytable_to_dim_business_unit_properties_pp_ax_dirpartytable_to_dim_business_unit_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_d365_dirpartytable_to_dim_business_unit_properties_pp_ax_dirpartytable_to_dim_business_unit_parameters_p_src_schema_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_dirpartytable_to_dim_business_unit_properties_pp_ax_dirpartytable_to_dim_business_unit_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_dirpartytable_to_dim_business_unit_properties_pp_ax_dirpartytable_to_dim_business_unit_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_dirpartytable_to_dim_business_unit_properties_pp_ax_dirpartytable_to_dim_business_unit_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_dirpartytable_to_dim_business_unit_properties_pp_ax_dirpartytable_to_dim_business_unit_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_nm": "[parameters('trg_d365_dirpartytable_to_dim_business_unit_properties_pp_ax_dirpartytable_to_dim_business_unit_parameters_p_src_nm')]",
+							"p_src_code": "[parameters('trg_d365_dirpartytable_to_dim_business_unit_properties_pp_ax_dirpartytable_to_dim_business_unit_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-06-07T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_dlvmode_to_dim_delivery_mode')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_dlvmode_to_dim_delivery_mode",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_table_nm": "[parameters('trg_d365_dlvmode_to_dim_delivery_mode_properties_pp_ax_dlvmode_to_dim_delivery_mode_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_d365_dlvmode_to_dim_delivery_mode_properties_pp_ax_dlvmode_to_dim_delivery_mode_parameters_p_src_schema_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_dlvmode_to_dim_delivery_mode_properties_pp_ax_dlvmode_to_dim_delivery_mode_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_dlvmode_to_dim_delivery_mode_properties_pp_ax_dlvmode_to_dim_delivery_mode_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_dlvmode_to_dim_delivery_mode_properties_pp_ax_dlvmode_to_dim_delivery_mode_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_dlvmode_to_dim_delivery_mode_properties_pp_ax_dlvmode_to_dim_delivery_mode_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_nm": "[parameters('trg_d365_dlvmode_to_dim_delivery_mode_properties_pp_ax_dlvmode_to_dim_delivery_mode_parameters_p_src_nm')]",
+							"p_src_code": "[parameters('trg_d365_dlvmode_to_dim_delivery_mode_properties_pp_ax_dlvmode_to_dim_delivery_mode_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-06-07T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_dlvterm_to_dim_delivery_term')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_dlvterm_to_dim_delivery_term",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_table_nm": "[parameters('trg_d365_dlvterm_to_dim_delivery_term_properties_pp_ax_dlvterm_to_dim_delivery_term_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_d365_dlvterm_to_dim_delivery_term_properties_pp_ax_dlvterm_to_dim_delivery_term_parameters_p_src_schema_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_dlvterm_to_dim_delivery_term_properties_pp_ax_dlvterm_to_dim_delivery_term_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_dlvterm_to_dim_delivery_term_properties_pp_ax_dlvterm_to_dim_delivery_term_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_dlvterm_to_dim_delivery_term_properties_pp_ax_dlvterm_to_dim_delivery_term_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_dlvterm_to_dim_delivery_term_properties_pp_ax_dlvterm_to_dim_delivery_term_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_nm": "[parameters('trg_d365_dlvterm_to_dim_delivery_term_properties_pp_ax_dlvterm_to_dim_delivery_term_parameters_p_src_nm')]",
+							"p_src_code": "[parameters('trg_d365_dlvterm_to_dim_delivery_term_properties_pp_ax_dlvterm_to_dim_delivery_term_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-06-07T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_ecorescategory_to_dim_sales_procurement_category')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_ecorescategory_to_dim_sales_procurement_category",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_nm": "[parameters('trg_d365_ecorescategory_to_dim_sales_procurement_category_properties_pp_ax_ecorescategory_to_dim_sales_procurement_category_parameters_p_src_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_ecorescategory_to_dim_sales_procurement_category_properties_pp_ax_ecorescategory_to_dim_sales_procurement_category_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_ecorescategory_to_dim_sales_procurement_category_properties_pp_ax_ecorescategory_to_dim_sales_procurement_category_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_ecorescategory_to_dim_sales_procurement_category_properties_pp_ax_ecorescategory_to_dim_sales_procurement_category_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_ecorescategory_to_dim_sales_procurement_category_properties_pp_ax_ecorescategory_to_dim_sales_procurement_category_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_table_nm": "[parameters('trg_d365_ecorescategory_to_dim_sales_procurement_category_properties_pp_ax_ecorescategory_to_dim_sales_procurement_category_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_d365_ecorescategory_to_dim_sales_procurement_category_properties_pp_ax_ecorescategory_to_dim_sales_procurement_category_parameters_p_src_schema_nm')]",
+							"p_src_code": "[parameters('trg_d365_ecorescategory_to_dim_sales_procurement_category_properties_pp_ax_ecorescategory_to_dim_sales_procurement_category_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-07-10T10:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_fiscalcalendarperiod_to_dim_financial_calendar_period')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_fiscalcalendarperiod_to_dim_financial_calendar_period",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_nm": "[parameters('trg_d365_fiscalcalendarperiod_to_dim_financial_calendar_period_properties_pp_ax_fiscalcalendarperiod_to_dim_financial_calendar_period_parameters_p_src_nm')]",
+							"p_src_code": "[parameters('trg_d365_fiscalcalendarperiod_to_dim_financial_calendar_period_properties_pp_ax_fiscalcalendarperiod_to_dim_financial_calendar_period_parameters_p_src_code')]",
+							"p_src_schema_nm": "[parameters('trg_d365_fiscalcalendarperiod_to_dim_financial_calendar_period_properties_pp_ax_fiscalcalendarperiod_to_dim_financial_calendar_period_parameters_p_src_schema_nm')]",
+							"p_src_table_nm": "[parameters('trg_d365_fiscalcalendarperiod_to_dim_financial_calendar_period_properties_pp_ax_fiscalcalendarperiod_to_dim_financial_calendar_period_parameters_p_src_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_fiscalcalendarperiod_to_dim_financial_calendar_period_properties_pp_ax_fiscalcalendarperiod_to_dim_financial_calendar_period_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_fiscalcalendarperiod_to_dim_financial_calendar_period_properties_pp_ax_fiscalcalendarperiod_to_dim_financial_calendar_period_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_fiscalcalendarperiod_to_dim_financial_calendar_period_properties_pp_ax_fiscalcalendarperiod_to_dim_financial_calendar_period_parameters_p_tgt_curate_schema_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_fiscalcalendarperiod_to_dim_financial_calendar_period_properties_pp_ax_fiscalcalendarperiod_to_dim_financial_calendar_period_parameters_p_tgt_curate_table_nm')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-09-24T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_generaljournalaccountentry_to_fact_general_ledger')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_generaljournalaccountentry_to_fact_general_ledger",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_nm": "[parameters('trg_d365_generaljournalaccountentry_to_fact_general_ledger_properties_pp_ax_generaljournalaccountentry_to_fact_general_ledger_parameters_p_src_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_generaljournalaccountentry_to_fact_general_ledger_properties_pp_ax_generaljournalaccountentry_to_fact_general_ledger_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_generaljournalaccountentry_to_fact_general_ledger_properties_pp_ax_generaljournalaccountentry_to_fact_general_ledger_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_generaljournalaccountentry_to_fact_general_ledger_properties_pp_ax_generaljournalaccountentry_to_fact_general_ledger_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_generaljournalaccountentry_to_fact_general_ledger_properties_pp_ax_generaljournalaccountentry_to_fact_general_ledger_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_table_nm": "[parameters('trg_d365_generaljournalaccountentry_to_fact_general_ledger_properties_pp_ax_generaljournalaccountentry_to_fact_general_ledger_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_d365_generaljournalaccountentry_to_fact_general_ledger_properties_pp_ax_generaljournalaccountentry_to_fact_general_ledger_parameters_p_src_schema_nm')]",
+							"p_src_code": "[parameters('trg_d365_generaljournalaccountentry_to_fact_general_ledger_properties_pp_ax_generaljournalaccountentry_to_fact_general_ledger_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-09-03T06:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_hcmworker_to_dim_worker')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_hcmworker_to_dim_worker",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_nm": "[parameters('trg_d365_hcmworker_to_dim_worker_properties_pp_ax_hcmworker_to_dim_worker_parameters_p_src_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_hcmworker_to_dim_worker_properties_pp_ax_hcmworker_to_dim_worker_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_hcmworker_to_dim_worker_properties_pp_ax_hcmworker_to_dim_worker_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_hcmworker_to_dim_worker_properties_pp_ax_hcmworker_to_dim_worker_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_hcmworker_to_dim_worker_properties_pp_ax_hcmworker_to_dim_worker_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_table_nm": "[parameters('trg_d365_hcmworker_to_dim_worker_properties_pp_ax_hcmworker_to_dim_worker_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_d365_hcmworker_to_dim_worker_properties_pp_ax_hcmworker_to_dim_worker_parameters_p_src_schema_nm')]",
+							"p_src_code": "[parameters('trg_d365_hcmworker_to_dim_worker_properties_pp_ax_hcmworker_to_dim_worker_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-06-07T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_intrastattransactioncode_to_dim_intra_stat_transaction_code')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_intrastattransactioncode_to_dim_intra_stat_transaction_code",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_table_nm": "[parameters('trg_d365_intrastattransactioncode_to_dim_intra_stat_transaction_code_properties_pp_ax_intrastattransactioncode_to_dim_intra_stat_transaction_code_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_d365_intrastattransactioncode_to_dim_intra_stat_transaction_code_properties_pp_ax_intrastattransactioncode_to_dim_intra_stat_transaction_code_parameters_p_src_schema_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_intrastattransactioncode_to_dim_intra_stat_transaction_code_properties_pp_ax_intrastattransactioncode_to_dim_intra_stat_transaction_code_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_intrastattransactioncode_to_dim_intra_stat_transaction_code_properties_pp_ax_intrastattransactioncode_to_dim_intra_stat_transaction_code_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_intrastattransactioncode_to_dim_intra_stat_transaction_code_properties_pp_ax_intrastattransactioncode_to_dim_intra_stat_transaction_code_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_intrastattransactioncode_to_dim_intra_stat_transaction_code_properties_pp_ax_intrastattransactioncode_to_dim_intra_stat_transaction_code_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_nm": "[parameters('trg_d365_intrastattransactioncode_to_dim_intra_stat_transaction_code_properties_pp_ax_intrastattransactioncode_to_dim_intra_stat_transaction_code_parameters_p_src_nm')]",
+							"p_src_code": "[parameters('trg_d365_intrastattransactioncode_to_dim_intra_stat_transaction_code_properties_pp_ax_intrastattransactioncode_to_dim_intra_stat_transaction_code_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-06-28T10:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_inventdim_to_dim_inventory')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_inventdim_to_dim_inventory",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_nm": "[parameters('trg_d365_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_src_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_table_nm": "[parameters('trg_d365_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_d365_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_src_schema_nm')]",
+							"p_src_code": "[parameters('trg_d365_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_src_code')]",
+							"p_tgt_raw_arkieva_table_nm": "[parameters('trg_d365_inventdim_to_dim_inventory_properties_pp_ax_inventdim_to_dim_inventory_parameters_p_tgt_raw_arkieva_table_nm')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-06-07T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_inventitemgtin_to_dim_global_trade_item_number')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_inventitemgtin_to_dim_global_trade_item_number",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_nm": "[parameters('trg_d365_inventitemgtin_to_dim_global_trade_item_number_properties_pp_ax_inventitemgtin_to_dim_global_trade_item_number_parameters_p_src_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_inventitemgtin_to_dim_global_trade_item_number_properties_pp_ax_inventitemgtin_to_dim_global_trade_item_number_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_inventitemgtin_to_dim_global_trade_item_number_properties_pp_ax_inventitemgtin_to_dim_global_trade_item_number_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_inventitemgtin_to_dim_global_trade_item_number_properties_pp_ax_inventitemgtin_to_dim_global_trade_item_number_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_inventitemgtin_to_dim_global_trade_item_number_properties_pp_ax_inventitemgtin_to_dim_global_trade_item_number_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_table_nm": "[parameters('trg_d365_inventitemgtin_to_dim_global_trade_item_number_properties_pp_ax_inventitemgtin_to_dim_global_trade_item_number_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_d365_inventitemgtin_to_dim_global_trade_item_number_properties_pp_ax_inventitemgtin_to_dim_global_trade_item_number_parameters_p_src_schema_nm')]",
+							"p_src_code": "[parameters('trg_d365_inventitemgtin_to_dim_global_trade_item_number_properties_pp_ax_inventitemgtin_to_dim_global_trade_item_number_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-06-28T10:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_inventitemprice_to_dim_cost')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_inventitemprice_to_dim_cost",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_nm": "[parameters('trg_d365_inventitemprice_to_dim_cost_properties_pp_ax_inventitemprice_to_dim_cost_parameters_p_src_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_inventitemprice_to_dim_cost_properties_pp_ax_inventitemprice_to_dim_cost_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_inventitemprice_to_dim_cost_properties_pp_ax_inventitemprice_to_dim_cost_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_inventitemprice_to_dim_cost_properties_pp_ax_inventitemprice_to_dim_cost_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_inventitemprice_to_dim_cost_properties_pp_ax_inventitemprice_to_dim_cost_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_table_nm": "[parameters('trg_d365_inventitemprice_to_dim_cost_properties_pp_ax_inventitemprice_to_dim_cost_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_d365_inventitemprice_to_dim_cost_properties_pp_ax_inventitemprice_to_dim_cost_parameters_p_src_schema_nm')]",
+							"p_src_code": "[parameters('trg_d365_inventitemprice_to_dim_cost_properties_pp_ax_inventitemprice_to_dim_cost_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-07-12T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_inventjournalname_to_dim_inventory_journal')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_inventjournalname_to_dim_inventory_journal",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_nm": "[parameters('trg_d365_inventjournalname_to_dim_inventory_journal_properties_pp_ax_inventjournalname_to_dim_inventory_journal_parameters_p_src_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_inventjournalname_to_dim_inventory_journal_properties_pp_ax_inventjournalname_to_dim_inventory_journal_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_inventjournalname_to_dim_inventory_journal_properties_pp_ax_inventjournalname_to_dim_inventory_journal_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_inventjournalname_to_dim_inventory_journal_properties_pp_ax_inventjournalname_to_dim_inventory_journal_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_inventjournalname_to_dim_inventory_journal_properties_pp_ax_inventjournalname_to_dim_inventory_journal_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_schema_nm": "[parameters('trg_d365_inventjournalname_to_dim_inventory_journal_properties_pp_ax_inventjournalname_to_dim_inventory_journal_parameters_p_src_schema_nm')]",
+							"p_src_table_nm": "[parameters('trg_d365_inventjournalname_to_dim_inventory_journal_properties_pp_ax_inventjournalname_to_dim_inventory_journal_parameters_p_src_table_nm')]",
+							"p_src_code": "[parameters('trg_d365_inventjournalname_to_dim_inventory_journal_properties_pp_ax_inventjournalname_to_dim_inventory_journal_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-07-16T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_inventjournaltrans_to_fact_inventory_journal')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_inventjournaltrans_to_fact_inventory_journal",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_nm": "[parameters('trg_d365_inventjournaltrans_to_fact_inventory_journal_properties_pp_ax_inventjournaltrans_to_fact_inventory_journal_parameters_p_src_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_inventjournaltrans_to_fact_inventory_journal_properties_pp_ax_inventjournaltrans_to_fact_inventory_journal_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_inventjournaltrans_to_fact_inventory_journal_properties_pp_ax_inventjournaltrans_to_fact_inventory_journal_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_inventjournaltrans_to_fact_inventory_journal_properties_pp_ax_inventjournaltrans_to_fact_inventory_journal_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_inventjournaltrans_to_fact_inventory_journal_properties_pp_ax_inventjournaltrans_to_fact_inventory_journal_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_schema_nm": "[parameters('trg_d365_inventjournaltrans_to_fact_inventory_journal_properties_pp_ax_inventjournaltrans_to_fact_inventory_journal_parameters_p_src_schema_nm')]",
+							"p_src_table_nm": "[parameters('trg_d365_inventjournaltrans_to_fact_inventory_journal_properties_pp_ax_inventjournaltrans_to_fact_inventory_journal_parameters_p_src_table_nm')]",
+							"p_src_code": "[parameters('trg_d365_inventjournaltrans_to_fact_inventory_journal_properties_pp_ax_inventjournaltrans_to_fact_inventory_journal_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-09-17T06:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_inventlocation_to_dim_warehouse')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_inventlocation_to_dim_warehouse",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_nm": "[parameters('trg_d365_inventlocation_to_dim_warehouse_properties_pp_ax_inventlocation_to_dim_warehouse_parameters_p_src_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_inventlocation_to_dim_warehouse_properties_pp_ax_inventlocation_to_dim_warehouse_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_inventlocation_to_dim_warehouse_properties_pp_ax_inventlocation_to_dim_warehouse_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_inventlocation_to_dim_warehouse_properties_pp_ax_inventlocation_to_dim_warehouse_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_inventlocation_to_dim_warehouse_properties_pp_ax_inventlocation_to_dim_warehouse_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_table_nm": "[parameters('trg_d365_inventlocation_to_dim_warehouse_properties_pp_ax_inventlocation_to_dim_warehouse_parameters_p_src_table_nm')]",
+							"p_src_code": "[parameters('trg_d365_inventlocation_to_dim_warehouse_properties_pp_ax_inventlocation_to_dim_warehouse_parameters_p_src_code')]",
+							"p_src_schema_nm": "[parameters('trg_d365_inventlocation_to_dim_warehouse_properties_pp_ax_inventlocation_to_dim_warehouse_parameters_p_src_schema_nm')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-06-07T06:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trg_d365_inventsite_to_dim_site')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "pp_ax_inventsite_to_dim_site",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"p_src_nm": "[parameters('trg_d365_inventsite_to_dim_site_properties_pp_ax_inventsite_to_dim_site_parameters_p_src_nm')]",
+							"p_tgt_curate_table_nm": "[parameters('trg_d365_inventsite_to_dim_site_properties_pp_ax_inventsite_to_dim_site_parameters_p_tgt_curate_table_nm')]",
+							"p_tgt_raw_table_nm": "[parameters('trg_d365_inventsite_to_dim_site_properties_pp_ax_inventsite_to_dim_site_parameters_p_tgt_raw_table_nm')]",
+							"p_tgt_raw_schema_nm": "[parameters('trg_d365_inventsite_to_dim_site_properties_pp_ax_inventsite_to_dim_site_parameters_p_tgt_raw_schema_nm')]",
+							"p_tgt_curate_schema_nm": "[parameters('trg_d365_inventsite_to_dim_site_properties_pp_ax_inventsite_to_dim_site_parameters_p_tgt_curate_schema_nm')]",
+							"p_src_table_nm": "[parameters('trg_d365_inventsite_to_dim_site_properties_pp_ax_inventsite_to_dim_site_parameters_p_src_table_nm')]",
+							"p_src_schema_nm": "[parameters('trg_d365_inventsite_to_dim_site_properties_pp_ax_inventsite_to_dim_site_parameters_p_src_schema_nm')]",
+							"p_src_code": "[parameters('trg_d365_inventsite_to_dim_site_properties_pp_ax_inventsite_to_dim_site_parameters_p_src_code')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Day",
+						"interval": 1,
+						"startTime": "2024-06-07T05:00:00",
+						"timeZone": "Eastern Standard Time"
+					}
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}

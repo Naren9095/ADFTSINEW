@@ -1,0 +1,358 @@
+{
+	"name": "pp_sql_athena_rebates",
+	"properties": {
+		"activities": [
+			{
+				"name": "SalesERP",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SnowflakeV2Source",
+						"query": "Select CUSTOMERID,\n\tDEALID,\n\tPRICINGDATE,\n\tITEMSIZEID,\n\tITEMID,\n\tSIZEID,\n\tCT_ITEMTYPE,\n\tFLOORSAMPLE_FLAG,\n\tORDERTYPE,\n\tPERIODID,\n\tUNITS,\n\tcast(SALES as decimal(11,4)) as SALES,\n\tcast(STMLO as decimal(11,4)) as STMLO,\n\tcast(AV as decimal(11,4)) as AV,\n\tcast(CM as decimal(11,4)) as CM,\n\tcast(CO as decimal(11,4)) as CO,\n\tcast(FS as decimal(11,4)) as FS,\n\tcast(OB as decimal(11,4)) as OB,\n\tcast(PM as decimal(11,4)) as PM,\n\tcast(PO as decimal(11,4)) as PO,\n\tcast(PP as decimal(11,4)) as PP,\n\tcast(RA as decimal(11,4)) as RA,\n\tcast(VR as decimal(11,4)) as VR,\n\tcast(RETURNSEXP as decimal(11,4)) as RETURNSEXP\nFROM GLOBAL.v_athena_saleserp",
+						"exportSettings": {
+							"type": "SnowflakeExportCopyCommand"
+						}
+					},
+					"sink": {
+						"type": "SqlServerSink",
+						"preCopyScript": {
+							"value": "@concat('delete from ',pipeline().parameters.p_tgt_schema_nm, '.',pipeline().parameters.p_tgt_table_nm,';')",
+							"type": "Expression"
+						},
+						"writeBehavior": "insert",
+						"sqlWriterUseTableLock": false
+					},
+					"enableStaging": true,
+					"stagingSettings": {
+						"linkedServiceName": {
+							"referenceName": "ls_blob_storage",
+							"type": "LinkedServiceReference"
+						},
+						"path": {
+							"value": "@pipeline().globalParameters.rootDir",
+							"type": "Expression"
+						},
+						"enableCompression": true
+					},
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "CUSTOMERID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ReportParentID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "DEALID",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "DealID",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "PRICINGDATE",
+									"type": "DateTime"
+								},
+								"sink": {
+									"name": "PricingDate",
+									"type": "DateTime"
+								}
+							},
+							{
+								"source": {
+									"name": "ITEMSIZEID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ItemSizeID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "ITEMID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ItemID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "SIZEID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "SizeID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "CT_ITEMTYPE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "ct_ItemType",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "FLOORSAMPLE_FLAG",
+									"type": "Boolean"
+								},
+								"sink": {
+									"name": "FloorSample_Flag",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "ORDERTYPE",
+									"type": "String"
+								},
+								"sink": {
+									"name": "OrderType",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "PERIODID",
+									"type": "String"
+								},
+								"sink": {
+									"name": "PeriodID",
+									"type": "String"
+								}
+							},
+							{
+								"source": {
+									"name": "UNITS",
+									"type": "Int64"
+								},
+								"sink": {
+									"name": "Units",
+									"type": "Int32"
+								}
+							},
+							{
+								"source": {
+									"name": "SALES",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "Sales",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "STMLO",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "STMLO",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "AV",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "AV",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "CM",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "CM",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "CO",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "CO",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "FS",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "FS",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "OB",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "OB",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "PM",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "PM",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "PO",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "PO",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "PP",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "PP",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "RA",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "RA",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "VR",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "VR",
+									"type": "Decimal"
+								}
+							},
+							{
+								"source": {
+									"name": "RETURNSEXP",
+									"type": "Decimal"
+								},
+								"sink": {
+									"name": "ReturnsExp",
+									"type": "Decimal"
+								}
+							}
+						]
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_tgt_table_name": {
+								"value": "@pipeline().parameters.p_src_table_nm",
+								"type": "Expression"
+							},
+							"p_tgt_schema_name": {
+								"value": "@pipeline().parameters.p_src_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_DbName": {
+								"value": "@pipeline().globalParameters.snow_publishDB",
+								"type": "Expression"
+							},
+							"p_ls_Env": {
+								"value": "@pipeline().globalParameters.environment",
+								"type": "Expression"
+							}
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_sql_server",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_src_table_name": "SalesERP",
+							"p_src_schema_name": "stg",
+							"p_ls_serverName": {
+								"value": "@pipeline().globalParameters.athena_sql_serverName",
+								"type": "Expression"
+							},
+							"p_ls_dbName": {
+								"value": "@pipeline().globalParameters.athena_sql_dbName",
+								"type": "Expression"
+							},
+							"p_ls_sqlUsername": "@pipeline().globalParameters.sql_userName",
+							"p_ls_sqlPassword": "@pipeline().globalParameters.sql_password"
+						}
+					}
+				]
+			}
+		],
+		"parameters": {
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "V_ATHENA_SALESERP"
+			},
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "GLOBAL"
+			},
+			"p_tgt_schema_nm": {
+				"type": "string",
+				"defaultValue": "stg"
+			},
+			"p_tgt_table_nm": {
+				"type": "string",
+				"defaultValue": "SalesERP"
+			}
+		},
+		"annotations": []
+	}
+}

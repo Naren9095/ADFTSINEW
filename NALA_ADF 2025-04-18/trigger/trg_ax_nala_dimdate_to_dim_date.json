@@ -1,0 +1,35 @@
+{
+	"name": "trg_ax_nala_dimdate_to_dim_date",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "pp_ax_dimdate_to_dim_date",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"p_tgt_raw_table_nm": "DATE_CALENDAR",
+					"p_tgt_raw_schema_nm": "GLOBAL",
+					"p_src_directory": "business_files",
+					"p_src_file_nm": "DimDate_SourceForMDW.xlsx",
+					"p_src_nm": "DATE_EXCEL",
+					"p_tgt_curate_table_nm": "DIM_DATE",
+					"p_tgt_curate_schema_nm": "GLOBAL",
+					"p_sheet_nm": "Sheet1",
+					"p_src_code": "1"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2024-06-07T05:00:00",
+				"timeZone": "Eastern Standard Time"
+			}
+		}
+	}
+}

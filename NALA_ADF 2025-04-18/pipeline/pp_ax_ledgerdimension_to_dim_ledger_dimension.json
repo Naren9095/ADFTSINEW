@@ -1,0 +1,1973 @@
+{
+	"name": "pp_ax_ledgerdimension_to_dim_ledger_dimension",
+	"properties": {
+		"activities": [
+			{
+				"name": "lkp_raw_last_modified_date",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "set_last_mod_tmstmp_OpsFinanceMapping",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SnowflakeSource",
+						"query": {
+							"value": "@concat('select max(to_varchar(LATEST_MODIFIEDDATETIME::timestamp, ''','yyyy-mm-dd hh24:mi:ss',''')) as max_date from ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_rawDb,'.',pipeline().parameters.p_tgt_raw_schema_nm, '.', pipeline().parameters.p_tgt_raw_table_nm)",
+							"type": "Expression"
+						},
+						"exportSettings": {
+							"type": "SnowflakeExportCopyCommand"
+						}
+					},
+					"dataset": {
+						"referenceName": "ds_snowflake",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_tgt_table_name": {
+								"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+								"type": "Expression"
+							},
+							"p_tgt_schema_name": {
+								"value": "@pipeline().parameters.p_tgt_curate_schema_nm",
+								"type": "Expression"
+							},
+							"p_ls_DbName": {
+								"value": "@pipeline().globalParameters.snow_rawDb",
+								"type": "Expression"
+							},
+							"p_ls_Env": {
+								"value": "@pipeline().globalParameters.environment",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "set_last_modified_date",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lkp_raw_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_prv_max_upd_timestamp",
+					"value": {
+						"value": "@coalesce(activity('lkp_raw_last_modified_date').output.firstRow.max_date, '1950-01-01 00:00:00')\n\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "raw_to_curate_sp_call",
+				"type": "Script",
+				"dependsOn": [
+					{
+						"activity": "df_load_dim_ledger_dimension",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"linkedServiceName": {
+					"referenceName": "ls_snowflake",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"ls_DbName": {
+							"value": "@pipeline().globalParameters.snow_auditDb",
+							"type": "Expression"
+						},
+						"ls_Env": {
+							"value": "@pipeline().globalParameters.environment",
+							"type": "Expression"
+						}
+					}
+				},
+				"typeProperties": {
+					"scripts": [
+						{
+							"type": "Query",
+							"text": {
+								"value": "@concat('CALL ',pipeline().globalParameters.environment,'_',pipeline().globalParameters.snow_auditDb,'.CONTROL.SP_TASK_INITIALIZE(','''',pipeline().RunId,'''',',','''',pipeline().globalParameters.environment,'''',',','''',pipeline().parameters.p_tgt_curate_table_nm,'''',',',pipeline().parameters.p_src_code,')')",
+								"type": "Expression"
+							}
+						}
+					],
+					"scriptBlockExecutionTimeout": "02:00:00"
+				}
+			},
+			{
+				"name": "load_dim_ledger_dimension_failure_notification",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "df_load_dim_ledger_dimension",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_adf_pipeline_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"subscription": {
+							"value": "@pipeline().globalParameters.subscriptionId",
+							"type": "Expression"
+						},
+						"resourceGroup": {
+							"value": "@pipeline().globalParameters.resourceGroup",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@coalesce(pipeline().RunId, -1)",
+							"type": "Expression"
+						},
+						"name": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"triggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"status": {
+							"value": "@activity('df_load_dim_ledger_dimension').Status",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@activity('df_load_dim_ledger_dimension').Error['message']",
+							"type": "Expression"
+						},
+						"executionEndTime": {
+							"value": "@activity('df_load_dim_ledger_dimension').ExecutionEndTime",
+							"type": "Expression"
+						},
+						"runDuration": {
+							"value": "@activity('df_load_dim_ledger_dimension').Duration",
+							"type": "Expression"
+						},
+						"teamWebhookUrl": {
+							"value": "@pipeline().globalParameters.teamsWebhookUrl",
+							"type": "Expression"
+						},
+						"notificationTime": {
+							"value": "@utcNow()",
+							"type": "Expression"
+						},
+						"taskName": {
+							"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+							"type": "Expression"
+						},
+						"taskStepNumber": {
+							"value": "@pipeline().parameters.p_src_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "raw_to_curate_storedprocedure_failure_notification",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pp_adf_pipeline_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"subscription": {
+							"value": "@pipeline().globalParameters.subscriptionId",
+							"type": "Expression"
+						},
+						"resourceGroup": {
+							"value": "@pipeline().globalParameters.resourceGroup",
+							"type": "Expression"
+						},
+						"runId": {
+							"value": "@coalesce(pipeline().RunId, -1)",
+							"type": "Expression"
+						},
+						"name": {
+							"value": "@pipeline().Pipeline",
+							"type": "Expression"
+						},
+						"triggerTime": {
+							"value": "@pipeline().TriggerTime",
+							"type": "Expression"
+						},
+						"status": {
+							"value": "@activity('raw_to_curate_sp_call').Status",
+							"type": "Expression"
+						},
+						"message": {
+							"value": "@activity('raw_to_curate_sp_call').Error['message']",
+							"type": "Expression"
+						},
+						"executionEndTime": {
+							"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+							"type": "Expression"
+						},
+						"runDuration": {
+							"value": "@activity('raw_to_curate_sp_call').Duration",
+							"type": "Expression"
+						},
+						"teamWebhookUrl": {
+							"value": "@pipeline().globalParameters.teamsWebhookUrl",
+							"type": "Expression"
+						},
+						"notificationTime": {
+							"value": "@utcNow()",
+							"type": "Expression"
+						},
+						"taskName": {
+							"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+							"type": "Expression"
+						},
+						"taskStepNumber": {
+							"value": "@pipeline().parameters.p_src_code",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "pipeline_execution_notification",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "raw_to_curate_sp_call",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@if(equals(activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE'],'TRUE'),bool('TRUE'), bool('FALSE'))",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "pp_stored_procedure_failure_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@toUpper('failed')",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": {
+										"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+										"type": "Expression"
+									},
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						},
+						{
+							"name": "curate_load_failure",
+							"type": "Fail",
+							"dependsOn": [
+								{
+									"activity": "pp_stored_procedure_failure_notification",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"message": {
+									"value": "@activity('raw_to_curate_sp_call').output.resultSets[0].rows[0]['SP_TASK_INITIALIZE']",
+									"type": "Expression"
+								},
+								"errorCode": "500"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "stored_procedure_success_notification",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pp_adf_pipeline_notification",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"subscription": {
+										"value": "@pipeline().globalParameters.subscriptionId",
+										"type": "Expression"
+									},
+									"resourceGroup": {
+										"value": "@pipeline().globalParameters.resourceGroup",
+										"type": "Expression"
+									},
+									"runId": {
+										"value": "@coalesce(pipeline().RunId, -1)",
+										"type": "Expression"
+									},
+									"name": {
+										"value": "@pipeline().Pipeline",
+										"type": "Expression"
+									},
+									"triggerTime": {
+										"value": "@pipeline().TriggerTime",
+										"type": "Expression"
+									},
+									"status": {
+										"value": "@activity('raw_to_curate_sp_call').Status",
+										"type": "Expression"
+									},
+									"message": {
+										"value": "@concat(pipeline().parameters.p_tgt_curate_table_nm, ' is successfully loaded')",
+										"type": "Expression"
+									},
+									"executionEndTime": {
+										"value": "@activity('raw_to_curate_sp_call').ExecutionEndTime",
+										"type": "Expression"
+									},
+									"runDuration": {
+										"value": "@activity('raw_to_curate_sp_call').Duration",
+										"type": "Expression"
+									},
+									"teamWebhookUrl": {
+										"value": "@pipeline().globalParameters.teamsWebhookUrl",
+										"type": "Expression"
+									},
+									"notificationTime": {
+										"value": "@utcNow()",
+										"type": "Expression"
+									},
+									"taskName": {
+										"value": "@pipeline().parameters.p_tgt_curate_table_nm",
+										"type": "Expression"
+									},
+									"taskStepNumber": {
+										"value": "@pipeline().parameters.p_src_code",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "switch_nala",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "set_last_modified_date",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@pipeline().parameters.p_src_code",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "1",
+							"activities": [
+								{
+									"name": "ledgerdimension_to_adls_nala",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"additionalColumns": [
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": {
+												"value": "select\n    def1.DIMENSIONATTRIBUTEVALUESET as DIMENSIONATTRIBUTEVALUESET,\n    def1.DISPLAYVALUE_A_DEPARTMENT as DISPLAYVALUE_A_DEPARTMENT,\n    def1.DISPLAYVALUE_B_INTERCOMPANY as DISPLAYVALUE_B_INTERCOMPANY,\n    def1.DISPLAYVALUE_C_SALES_CHANNEL as DISPLAYVALUE_C_SALES_CHANNEL,\n    def1.DISPLAYVALUE_D_TYPE as DISPLAYVALUE_D_TYPE,\n    def1.DISPLAYVALUE_E_CATEGORY as DISPLAYVALUE_E_CATEGORY,\n    def1.DISPLAYVALUE_F_FAMILY as DISPLAYVALUE_F_FAMILY,\n    def1.DISPLAYVALUE_G_SIZE as DISPLAYVALUE_G_SIZE,\n    def1.DISPLAYVALUE_H_VERSION as DISPLAYVALUE_H_VERSION,\n    def1.DISPLAYVALUE_I_CUSTOMER as DISPLAYVALUE_I_CUSTOMER,\n    def1.DISPLAYVALUE_J_VENDOR as DISPLAYVALUE_J_VENDOR,\n    def1.DISPLAYVALUE_K_FOAM_SOURCED as DISPLAYVALUE_K_FOAM_SOURCED,\n    def1.DISPLAYVALUE_L_STORE as DISPLAYVALUE_L_STORE,\n    def1.DISPLAYVALUE_M_SALES_DISTRI as DISPLAYVALUE_M_SALES_DISTRI,\n    def1.DISPLAYVALUE_BUSINESS_UNIT as DISPLAYVALUE_BUSINESS_UNIT,\n    def1.DISPLAYVALUE_MAIN_ACCOUNT as DISPLAYVALUE_MAIN_ACCOUNT,\n    def1.DISPLAYVALUE_PROJECTS as DISPLAYVALUE_PROJECTS,\n    def1.DISPLAYVALUE_SITE as DISPLAYVALUE_SITE,\n    def1.LEDGERDIMENSION_MODIFIEDDATETIME as LEDGERDIMENSION_MODIFIEDDATETIME,\n    dpt1.NAME as DIRPARTYTABLE1_NAME_DEPARTMENT,\n    desc1_b.DESCRIPTION as DIMENSIONFINANCIALTAG_DESCRIPTION_INTERCOMPANY,\n    desc1_c.DESCRIPTION as DIMENSIONFINANCIALTAG_DESCRIPTION_SALES_CHANNEL,\n    desc1_d.DESCRIPTION as DIMENSIONFINANCIALTAG_DESCRIPTION_TYPE,\n    desc1_e.DESCRIPTION as DIMENSIONFINANCIALTAG_DESCRIPTION_CATEGORY,\n    desc1_f.DESCRIPTION as DIMENSIONFINANCIALTAG_DESCRIPTION_FAMILY,\n    desc1_g.DESCRIPTION as DIMENSIONFINANCIALTAG_DESCRIPTION_SIZE,\n    desc1_h.DESCRIPTION as DIMENSIONFINANCIALTAG_DESCRIPTION_VERSION,\n    desc1_k.DESCRIPTION as DIMENSIONFINANCIALTAG_DESCRIPTION_FOAM_SOURCED,\n    desc1_m.DESCRIPTION as DIMENSIONFINANCIALTAG_DESCRIPTION_M_SALES_DISTRI,\n    desc1_proj.DESCRIPTION as DIMENSIONFINANCIALTAG_DESCRIPTION_PROJECTS,\n    desc1_site.DESCRIPTION as DIMENSIONFINANCIALTAG_DESCRIPTION_SITE,\n    desc1_l.NAME as DIRPARTYTABLE2_NAME_STORE,\n    dpt3.NAME as DIRPARTYTABLE3_NAME_BUSINESS_UNIT,\n    (\n        SELECT\n            MAX(LastUpdateDate)\n        FROM\n            (\n                VALUES\n                    (def1.LEDGERDIMENSION_MODIFIEDDATETIME),\n                    (isnull (desc1_b.DESC_MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (desc1_c.DESC_MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (desc1_d.DESC_MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (desc1_e.DESC_MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (desc1_f.DESC_MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (desc1_g.DESC_MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (desc1_h.DESC_MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (desc1_k.DESC_MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (desc1_m.DESC_MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (desc1_proj.DESC_MODIFIEDDATETIME, '1950-01-01')),\n                    (isnull (desc1_site.DESC_MODIFIEDDATETIME, '1950-01-01'))       \n            ) AS UpdateDate (LastUpdateDate)\n    ) AS LATEST_MODIFIEDDATETIME\nfrom\n    (select distinct davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION as DIMENSIONATTRIBUTEVALUESET\n\t, max(\n\t\tcase when da1.NAME = 'A_Department' then dalv1.DISPLAYVALUE\n\t\t\telse null\n\t\t\tend\n\t\t) over (partition by davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION) as DISPLAYVALUE_A_DEPARTMENT\n\t, max(\n\t\tcase when da1.NAME = 'B_Intercompany' then dalv1.DISPLAYVALUE\n\t\t\telse null\n\t\t\tend\n\t\t) over (partition by davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION) as DISPLAYVALUE_B_INTERCOMPANY\n\t, max(\n\t\tcase when da1.NAME = 'C_Sales_Channel' then dalv1.DISPLAYVALUE\n\t\t\telse null\n\t\t\tend\n\t\t) over (partition by davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION) as DISPLAYVALUE_C_SALES_CHANNEL\n\t, max(\n\t\tcase when da1.NAME = 'D_Type' then dalv1.DISPLAYVALUE\n\t\t\telse null\n\t\t\tend\n\t\t) over (partition by davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION) as DISPLAYVALUE_D_TYPE\n\t, max(\n\t\tcase when da1.NAME = 'E_Category' then dalv1.DISPLAYVALUE\n\t\t\telse null\n\t\t\tend\n\t\t) over (partition by davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION) as DISPLAYVALUE_E_CATEGORY\n\t, max(\n\t\tcase when da1.NAME = 'F_Family' then dalv1.DISPLAYVALUE\n\t\t\telse null\n\t\t\tend\n\t\t) over (partition by davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION) as DISPLAYVALUE_F_FAMILY\n\t, max(\n\t\tcase when da1.NAME = 'G_Size' then dalv1.DISPLAYVALUE\n\t\t\telse null\n\t\t\tend\n\t\t) over (partition by davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION) as DISPLAYVALUE_G_SIZE\n\t, max(\n\t\tcase when da1.NAME = 'H_Version' then dalv1.DISPLAYVALUE\n\t\t\telse null\n\t\t\tend\n\t\t) over (partition by davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION) as DISPLAYVALUE_H_VERSION\n\t, max(\n\t\tcase when da1.NAME = 'I_Customer' then dalv1.DISPLAYVALUE\n\t\t\telse null\n\t\t\tend\n\t\t) over (partition by davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION) as DISPLAYVALUE_I_CUSTOMER\n\t, max(\n\t\tcase when da1.NAME = 'J_Vendor' then dalv1.DISPLAYVALUE\n\t\t\telse null\n\t\t\tend\n\t\t) over (partition by davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION) as DISPLAYVALUE_J_VENDOR\n\t, max(\n\t\tcase when da1.NAME = 'K_Foam_Sourced' then dalv1.DISPLAYVALUE\n\t\t\telse null\n\t\t\tend\n\t\t) over (partition by davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION) as DISPLAYVALUE_K_FOAM_SOURCED\n\t, max(\n\t\tcase when da1.NAME = 'L_Store' then dalv1.DISPLAYVALUE\n\t\t\telse null\n\t\t\tend\n\t\t) over (partition by davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION) as DISPLAYVALUE_L_STORE\n\t, max(\n\t\tcase when da1.NAME = 'M_Sales_Distri' then dalv1.DISPLAYVALUE\n\t\t\telse null\n\t\t\tend\n\t\t) over (partition by davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION) as DISPLAYVALUE_M_SALES_DISTRI\n\t, max(\n\t\tcase when da1.NAME = 'BusinessUnit' then dalv1.DISPLAYVALUE\n\t\t\telse null\n\t\t\tend\n\t\t) over (partition by davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION) as DISPLAYVALUE_BUSINESS_UNIT\n\t, max(\n\t\tcase when da1.NAME = 'MainAccount' then dalv1.DISPLAYVALUE\n\t\t\telse null\n\t\t\tend\n\t\t) over (partition by davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION) as DISPLAYVALUE_MAIN_ACCOUNT\n\t, max(\n\t\tcase when da1.NAME = 'Projects' then dalv1.DISPLAYVALUE\n\t\t\telse null\n\t\t\tend\n\t\t) over (partition by davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION) as DISPLAYVALUE_PROJECTS\n\t, max(\n\t\tcase when da1.NAME = 'Site' then dalv1.DISPLAYVALUE\n\t\t\telse null\n\t\t\tend\n\t\t) over (partition by davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION) as DISPLAYVALUE_SITE\n\t, max(\n\t\t(select max(i) from (values (davgc1.MODIFIEDDATETIME), (dalv1.MODIFIEDDATETIME), (dav1.MODIFIEDDATETIME), (da1.MODIFIEDDATETIME)) AS T(i))\n\t\t) over (partition by davgc1.DIMENSIONATTRIBUTEVALUECOMBINATION) as LEDGERDIMENSION_MODIFIEDDATETIME\nfrom dbo.DIMENSIONATTRIBUTEVALUEGROUPCOMBINATION davgc1\nleft join dbo.DIMENSIONATTRIBUTELEVELVALUE dalv1 on\n\tdavgc1.DIMENSIONATTRIBUTEVALUEGROUP = dalv1.DIMENSIONATTRIBUTEVALUEGROUP\nleft join dbo.DIMENSIONATTRIBUTEVALUE dav1 on\n\tdalv1.DIMENSIONATTRIBUTEVALUE = dav1.RECID\nleft join dbo.DIMENSIONATTRIBUTE da1 on\n\tdav1.DIMENSIONATTRIBUTE = da1.RECID\n) def1\nleft join (select OMOPERATINGUNITNUMBER\n\t\t\t, max(NAME) as NAME\n\t\tfrom dbo.DIRPARTYTABLE\n\t\tgroup by OMOPERATINGUNITNUMBER) dpt1 on\n\tdef1.DISPLAYVALUE_A_DEPARTMENT = dpt1.OMOPERATINGUNITNUMBER\nleft join (select distinct dft1.VALUE\n\t\t\t\t, max(dft1.DESCRIPTION) over (partition by dft1.VALUE order by dft1.MODIFIEDDATETIME desc)  as DESCRIPTION\n\t\t\t\t, (select max(i) from (values (dft1.MODIFIEDDATETIME), (dadc1.MODIFIEDDATETIME), (da2.MODIFIEDDATETIME)) AS T(i)) as DESC_MODIFIEDDATETIME\n\t\t\tfrom dbo.DIMENSIONFINANCIALTAG dft1\n\t\t\tleft join dbo.DIMENSIONATTRIBUTEDIRCATEGORY dadc1 on\n\t\t\t\tdft1.FINANCIALTAGCATEGORY = dadc1.DIRCATEGORY\n\t\t\tleft join dbo.DIMENSIONATTRIBUTE da2 on\n\t\t\t\tdadc1.DIMENSIONATTRIBUTE = da2.RECID\n\t\t\twhere da2.NAME = 'B_Intercompany') desc1_b on\n\tdef1.DISPLAYVALUE_B_INTERCOMPANY = desc1_b.VALUE\nleft join (select distinct dft1.VALUE\n\t\t\t\t, max(dft1.DESCRIPTION) over (partition by dft1.VALUE order by dft1.MODIFIEDDATETIME desc)  as DESCRIPTION\n\t\t\t\t, (select max(i) from (values (dft1.MODIFIEDDATETIME), (dadc1.MODIFIEDDATETIME), (da2.MODIFIEDDATETIME)) AS T(i)) as DESC_MODIFIEDDATETIME\n\t\t\tfrom dbo.DIMENSIONFINANCIALTAG dft1\n\t\t\tleft join dbo.DIMENSIONATTRIBUTEDIRCATEGORY dadc1 on\n\t\t\t\tdft1.FINANCIALTAGCATEGORY = dadc1.DIRCATEGORY\n\t\t\tleft join dbo.DIMENSIONATTRIBUTE da2 on\n\t\t\t\tdadc1.DIMENSIONATTRIBUTE = da2.RECID\n\t\t\twhere da2.NAME = 'C_Sales_Channel') desc1_c on\n\tdef1.DISPLAYVALUE_C_SALES_CHANNEL = desc1_c.VALUE\nleft join (select distinct dft1.VALUE\n\t\t\t\t, max(dft1.DESCRIPTION) over (partition by dft1.VALUE order by dft1.MODIFIEDDATETIME desc)  as DESCRIPTION\n\t\t\t\t, (select max(i) from (values (dft1.MODIFIEDDATETIME), (dadc1.MODIFIEDDATETIME), (da2.MODIFIEDDATETIME)) AS T(i)) as DESC_MODIFIEDDATETIME\n\t\t\tfrom dbo.DIMENSIONFINANCIALTAG dft1\n\t\t\tleft join dbo.DIMENSIONATTRIBUTEDIRCATEGORY dadc1 on\n\t\t\t\tdft1.FINANCIALTAGCATEGORY = dadc1.DIRCATEGORY\n\t\t\tleft join dbo.DIMENSIONATTRIBUTE da2 on\n\t\t\t\tdadc1.DIMENSIONATTRIBUTE = da2.RECID\n\t\t\twhere da2.NAME = 'D_Type') desc1_d on\n\tdef1.DISPLAYVALUE_D_TYPE = desc1_d.VALUE\nleft join (select distinct dft1.VALUE\n\t\t\t\t, max(dft1.DESCRIPTION) over (partition by dft1.VALUE order by dft1.MODIFIEDDATETIME desc)  as DESCRIPTION\n\t\t\t\t, (select max(i) from (values (dft1.MODIFIEDDATETIME), (dadc1.MODIFIEDDATETIME), (da2.MODIFIEDDATETIME)) AS T(i)) as DESC_MODIFIEDDATETIME\n\t\t\tfrom dbo.DIMENSIONFINANCIALTAG dft1\n\t\t\tleft join dbo.DIMENSIONATTRIBUTEDIRCATEGORY dadc1 on\n\t\t\t\tdft1.FINANCIALTAGCATEGORY = dadc1.DIRCATEGORY\n\t\t\tleft join dbo.DIMENSIONATTRIBUTE da2 on\n\t\t\t\tdadc1.DIMENSIONATTRIBUTE = da2.RECID\n\t\t\twhere da2.NAME = 'E_Category') desc1_e on\n\tdef1.DISPLAYVALUE_E_CATEGORY = desc1_e.VALUE\nleft join (select distinct dft1.VALUE\n\t\t\t\t, max(dft1.DESCRIPTION) over (partition by dft1.VALUE order by dft1.MODIFIEDDATETIME desc)  as DESCRIPTION\n\t\t\t\t, (select max(i) from (values (dft1.MODIFIEDDATETIME), (dadc1.MODIFIEDDATETIME), (da2.MODIFIEDDATETIME)) AS T(i)) as DESC_MODIFIEDDATETIME\n\t\t\tfrom dbo.DIMENSIONFINANCIALTAG dft1\n\t\t\tleft join dbo.DIMENSIONATTRIBUTEDIRCATEGORY dadc1 on\n\t\t\t\tdft1.FINANCIALTAGCATEGORY = dadc1.DIRCATEGORY\n\t\t\tleft join dbo.DIMENSIONATTRIBUTE da2 on\n\t\t\t\tdadc1.DIMENSIONATTRIBUTE = da2.RECID\n\t\t\twhere da2.NAME = 'F_Family') desc1_f on\n\tdef1.DISPLAYVALUE_F_FAMILY = desc1_f.VALUE\nleft join (select distinct dft1.VALUE\n\t\t\t\t, max(dft1.DESCRIPTION) over (partition by dft1.VALUE order by dft1.MODIFIEDDATETIME desc)  as DESCRIPTION\n\t\t\t\t, (select max(i) from (values (dft1.MODIFIEDDATETIME), (dadc1.MODIFIEDDATETIME), (da2.MODIFIEDDATETIME)) AS T(i)) as DESC_MODIFIEDDATETIME\n\t\t\tfrom dbo.DIMENSIONFINANCIALTAG dft1\n\t\t\tleft join dbo.DIMENSIONATTRIBUTEDIRCATEGORY dadc1 on\n\t\t\t\tdft1.FINANCIALTAGCATEGORY = dadc1.DIRCATEGORY\n\t\t\tleft join dbo.DIMENSIONATTRIBUTE da2 on\n\t\t\t\tdadc1.DIMENSIONATTRIBUTE = da2.RECID\n\t\t\twhere da2.NAME = 'G_Size') desc1_g on\n\tdef1.DISPLAYVALUE_G_SIZE = desc1_g.VALUE\nleft join (select distinct dft1.VALUE\n\t\t\t\t, max(dft1.DESCRIPTION) over (partition by dft1.VALUE order by dft1.MODIFIEDDATETIME desc)  as DESCRIPTION\n\t\t\t\t, (select max(i) from (values (dft1.MODIFIEDDATETIME), (dadc1.MODIFIEDDATETIME), (da2.MODIFIEDDATETIME)) AS T(i)) as DESC_MODIFIEDDATETIME\n\t\t\tfrom dbo.DIMENSIONFINANCIALTAG dft1\n\t\t\tleft join dbo.DIMENSIONATTRIBUTEDIRCATEGORY dadc1 on\n\t\t\t\tdft1.FINANCIALTAGCATEGORY = dadc1.DIRCATEGORY\n\t\t\tleft join dbo.DIMENSIONATTRIBUTE da2 on\n\t\t\t\tdadc1.DIMENSIONATTRIBUTE = da2.RECID\n\t\t\twhere da2.NAME = 'H_Version') desc1_h on\n\tdef1.DISPLAYVALUE_H_VERSION = desc1_h.VALUE\nleft join (select distinct dft1.VALUE\n\t\t\t\t, max(dft1.DESCRIPTION) over (partition by dft1.VALUE order by dft1.MODIFIEDDATETIME desc)  as DESCRIPTION\n\t\t\t\t, (select max(i) from (values (dft1.MODIFIEDDATETIME), (dadc1.MODIFIEDDATETIME), (da2.MODIFIEDDATETIME)) AS T(i)) as DESC_MODIFIEDDATETIME\n\t\t\tfrom dbo.DIMENSIONFINANCIALTAG dft1\n\t\t\tleft join dbo.DIMENSIONATTRIBUTEDIRCATEGORY dadc1 on\n\t\t\t\tdft1.FINANCIALTAGCATEGORY = dadc1.DIRCATEGORY\n\t\t\tleft join dbo.DIMENSIONATTRIBUTE da2 on\n\t\t\t\tdadc1.DIMENSIONATTRIBUTE = da2.RECID\n\t\t\twhere da2.NAME = 'K_Foam_Sourced') desc1_k on\n\tdef1.DISPLAYVALUE_K_FOAM_SOURCED = desc1_k.VALUE\nleft join (select rct1.STORENUMBER\n\t\t\t\t, max(dpt1.NAME) as NAME\n\t\t\tfrom dbo.RETAILCHANNELTABLE rct1\n\t\t\tleft join dbo.DIRPARTYTABLE dpt1 on\n\t\t\t\trct1.OMOPERATINGUNITID = dpt1.RECID\n\t\t\tgroup by rct1.STORENUMBER) desc1_l on\n\tdef1.DISPLAYVALUE_L_STORE = desc1_l.STORENUMBER\nleft join (select distinct dft1.VALUE\n\t\t\t\t, max(dft1.DESCRIPTION) over (partition by dft1.VALUE order by dft1.MODIFIEDDATETIME desc)  as DESCRIPTION\n\t\t\t\t, (select max(i) from (values (dft1.MODIFIEDDATETIME), (dadc1.MODIFIEDDATETIME), (da2.MODIFIEDDATETIME)) AS T(i)) as DESC_MODIFIEDDATETIME\n\t\t\tfrom dbo.DIMENSIONFINANCIALTAG dft1\n\t\t\tleft join dbo.DIMENSIONATTRIBUTEDIRCATEGORY dadc1 on\n\t\t\t\tdft1.FINANCIALTAGCATEGORY = dadc1.DIRCATEGORY\n\t\t\tleft join dbo.DIMENSIONATTRIBUTE da2 on\n\t\t\t\tdadc1.DIMENSIONATTRIBUTE = da2.RECID\n\t\t\twhere da2.NAME = 'M_Sales_Distri') desc1_m on\n\tdef1.DISPLAYVALUE_M_SALES_DISTRI = desc1_m.VALUE\nleft join (select OMOPERATINGUNITNUMBER\n\t\t\t, max(NAME) as NAME\n\t\tfrom dbo.DIRPARTYTABLE\n\t\tgroup by OMOPERATINGUNITNUMBER) dpt3 on\n\tdef1.DISPLAYVALUE_BUSINESS_UNIT = dpt3.OMOPERATINGUNITNUMBER\nleft join (select distinct dft1.VALUE\n\t\t\t\t, max(dft1.DESCRIPTION) over (partition by dft1.VALUE order by dft1.MODIFIEDDATETIME desc)  as DESCRIPTION\n\t\t\t\t, (select max(i) from (values (dft1.MODIFIEDDATETIME), (dadc1.MODIFIEDDATETIME), (da2.MODIFIEDDATETIME)) AS T(i)) as DESC_MODIFIEDDATETIME\n\t\t\tfrom dbo.DIMENSIONFINANCIALTAG dft1\n\t\t\tleft join dbo.DIMENSIONATTRIBUTEDIRCATEGORY dadc1 on\n\t\t\t\tdft1.FINANCIALTAGCATEGORY = dadc1.DIRCATEGORY\n\t\t\tleft join dbo.DIMENSIONATTRIBUTE da2 on\n\t\t\t\tdadc1.DIMENSIONATTRIBUTE = da2.RECID\n\t\t\twhere da2.NAME = 'Projects') desc1_proj on\n\tdef1.DISPLAYVALUE_PROJECTS = desc1_proj.VALUE\nleft join (select distinct dft1.VALUE\n\t\t\t\t, max(dft1.DESCRIPTION) over (partition by dft1.VALUE order by dft1.MODIFIEDDATETIME desc)  as DESCRIPTION\n\t\t\t\t, (select max(i) from (values (dft1.MODIFIEDDATETIME), (dadc1.MODIFIEDDATETIME), (da2.MODIFIEDDATETIME)) AS T(i)) as DESC_MODIFIEDDATETIME\n\t\t\tfrom dbo.DIMENSIONFINANCIALTAG dft1\n\t\t\tleft join dbo.DIMENSIONATTRIBUTEDIRCATEGORY dadc1 on\n\t\t\t\tdft1.FINANCIALTAGCATEGORY = dadc1.DIRCATEGORY\n\t\t\tleft join dbo.DIMENSIONATTRIBUTE da2 on\n\t\t\t\tdadc1.DIMENSIONATTRIBUTE = da2.RECID\n\t\t\twhere da2.NAME = 'Site') desc1_site on\n\tdef1.DISPLAYVALUE_SITE = desc1_site.VALUE",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "DIMENSIONATTRIBUTEVALUESET",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "DIMENSIONATTRIBUTEVALUESET",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_A_DEPARTMENT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_A_DEPARTMENT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_B_INTERCOMPANY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_B_INTERCOMPANY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_C_SALES_CHANNEL",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_C_SALES_CHANNEL",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_D_TYPE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_D_TYPE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_E_CATEGORY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_E_CATEGORY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_F_FAMILY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_F_FAMILY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_G_SIZE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_G_SIZE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_H_VERSION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_H_VERSION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_I_CUSTOMER",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_I_CUSTOMER",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_J_VENDOR",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_J_VENDOR",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_K_FOAM_SOURCED",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_K_FOAM_SOURCED",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_L_STORE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_L_STORE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_M_SALES_DISTRI",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_M_SALES_DISTRI",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_BUSINESS_UNIT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_BUSINESS_UNIT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_MAIN_ACCOUNT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_MAIN_ACCOUNT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_PROJECTS",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_PROJECTS",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_SITE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_SITE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERDIMENSION_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "LEDGERDIMENSION_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE1_NAME_DEPARTMENT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE1_NAME_DEPARTMENT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_INTERCOMPANY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_INTERCOMPANY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_SALES_CHANNEL",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_SALES_CHANNEL",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_TYPE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_TYPE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_CATEGORY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_CATEGORY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_FAMILY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_FAMILY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_SIZE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_SIZE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_VERSION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_VERSION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_FOAM_SOURCED",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_FOAM_SOURCED",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_M_SALES_DISTRI",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_M_SALES_DISTRI",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_PROJECTS",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_PROJECTS",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_SITE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_SITE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE2_NAME_STORE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE2_NAME_STORE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE3_NAME_BUSINESS_UNIT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE3_NAME_BUSINESS_UNIT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_sql_server",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_src_table_name": {
+													"value": "@pipeline().parameters.p_src_table_nm",
+													"type": "Expression"
+												},
+												"p_src_schema_name": {
+													"value": "@pipeline().parameters.p_src_schema_nm",
+													"type": "Expression"
+												},
+												"p_ls_serverName": {
+													"value": "@pipeline().globalParameters.nala_sql_serverName",
+													"type": "Expression"
+												},
+												"p_ls_dbName": {
+													"value": "@pipeline().globalParameters.nala_sql_dbName",
+													"type": "Expression"
+												},
+												"p_ls_sqlUsername": {
+													"value": "@pipeline().globalParameters.sql_userName",
+													"type": "Expression"
+												},
+												"p_ls_sqlPassword": {
+													"value": "@pipeline().globalParameters.sql_password",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_directory": {
+													"value": "@pipeline().parameters.p_temp_directory",
+													"type": "Expression"
+												},
+												"p_root_system": {
+													"value": "@pipeline().globalParameters.rootDir",
+													"type": "Expression"
+												},
+												"p_file_name": {
+													"value": "@pipeline().parameters.p_temp_file_nm",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "nala_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "ledgerdimension_to_adls_nala",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('ledgerdimension_to_adls_nala').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('ledgerdimension_to_adls_nala').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('ledgerdimension_to_adls_nala').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('ledgerdimension_to_adls_nala').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											},
+											"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+											"taskStepNumber": {
+												"value": "@pipeline().parameters.p_src_code",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_nala_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "nala_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('ledgerdimension_to_adls_nala').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						},
+						{
+							"value": "3",
+							"activities": [
+								{
+									"name": "ledgerdimension_to_adls_d365",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "WarehouseSource",
+											"additionalColumns": [
+												{
+													"name": "HK_JOB_RUN_ID",
+													"value": {
+														"value": "@coalesce(pipeline().RunId, -1)",
+														"type": "Expression"
+													}
+												},
+												{
+													"name": "HK_SOURCE_NAME",
+													"value": {
+														"value": "@pipeline().parameters.p_src_nm",
+														"type": "Expression"
+													}
+												}
+											],
+											"sqlReaderQuery": {
+												"value": "Select \n    dimensionattributevalueset As DIMENSIONATTRIBUTEVALUESET,\n    DISPLAYVALUE_A_DEPARTMENT AS DISPLAYVALUE_A_DEPARTMENT,\n    DISPLAYVALUE_B_INTERCOMPANY AS DISPLAYVALUE_B_INTERCOMPANY,\n    DISPLAYVALUE_C_SALES_CHANNEL AS DISPLAYVALUE_C_SALES_CHANNEL,\n    DISPLAYVALUE_D_TYPE AS DISPLAYVALUE_D_TYPE,\n    DISPLAYVALUE_E_CATEGORY AS DISPLAYVALUE_E_CATEGORY,\n    DISPLAYVALUE_F_FAMILY AS DISPLAYVALUE_F_FAMILY,\n    DISPLAYVALUE_G_SIZE AS DISPLAYVALUE_G_SIZE,\n    DISPLAYVALUE_H_VERSION AS DISPLAYVALUE_H_VERSION,\n    DISPLAYVALUE_I_CUSTOMER AS DISPLAYVALUE_I_CUSTOMER,\n    DISPLAYVALUE_J_VENDOR AS DISPLAYVALUE_J_VENDOR,\n    DISPLAYVALUE_K_FOAM_SOURCED AS DISPLAYVALUE_K_FOAM_SOURCED,\n    DISPLAYVALUE_L_STORE AS DISPLAYVALUE_L_STORE,\n    DISPLAYVALUE_M_SALES_DISTRI AS DISPLAYVALUE_M_SALES_DISTRI,\n    DISPLAYVALUE_BUSINESS_UNIT AS DISPLAYVALUE_BUSINESS_UNIT,\n    DISPLAYVALUE_MAIN_ACCOUNT AS DISPLAYVALUE_MAIN_ACCOUNT,\n    DISPLAYVALUE_PROJECTS AS DISPLAYVALUE_PROJECTS,\n    DISPLAYVALUE_SITE AS DISPLAYVALUE_SITE,\n    LEDGERDIMENSION_MODIFIEDDATETIME AS LEDGERDIMENSION_MODIFIEDDATETIME,\n\tdpt1.name AS DIRPARTYTABLE1_NAME_DEPARTMENT,\n    dft1.description AS DIMENSIONFINANCIALTAG_DESCRIPTION_INTERCOMPANY,\n    dft2.description AS DIMENSIONFINANCIALTAG_DESCRIPTION_SALES_CHANNEL,\n    dft3.description AS DIMENSIONFINANCIALTAG_DESCRIPTION_TYPE,\n    dft4.description AS DIMENSIONFINANCIALTAG_DESCRIPTION_CATEGORY,\n    dft5.description AS DIMENSIONFINANCIALTAG_DESCRIPTION_FAMILY,\n    dft6.description AS DIMENSIONFINANCIALTAG_DESCRIPTION_SIZE,\n    dft7.description AS DIMENSIONFINANCIALTAG_DESCRIPTION_VERSION,\n    dft8.description AS DIMENSIONFINANCIALTAG_DESCRIPTION_FOAM_SOURCED,\n    dft9.description AS DIMENSIONFINANCIALTAG_DESCRIPTION_M_SALES_DISTRI,\n    dft10.description AS DIMENSIONFINANCIALTAG_DESCRIPTION_PROJECTS,\n    dft11.description AS DIMENSIONFINANCIALTAG_DESCRIPTION_SITE,\n    dpt2.name AS DIRPARTYTABLE2_NAME_STORE,\n    dpt3.name AS DIRPARTYTABLE3_NAME_BUSINESS_UNIT,\n    LEDGERDIMENSION_MODIFIEDDATETIME AS LATEST_MODIFIEDDATETIME\nfrom\n    (\n        select distinct\n            davsi1.dimensionattributevalueset,\n            max(\n                case\n                    when lower(da1.name) = 'a_department' Then davsi1.displayvalue\n                    else null\n                end\n            ) over (\n                partition by\n                    davsi1.dimensionattributevalueset\n            ) as DISPLAYVALUE_A_DEPARTMENT,\n            max(\n                case\n                    when lower(da1.name) = 'b_intercompany' then davsi1.displayvalue\n                    else null\n                end\n            ) over (\n                partition by\n                    davsi1.dimensionattributevalueset\n            ) as DISPLAYVALUE_B_INTERCOMPANY,\n            max(\n                case\n                    when lower(da1.name) = 'c_sales_channel' then davsi1.displayvalue\n                    else null\n                end\n            ) over (\n                partition by\n                    davsi1.dimensionattributevalueset\n            ) as DISPLAYVALUE_C_SALES_CHANNEL,\n            max(\n                case\n                    when lower(da1.name) = 'd_type' then davsi1.displayvalue\n                    else null\n                end\n            ) over (\n                partition by\n                    davsi1.dimensionattributevalueset\n            ) as DISPLAYVALUE_D_TYPE,\n            max(\n                case\n                    when lower(da1.name) = 'e_category' then davsi1.displayvalue\n                    else null\n                end\n            ) over (\n                partition by\n                    davsi1.dimensionattributevalueset\n            ) as DISPLAYVALUE_E_CATEGORY,\n            max(\n                case\n                    when lower(da1.name) = 'f_family' then davsi1.displayvalue\n                    else null\n                end\n            ) over (\n                partition by\n                    davsi1.dimensionattributevalueset\n            ) as DISPLAYVALUE_F_FAMILY,\n            max(\n                case\n                    when lower(da1.name) = 'g_size' then davsi1.displayvalue\n                    else null\n                end\n            ) over (\n                partition by\n                    davsi1.dimensionattributevalueset\n            ) as DISPLAYVALUE_G_SIZE,\n            max(\n                case\n                    when lower(da1.name) = 'h_version' then davsi1.displayvalue\n                    else null\n                end\n            ) over (\n                partition by\n                    davsi1.dimensionattributevalueset\n            ) as DISPLAYVALUE_H_VERSION,\n            max(\n                case\n                    when lower(da1.name) = 'i_customer' then davsi1.displayvalue\n                    else null\n                end\n            ) over (\n                partition by\n                    davsi1.dimensionattributevalueset\n            ) as DISPLAYVALUE_I_CUSTOMER,\n            max(\n                case\n                    when lower(da1.name) = 'j_vendor' then davsi1.displayvalue\n                    else null\n                end\n            ) over (\n                partition by\n                    davsi1.dimensionattributevalueset\n            ) as DISPLAYVALUE_J_VENDOR,\n            max(\n                case\n                    when lower(da1.name) = 'k_foam_sourced' then davsi1.displayvalue\n                    else null\n                end\n            ) over (\n                partition by\n                    davsi1.dimensionattributevalueset\n            ) as DISPLAYVALUE_K_FOAM_SOURCED,\n            max(\n                case\n                    when lower(da1.name) = 'l_store' then davsi1.displayvalue\n                    else null\n                end\n            ) over (\n                partition by\n                    davsi1.dimensionattributevalueset\n            ) as DISPLAYVALUE_L_STORE,\n            max(\n                case\n                    when lower(da1.name) = 'm_sales_distri' then davsi1.displayvalue\n                    else null\n                end\n            ) over (\n                partition by\n                    davsi1.dimensionattributevalueset\n            ) as DISPLAYVALUE_M_SALES_DISTRI,\n            max(\n                case\n                    when lower(da1.name) = 'businessunit' then davsi1.displayvalue\n                    else null\n                end\n            ) over (\n                partition by\n                    davsi1.dimensionattributevalueset\n            ) as DISPLAYVALUE_BUSINESS_UNIT,\n            max(\n                case\n                    when lower(da1.name) = 'mainaccount' then davsi1.displayvalue --davsi1.displayvalue\n                    else null\n                end\n            ) over (\n                partition by\n                    davsi1.dimensionattributevalueset\n            ) as DISPLAYVALUE_MAIN_ACCOUNT,\n            max(\n                case\n                    when lower(da1.name) = 'projects' then davsi1.displayvalue\n                    else null\n                end\n            ) over (\n                partition by\n                    davsi1.dimensionattributevalueset\n            ) as DISPLAYVALUE_PROJECTS,\n            max(\n                case\n                    when lower(da1.name) = 'site' then davsi1.displayvalue\n                    else null\n                end\n            ) over (\n                partition by\n                    davsi1.dimensionattributevalueset\n            ) as DISPLAYVALUE_SITE,\n            max(\n                (\n                    select\n                        max(i)\n                    from\n                        (\n                            values\n                                (davsi1.modifieddatetime),\n                                (davc1.modifieddatetime),\n                                (dav1.modifieddatetime),\n                                (da1.modifieddatetime),\n                                (desc1.desc_modifieddatetime)\n                        ) as t(i)\n                )\n            ) over (\n                partition by\n                    davsi1.dimensionattributevalueset\n            ) as  LEDGERDIMENSION_MODIFIEDDATETIME\n\n        From \n\t\t\tdataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionattributevaluesetitem davsi1\n            left join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionattributevaluecombination davc1 on davsi1.dimensionattributevalue = davc1.recid\n            left join  (Select  t1.recid \n\t\t\t\t\t\tFrom dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.custtable  t1               \n\t\t\t\t\t\tCross Join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dirpartytable t2\n\t\t\t\t\t\t Where\n    (\n        t1.party = t2.recid\n        And ( t1.partition = t2.partition )\n    )) As dact1  \n\t\t\ton davsi1.dimensionattributevalue = dact1.recid\n            left join (Select t3.recid From dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.vendtable  t3               \n\t\t\t\t\t\tCross Join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dirpartytable t2\n\t\t\t\t\t\t Where\n    (\n        t3.party = t2.recid\n        And ( t3.partition = t2.partition )\n    )) As davt1 \n\ton davsi1.dimensionattributevalue = davt1.recid\n            left join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionattributevalue dav1 on davsi1.dimensionattributevalue = dav1.recid\n            left join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionattribute da1 on dav1.dimensionattribute = da1.recid\n            left join (\n                select\n                    dft1.value,\n                    da2.name,\n                    dft1.description,\n                    (\n                        select\n                            max(i)\n                        from\n                            (\n                                values\n                                    (dft1.modifieddatetime),\n                                    (dadc1.modifieddatetime),\n                                    (da2.modifieddatetime)\n                            ) as t (i)\n                    ) as desc_modifieddatetime\n                from\n                    dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionfinancialtag dft1\n                    left join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionattributedircategory dadc1 on dft1.financialtagcategory = dadc1.dircategory\n                    left join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionattribute da2 on dadc1.dimensionattribute = da2.recid\n            ) desc1 on davsi1.displayvalue = desc1.value\n            and da1.name = desc1.name\n    ) def1\n    left join (\n        Select omoperatingunitnumber\n\t ,max(d1.name) As name\n From\n    dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.omoperatingunit a1\n\tInner Join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dirpartytable d1\n\tOn a1.recid = d1.recid\n\tGroup By omoperatingunitnumber\n    ) As dpt1 \n\tOn def1.DISPLAYVALUE_A_DEPARTMENT = dpt1.omoperatingunitnumber\n    left join (\n        select\n            value,\n            max(description) as description\n        from\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionfinancialtag\n        group by\n            value\n    ) dft1 on def1.DISPLAYVALUE_B_INTERCOMPANY = dft1.value\n    left join (\n        select\n            value,\n            max(description) as description\n        from\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionfinancialtag\n        group by\n            value\n    ) dft2 on def1.DISPLAYVALUE_C_SALES_CHANNEL = dft2.value\n    left join (\n        select\n            value,\n            max(description) as description\n        from\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionfinancialtag\n        group by\n            value\n    ) dft3 on def1.DISPLAYVALUE_D_TYPE = dft3.value\n    left join (\n        select\n            value,\n            max(description) as description\n        from\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionfinancialtag\n        group by\n            value\n    ) dft4 on def1.DISPLAYVALUE_E_CATEGORY = dft4.value\n    left join (\n        select\n            value,\n            max(description) as description\n        from\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionfinancialtag\n        group by\n            value\n    ) dft5 on def1.DISPLAYVALUE_K_FOAM_SOURCED = dft5.value\n    left join (\n        select\n            value,\n            max(description) as description\n        from\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionfinancialtag\n        group by\n            value\n    ) dft6 on def1.DISPLAYVALUE_G_SIZE = dft6.value\n    left join (\n        select\n            value,\n            max(description) as description\n        from\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionfinancialtag\n        group by\n            value\n    ) dft7 on def1.DISPLAYVALUE_H_VERSION = dft7.value\n    left join (\n        select\n            value,\n            max(description) as description\n        from\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionfinancialtag\n        group by\n            value\n    ) dft8 on def1.DISPLAYVALUE_H_VERSION = dft8.value\n    left join (\n        select\n            value,\n            max(description) as description\n        from\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionfinancialtag\n        group by\n            value\n    ) dft9 on def1.DISPLAYVALUE_M_SALES_DISTRI = dft9.value\n    left join (\n        select\n            value,\n            max(description) as description\n        from\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionfinancialtag\n        group by\n            value\n    ) dft10 on def1.DISPLAYVALUE_PROJECTS = dft10.value\n    left join (\n        select\n            value,\n            max(description) as description\n        from\n            dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dimensionfinancialtag\n        group by\n            value\n    ) dft11 on def1.DISPLAYVALUE_SITE = dft11.value\n    left join (\n        Select omoperatingunitnumber\n\t ,max(d2.name) As name\n From\n    dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.omoperatingunit a2\n\tInner Join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dirpartytable d2\n\tOn a2.recid = d2.recid\n\tGroup By omoperatingunitnumber\n    ) dpt2 on def1.DISPLAYVALUE_L_STORE = dpt2.omoperatingunitnumber\n    left join (\n        Select omoperatingunitnumber\n\t ,max(d3.name) As name\n From\n    dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.omoperatingunit a3\n\tInner Join dataverse_nalatst_cds2_workspace_unqe092999b0ee2ee1190466045bda8c.dbo.dirpartytable d3\n\tOn a3.recid = d3.recid\n\tGroup By omoperatingunitnumber\n    ) As dpt3 \n\tOn def1.DISPLAYVALUE_BUSINESS_UNIT = dpt3.omoperatingunitnumber\n    where \nLEDGERDIMENSION_MODIFIEDDATETIME > '10/1/2024'",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"mappings": [
+												{
+													"source": {
+														"name": "DIMENSIONATTRIBUTEVALUESET",
+														"type": "Int64",
+														"physicalType": "bigint"
+													},
+													"sink": {
+														"name": "DIMENSIONATTRIBUTEVALUESET",
+														"type": "Int64",
+														"physicalType": "INT_64"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_A_DEPARTMENT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_A_DEPARTMENT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_B_INTERCOMPANY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_B_INTERCOMPANY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_C_SALES_CHANNEL",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_C_SALES_CHANNEL",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_D_TYPE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_D_TYPE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_E_CATEGORY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_E_CATEGORY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_F_FAMILY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_F_FAMILY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_G_SIZE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_G_SIZE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_H_VERSION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_H_VERSION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_I_CUSTOMER",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_I_CUSTOMER",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_J_VENDOR",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_J_VENDOR",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_K_FOAM_SOURCED",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_K_FOAM_SOURCED",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_L_STORE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_L_STORE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_M_SALES_DISTRI",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_M_SALES_DISTRI",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_BUSINESS_UNIT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_BUSINESS_UNIT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_MAIN_ACCOUNT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_MAIN_ACCOUNT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_PROJECTS",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_PROJECTS",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DISPLAYVALUE_SITE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DISPLAYVALUE_SITE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LEDGERDIMENSION_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "LEDGERDIMENSION_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE1_NAME_DEPARTMENT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE1_NAME_DEPARTMENT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_INTERCOMPANY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_INTERCOMPANY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_SALES_CHANNEL",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_SALES_CHANNEL",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_TYPE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_TYPE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_CATEGORY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_CATEGORY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_FAMILY",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_FAMILY",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_SIZE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_SIZE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_VERSION",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_VERSION",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_FOAM_SOURCED",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_FOAM_SOURCED",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_M_SALES_DISTRI",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_M_SALES_DISTRI",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_PROJECTS",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_PROJECTS",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_SITE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIMENSIONFINANCIALTAG_DESCRIPTION_SITE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE2_NAME_STORE",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE2_NAME_STORE",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "DIRPARTYTABLE3_NAME_BUSINESS_UNIT",
+														"type": "String",
+														"physicalType": "nvarchar"
+													},
+													"sink": {
+														"name": "DIRPARTYTABLE3_NAME_BUSINESS_UNIT",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "datetime"
+													},
+													"sink": {
+														"name": "LATEST_MODIFIEDDATETIME",
+														"type": "DateTime",
+														"physicalType": "INT_96"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_JOB_RUN_ID",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												},
+												{
+													"source": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String"
+													},
+													"sink": {
+														"name": "HK_SOURCE_NAME",
+														"type": "String",
+														"physicalType": "UTF8"
+													}
+												}
+											],
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_fabric_wh",
+											"type": "DatasetReference"
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"p_directory": {
+													"value": "@pipeline().parameters.p_temp_directory",
+													"type": "Expression"
+												},
+												"p_root_system": {
+													"value": "@pipeline().globalParameters.rootDir",
+													"type": "Expression"
+												},
+												"p_file_name": {
+													"value": "@pipeline().parameters.p_temp_file_nm",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								},
+								{
+									"name": "d365_raw_load_failure_notification",
+									"type": "ExecutePipeline",
+									"dependsOn": [
+										{
+											"activity": "ledgerdimension_to_adls_d365",
+											"dependencyConditions": [
+												"Failed"
+											]
+										}
+									],
+									"policy": {
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "pp_adf_pipeline_notification",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"subscription": {
+												"value": "@pipeline().globalParameters.subscriptionId",
+												"type": "Expression"
+											},
+											"resourceGroup": {
+												"value": "@pipeline().globalParameters.resourceGroup",
+												"type": "Expression"
+											},
+											"runId": {
+												"value": "@coalesce(pipeline().RunId, -1)",
+												"type": "Expression"
+											},
+											"name": {
+												"value": "@pipeline().Pipeline",
+												"type": "Expression"
+											},
+											"triggerTime": {
+												"value": "@pipeline().TriggerTime",
+												"type": "Expression"
+											},
+											"status": {
+												"value": "@activity('ledgerdimension_to_adls_d365').Status",
+												"type": "Expression"
+											},
+											"message": {
+												"value": "@replace(replace(replace(activity('ledgerdimension_to_adls_d365').Error['message'], '\\','\\\\'), '''', ''), '\"' , '')",
+												"type": "Expression"
+											},
+											"executionEndTime": {
+												"value": "@activity('ledgerdimension_to_adls_d365').ExecutionEndTime",
+												"type": "Expression"
+											},
+											"runDuration": {
+												"value": "@activity('ledgerdimension_to_adls_d365').Duration",
+												"type": "Expression"
+											},
+											"teamWebhookUrl": {
+												"value": "@pipeline().globalParameters.teamsWebhookUrl",
+												"type": "Expression"
+											},
+											"notificationTime": {
+												"value": "@utcNow()",
+												"type": "Expression"
+											},
+											"taskName": "@pipeline().parameters.p_tgt_curate_table_nm",
+											"taskStepNumber": {
+												"value": "@pipeline().parameters.p_src_code",
+												"type": "Expression"
+											}
+										}
+									}
+								},
+								{
+									"name": "sql_d365_load_to_raw_fail",
+									"type": "Fail",
+									"dependsOn": [
+										{
+											"activity": "d365_raw_load_failure_notification",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"userProperties": [],
+									"typeProperties": {
+										"message": {
+											"value": "@activity('ledgerdimension_to_adls_d365').Error['message']",
+											"type": "Expression"
+										},
+										"errorCode": "500"
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "df_load_dim_ledger_dimension",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "switch_nala",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_load_dim_ledger_dimension",
+						"type": "DataFlowReference",
+						"parameters": {
+							"df_prev_max_timestamp": {
+								"value": "'@{variables('v_prv_max_upd_timestamp')}'",
+								"type": "Expression"
+							},
+							"df_last_mod_tmstmp_opsfinancemapping": {
+								"value": "'@{variables('v_last_mod_tmstmp_opsfinancemapping')}'",
+								"type": "Expression"
+							}
+						},
+						"datasetParameters": {
+							"SrcLedgerDimension": {
+								"p_directory": {
+									"value": "@pipeline().parameters.p_temp_directory",
+									"type": "Expression"
+								},
+								"p_root_system": {
+									"value": "@pipeline().globalParameters.rootDir",
+									"type": "Expression"
+								},
+								"p_file_name": {
+									"value": "@pipeline().parameters.p_temp_file_nm",
+									"type": "Expression"
+								}
+							},
+							"SrcOpsFinanceMapping": {
+								"p_src_directory": {
+									"value": "@pipeline().parameters.p_src_directory",
+									"type": "Expression"
+								},
+								"p_src_file_name": {
+									"value": "@pipeline().parameters.p_src_file_nm",
+									"type": "Expression"
+								},
+								"p_src_root_system": {
+									"value": "@pipeline().globalParameters.rootDir",
+									"type": "Expression"
+								},
+								"p_sheet_name": {
+									"value": "@pipeline().parameters.p_src_sheet_nm",
+									"type": "Expression"
+								}
+							},
+							"InsertLedgerDimension": {
+								"p_tgt_table_name": {
+									"value": "@pipeline().parameters.p_tgt_raw_table_nm",
+									"type": "Expression"
+								},
+								"p_tgt_schema_name": {
+									"value": "@pipeline().parameters.p_tgt_raw_schema_nm",
+									"type": "Expression"
+								},
+								"p_ls_DbName": {
+									"value": "@pipeline().globalParameters.snow_rawDb",
+									"type": "Expression"
+								},
+								"p_ls_Env": {
+									"value": "@pipeline().globalParameters.environment",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"integrationRuntime": {
+						"referenceName": "IR-Snowflake-NALA",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "get_last_modifieddatetime_OpsFinanceMapping",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_delimited_csv",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_directory": {
+								"value": "@pipeline().parameters.p_src_directory",
+								"type": "Expression"
+							},
+							"p_file_nm": {
+								"value": "@pipeline().parameters.p_src_file_nm",
+								"type": "Expression"
+							},
+							"p_root_system": {
+								"value": "@pipeline().globalParameters.rootDir",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"itemName",
+						"lastModified"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "set_last_mod_tmstmp_OpsFinanceMapping",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "get_last_modifieddatetime_OpsFinanceMapping",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_last_mod_tmstmp_opsfinancemapping",
+					"value": {
+						"value": "@coalesce(activity('get_last_modifieddatetime_OpsFinanceMapping').output.lastModified,'1950-01-01 00:00:00')",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"p_src_table_nm": {
+				"type": "string",
+				"defaultValue": "LEDGERDIMENSION"
+			},
+			"p_src_schema_nm": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"p_tgt_raw_table_nm": {
+				"type": "string",
+				"defaultValue": "LEDGERDIMENSION"
+			},
+			"p_tgt_raw_schema_nm": {
+				"type": "string",
+				"defaultValue": "AX_NALA"
+			},
+			"p_tgt_curate_table_nm": {
+				"type": "string",
+				"defaultValue": "DIM_LEDGER_DIMENSION"
+			},
+			"p_tgt_curate_schema_nm": {
+				"type": "string",
+				"defaultValue": "GLOBAL"
+			},
+			"p_src_nm": {
+				"type": "string",
+				"defaultValue": "AXNALA"
+			},
+			"p_src_directory": {
+				"type": "string",
+				"defaultValue": "business_files"
+			},
+			"p_temp_file_nm": {
+				"type": "string",
+				"defaultValue": "ledgerdimension_nala.snappy.parquet"
+			},
+			"p_src_file_nm": {
+				"type": "string",
+				"defaultValue": "OpsFinance_Mapping.xlsx"
+			},
+			"p_temp_directory": {
+				"type": "string",
+				"defaultValue": "temp_files"
+			},
+			"p_src_code": {
+				"type": "string",
+				"defaultValue": "1"
+			},
+			"p_src_sheet_nm": {
+				"type": "string",
+				"defaultValue": "BU_Mapping"
+			}
+		},
+		"variables": {
+			"v_prv_max_upd_timestamp": {
+				"type": "String"
+			},
+			"v_last_mod_tmstmp_opsfinancemapping": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2024-06-18T16:40:02Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

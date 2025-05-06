@@ -1,0 +1,34 @@
+{
+	"name": "trg_d365_userinfo_to_dim_user_info",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "pp_ax_userinfo_to_dim_user_info",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"p_src_nm": "D365",
+					"p_tgt_curate_table_nm": "DIM_USER_INFO",
+					"p_tgt_raw_table_nm": "USERINFO",
+					"p_tgt_raw_schema_nm": "D365",
+					"p_tgt_curate_schema_nm": "GLOBAL",
+					"p_src_table_nm": "USERINFO",
+					"p_src_schema_nm": "dbo",
+					"p_src_code": "3"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2024-07-12T05:00:00",
+				"timeZone": "Eastern Standard Time"
+			}
+		}
+	}
+}

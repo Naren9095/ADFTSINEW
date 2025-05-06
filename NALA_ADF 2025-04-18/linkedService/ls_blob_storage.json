@@ -1,0 +1,23 @@
+{
+	"name": "ls_blob_storage",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureBlobStorage",
+		"typeProperties": {
+			"sasUri": "https://tsnalamdwsnowflakedev.blob.core.windows.net/",
+			"sasToken": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "ls_key_vault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "stsastoken"
+			}
+		},
+		"connectVia": {
+			"referenceName": "IR-Snowflake-NALA",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
